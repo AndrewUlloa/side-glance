@@ -2,7 +2,9 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
 import { SignalController } from "../core/controller.ts";
+import type { SignalTarget } from "../core/protocol.ts";
 import { FileSignalStore } from "../core/store.ts";
+import { discoverTerminalTarget } from "../core/target.ts";
 
 export interface SupervisedRunResult {
   exitCode: number;
@@ -20,14 +22,11 @@ export async function runSupervised(
 
   const wrapperArgs = args.slice(0, separatorIndex);
   const childArgs = args.slice(separatorIndex + 1);
-  const surfaceIndex = wrapperArgs.indexOf("--surface");
-  if (surfaceIndex === -1 || !wrapperArgs[surfaceIndex + 1]) {
-    throw new Error("run requires --surface before --.");
-  }
-  if (wrapperArgs.length !== 2 || surfaceIndex !== 0) {
-    throw new Error("run received an unknown option.");
-  }
-  const surfaceId = validateSurfaceId(wrapperArgs[1]);
+  const target = await discoverTerminalTarget({
+    environment: process.env,
+    ...parseTargetOptions(wrapperArgs),
+  });
+  const { surfaceId } = target;
 
   const sessionId = `wrapper-${process.pid}-${randomUUID()}`;
   const controller = new SignalController(new FileSignalStore({ directory: stateDirectory }));
@@ -40,7 +39,7 @@ export async function runSupervised(
     occurredAt: Date.now(),
     generation: 0,
     confidence: "wrapper",
-    target: { surfaceId },
+    target,
   });
 
   let result: SupervisedRunResult;
@@ -48,16 +47,18 @@ export async function runSupervised(
     result = await superviseChild(childArgs[0], childArgs.slice(1), {
       SIGNAL_SURFACE_ID: surfaceId,
       SIGNAL_SESSION_ID: sessionId,
+      ...(target.tty ? { SIGNAL_TTY: target.tty } : {}),
+      ...(target.tmuxPane ? { SIGNAL_TMUX_PANE: target.tmuxPane } : {}),
     });
   } catch (error) {
-    await submitEnd(controller, sessionId, surfaceId, "spawn-failed");
+    await submitEnd(controller, sessionId, target, "spawn-failed");
     throw error;
   }
 
   await submitEnd(
     controller,
     sessionId,
-    surfaceId,
+    target,
     result.signal ? `signal:${result.signal}` : `exit:${result.exitCode}`,
   );
   return result;
@@ -105,7 +106,7 @@ async function superviseChild(
 async function submitEnd(
   controller: SignalController,
   sessionId: string,
-  surfaceId: string,
+  target: SignalTarget,
   reason: string,
 ): Promise<void> {
   await controller.submit({
@@ -118,18 +119,34 @@ async function submitEnd(
     generation: 0,
     reason,
     confidence: "wrapper",
-    target: { surfaceId },
+    target,
   });
 }
 
-function validateSurfaceId(value: string): string {
-  if (value.length === 0 || value.length > 512) {
-    throw new Error("run surface ID must contain 1 to 512 characters.");
+function parseTargetOptions(args: readonly string[]): {
+  surfaceId?: string;
+  tty?: string;
+  tmuxPane?: string;
+} {
+  const values: { surfaceId?: string; tty?: string; tmuxPane?: string } = {};
+  const names = {
+    "--surface": "surfaceId",
+    "--tty": "tty",
+    "--tmux-pane": "tmuxPane",
+  } as const;
+  for (let index = 0; index < args.length; index += 2) {
+    const name = args[index];
+    const key = names[name as keyof typeof names];
+    const value = args[index + 1];
+    if (!key || !value || value.startsWith("--")) {
+      throw new Error(`run received an invalid target option: ${name ?? "missing"}.`);
+    }
+    if (values[key] !== undefined) {
+      throw new Error(`run received duplicate target option: ${name}.`);
+    }
+    values[key] = value;
   }
-  if ([...value].some((character) => (character.codePointAt(0) ?? 0) <= 0x1f)) {
-    throw new Error("run surface ID may not contain control characters.");
-  }
-  return value;
+  return values;
 }
 
 function signalExitCode(signal: NodeJS.Signals | null): number {

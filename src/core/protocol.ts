@@ -64,9 +64,36 @@ export interface SignalSessionState {
   updatedAt: number;
 }
 
+export interface SignalTmuxOptionSnapshot {
+  name:
+    | "window-status-style"
+    | "window-status-current-style"
+    | "window-status-format"
+    | "window-status-current-format";
+  local: boolean;
+  value?: string;
+}
+
+export interface SignalTmuxSnapshot {
+  windowId: string;
+  options: SignalTmuxOptionSnapshot[];
+}
+
+export interface SignalSurfaceState {
+  surfaceId: string;
+  target: SignalTarget;
+  phase: SignalPhase;
+  generation: number;
+  updatedAt: number;
+  terminalPainted: boolean;
+  ownerKey?: string;
+  tmuxSnapshot?: SignalTmuxSnapshot;
+}
+
 export interface SignalState {
   schemaVersion: 1;
   sessions: Record<string, SignalSessionState>;
+  surfaces: Record<string, SignalSurfaceState>;
   seenEventIds: string[];
 }
 

@@ -10,6 +10,7 @@ export function createSignalState(): SignalState {
   return {
     schemaVersion: 1,
     sessions: {},
+    surfaces: {},
     seenEventIds: [],
   };
 }

@@ -227,7 +227,7 @@ export default function Home() {
             </div>
             <div className="command-block">
               <span className="command-comment"># supervise any coding CLI</span>
-              <code><span>$</span> signal run --surface tty:current -- claude</code>
+              <code><span>$</span> signal run -- claude</code>
             </div>
             <div className="command-block">
               <span className="command-comment"># merge native hooks safely</span>

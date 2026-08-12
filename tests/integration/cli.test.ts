@@ -217,6 +217,26 @@ test("supervised run passes stable surface and session identity to provider hook
   assert.match(environment.session, /^wrapper-/u);
 });
 
+test("supervised run can take its surface from the wrapper environment", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(
+    [
+      "run",
+      "--",
+      process.execPath,
+      "-e",
+      "process.stdout.write(process.env.SIGNAL_SURFACE_ID || '')",
+    ],
+    {
+      stateDirectory: directory,
+      env: { SIGNAL_SURFACE_ID: "test:auto-surface" },
+    },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout, "test:auto-surface");
+});
+
 test("exposes transactional provider install and uninstall commands", async (context) => {
   const directory = await stateDirectory(context);
   const home = await mkdtemp(path.join(tmpdir(), "signal-cli-install-"));

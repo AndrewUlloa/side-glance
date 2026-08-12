@@ -15,6 +15,7 @@ import { SignalController } from "../core/controller.ts";
 import { urgencyFromElapsed } from "../core/policy.ts";
 import { sessionKey, type SignalPhase } from "../core/protocol.ts";
 import { FileSignalStore } from "../core/store.ts";
+import { discoverTerminalTarget } from "../core/target.ts";
 import { parseSignalEvent, parseSignalSource } from "../core/validation.ts";
 import { runInstallCommand } from "./install.ts";
 import { runSupervised } from "./run.ts";
@@ -35,13 +36,10 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     case "hook": {
       const provider = parseOption(args, "--provider");
-      const surfaceId =
-        optionalOption(args, "--surface") ?? process.env.SIGNAL_SURFACE_ID;
-      if (!surfaceId) {
-        throw new Error(
-          "hook requires --surface or the SIGNAL_SURFACE_ID wrapper environment.",
-        );
-      }
+      const target = await discoverTerminalTarget({
+        environment: process.env,
+        surfaceId: optionalOption(args, "--surface"),
+      });
       requireOnlyOptions(
         args.slice(1),
         ["--provider", "--surface", "--session", "--json"],
@@ -53,7 +51,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       const context: AdapterContext = {
         eventId: randomUUID(),
         occurredAt: Date.now(),
-        target: { surfaceId },
+        target,
         ...(fallbackSessionId ? { fallbackSessionId } : {}),
       };
       const rawPayload: unknown = JSON.parse(await readBoundedStdin());

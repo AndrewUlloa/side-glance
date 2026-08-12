@@ -22,6 +22,7 @@ import type {
   SignalSessionState,
   SignalSource,
   SignalState,
+  SignalSurfaceState,
 } from "./protocol.ts";
 
 const execFileAsync = promisify(execFile);
@@ -369,6 +370,7 @@ function isSignalState(value: unknown): value is SignalState {
   if (!isRecord(value)) return false;
   if (value.schemaVersion !== 1) return false;
   if (!isRecord(value.sessions)) return false;
+  if (!isRecord(value.surfaces)) return false;
   if (
     !Array.isArray(value.seenEventIds) ||
     value.seenEventIds.some((eventId) => typeof eventId !== "string")
@@ -376,7 +378,10 @@ function isSignalState(value: unknown): value is SignalState {
     return false;
   }
 
-  return Object.values(value.sessions).every(isSignalSessionState);
+  return (
+    Object.values(value.sessions).every(isSignalSessionState) &&
+    Object.values(value.surfaces).every(isSignalSurfaceState)
+  );
 }
 
 function isSignalSessionState(value: unknown): value is SignalSessionState {
@@ -412,6 +417,49 @@ function isSignalTarget(value: unknown): boolean {
   if (value.tty !== undefined && typeof value.tty !== "string") return false;
   if (value.tmuxPane !== undefined && typeof value.tmuxPane !== "string") return false;
   return true;
+}
+
+function isSignalSurfaceState(value: unknown): value is SignalSurfaceState {
+  if (!isRecord(value)) return false;
+  if (typeof value.surfaceId !== "string" || !isSignalTarget(value.target)) {
+    return false;
+  }
+  if (typeof value.phase !== "string" || !PHASES.has(value.phase as SignalPhase)) {
+    return false;
+  }
+  if (!Number.isSafeInteger(value.generation) || Number(value.generation) < 0) {
+    return false;
+  }
+  if (!Number.isFinite(value.updatedAt) || typeof value.terminalPainted !== "boolean") {
+    return false;
+  }
+  if (value.ownerKey !== undefined && typeof value.ownerKey !== "string") {
+    return false;
+  }
+  if (value.tmuxSnapshot !== undefined && !isTmuxSnapshot(value.tmuxSnapshot)) {
+    return false;
+  }
+  return true;
+}
+
+function isTmuxSnapshot(value: unknown): boolean {
+  if (!isRecord(value) || !/^@\d+$/u.test(String(value.windowId))) return false;
+  if (!Array.isArray(value.options) || value.options.length !== 4) return false;
+  const names = new Set([
+    "window-status-style",
+    "window-status-current-style",
+    "window-status-format",
+    "window-status-current-format",
+  ]);
+  return value.options.every(
+    (option) =>
+      isRecord(option) &&
+      typeof option.name === "string" &&
+      names.has(option.name) &&
+      typeof option.local === "boolean" &&
+      (option.value === undefined || typeof option.value === "string") &&
+      option.local === (option.value !== undefined),
+  );
 }
 
 function isLockOwner(value: unknown): value is LockOwner {

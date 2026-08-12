@@ -91,6 +91,7 @@ test("writes private state atomically and quarantines malformed state", async (c
   assert.deepEqual(reset, {
     schemaVersion: 1,
     sessions: {},
+    surfaces: {},
     seenEventIds: [],
   });
 
