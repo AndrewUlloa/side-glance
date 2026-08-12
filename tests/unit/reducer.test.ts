@@ -118,3 +118,37 @@ test("applies a duplicate event ID only once", () => {
   assert.strictEqual(twice, once);
   assert.deepEqual(twice.seenEventIds, ["same-event"]);
 });
+
+test("rejects a delayed event even when the provider cannot supply a turn ID", () => {
+  let state = reduceSignalEvent(
+    createSignalState(),
+    event("start", "turn.started", { occurredAt: 2_000 }),
+  );
+  state = reduceSignalEvent(
+    state,
+    event("done", "turn.completed", { occurredAt: 3_000 }),
+  );
+  const completed = state;
+
+  state = reduceSignalEvent(
+    state,
+    event("late-wait", "attention.waiting", { occurredAt: 2_500 }),
+  );
+
+  assert.strictEqual(state, completed);
+  assert.equal(state.sessions["claude:session-a"]?.phase, "completed");
+});
+
+test("bounds the replay cache without changing the newest event order", () => {
+  let state = createSignalState();
+  for (let index = 0; index < 4_100; index += 1) {
+    state = reduceSignalEvent(
+      state,
+      event(`event-${index}`, "attention.waiting", { occurredAt: index + 1 }),
+    );
+  }
+
+  assert.equal(state.seenEventIds.length, 4_096);
+  assert.equal(state.seenEventIds[0], "event-4");
+  assert.equal(state.seenEventIds.at(-1), "event-4099");
+});

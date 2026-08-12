@@ -31,22 +31,37 @@ export function createDefaultSurfaceRenderer(): SurfaceRenderer {
         return { terminalPainted: false };
       }
 
+      const channels = surfaceChannels(target);
       let tmuxSnapshot = previous?.tmuxSnapshot;
-      if (target.tmuxPane) {
+      if (channels.tmux && target.tmuxPane) {
         const runner = createTmuxRunner();
         tmuxSnapshot ??= await captureTmuxSnapshot(runner, target.tmuxPane);
         await applyTmuxPaint(runner, asTmuxSnapshot(tmuxSnapshot), visual.accent);
       }
-      if (target.tty) {
+      if (!channels.terminal && previous?.terminalPainted && target.tty) {
+        await renderTerminal(target.tty, "reset");
+      }
+      if (channels.terminal && target.tty) {
         await renderTerminal(target.tty, { wash: visual.wash });
       }
 
       return {
-        terminalPainted: Boolean(target.tty),
+        terminalPainted: channels.terminal,
         ...(tmuxSnapshot ? { tmuxSnapshot } : {}),
       };
     },
     reset: resetSurface,
+  };
+}
+
+export function surfaceChannels(target: SignalTarget): {
+  terminal: boolean;
+  tmux: boolean;
+} {
+  const tmux = Boolean(target.tmuxPane);
+  return {
+    terminal: Boolean(target.tty) && !tmux,
+    tmux,
   };
 }
 

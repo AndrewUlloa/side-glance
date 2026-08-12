@@ -10,6 +10,7 @@ import { adaptClaudeHook } from "../adapters/claude.ts";
 import { adaptCodexHook } from "../adapters/codex.ts";
 import { adaptGeminiHook } from "../adapters/gemini.ts";
 import { adaptOpenCodeEvent } from "../adapters/opencode.ts";
+import { inspectProviderHooks } from "../adapters/installers.ts";
 import type { AdapterContext, AdapterResult } from "../adapters/types.ts";
 import { SignalController } from "../core/controller.ts";
 import { urgencyFromElapsed } from "../core/policy.ts";
@@ -72,8 +73,15 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       return 0;
     }
     case "doctor": {
-      requireExactArgs(args.slice(1), ["--json"], "doctor");
+      const homeDirectory = optionalOption(args, "--home") ?? homedir();
+      requireOnlyOptions(args.slice(1), ["--home", "--json"], "doctor");
       const majorVersion = Number.parseInt(process.versions.node.split(".")[0], 10);
+      const inspections = await Promise.all(
+        (["claude", "codex", "gemini"] as const).map(async (provider) => [
+          provider,
+          await inspectProviderHooks({ provider, homeDirectory }),
+        ] as const),
+      );
       writeJson({
         stateDirectory,
         node: { version: process.versions.node, supported: majorVersion >= 24 },
@@ -81,6 +89,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           tty: Boolean(process.stdout.isTTY),
           tmux: Boolean(process.env.TMUX),
         },
+        providers: Object.fromEntries(inspections),
       });
       return 0;
     }
@@ -96,6 +105,28 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       return 0;
     }
     case "reset": {
+      if (args.includes("--all")) {
+        requireExactArgs(args.slice(1), ["--all", "--json"], "reset");
+        const controller = new SignalController(store);
+        let current = await store.read();
+        for (const session of Object.values(current.sessions)) {
+          if (session.phase === "inactive") continue;
+          current = await controller.submit({
+            v: 1,
+            eventId: randomUUID(),
+            source: session.source,
+            sessionId: session.sessionId,
+            kind: "session.ended",
+            occurredAt: Math.max(Date.now(), session.updatedAt + 1),
+            generation: session.generation,
+            reason: "manual-reset-all",
+            confidence: "wrapper",
+            ...(session.target ? { target: session.target } : {}),
+          });
+        }
+        writeJson(current);
+        return 0;
+      }
       const source = parseSignalSource(parseOption(args, "--source"));
       const sessionId = parseOption(args, "--session");
       requireOnlyOptions(args.slice(1), ["--source", "--session", "--json"], "reset");
@@ -108,7 +139,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         source,
         sessionId,
         kind: "session.ended",
-        occurredAt: Date.now(),
+        occurredAt: Math.max(Date.now(), session.updatedAt + 1),
         generation: session.generation,
         reason: "manual-reset",
         confidence: "wrapper",

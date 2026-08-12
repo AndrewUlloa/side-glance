@@ -6,6 +6,8 @@ import {
   type SignalState,
 } from "./protocol.ts";
 
+const MAX_SEEN_EVENT_IDS = 4_096;
+
 export function createSignalState(): SignalState {
   return {
     schemaVersion: 1,
@@ -25,6 +27,9 @@ export function reduceSignalEvent(
 
   const key = sessionKey(event.source, event.sessionId);
   const current = state.sessions[key];
+  if (current && event.occurredAt < current.updatedAt) {
+    return state;
+  }
   if (
     current &&
     event.generation !== undefined &&
@@ -70,7 +75,9 @@ export function reduceSignalEvent(
       ...state.sessions,
       [key]: nextSession,
     },
-    seenEventIds: [...state.seenEventIds, event.eventId],
+    seenEventIds: [...state.seenEventIds, event.eventId].slice(
+      -MAX_SEEN_EVENT_IDS,
+    ),
   };
 }
 

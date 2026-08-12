@@ -32,6 +32,17 @@ export interface InstallerResult {
   installedHooks: number;
 }
 
+export interface ProviderInspection {
+  provider: InstallableProvider;
+  configPath: string;
+  exists: boolean;
+  valid: true;
+  expectedEvents: number;
+  existingHookGroups: number;
+  signalHooks: number;
+  notifyConfigured?: boolean;
+}
+
 interface HookCommand {
   type: string;
   command?: string;
@@ -70,6 +81,35 @@ const PROVIDER_EVENTS: Readonly<Record<InstallableProvider, readonly string[]>> 
     "SessionEnd",
   ],
 };
+
+export async function inspectProviderHooks(options: {
+  provider: InstallableProvider;
+  homeDirectory: string;
+}): Promise<ProviderInspection> {
+  if (!path.isAbsolute(options.homeDirectory)) {
+    throw new Error("Doctor home directory must be absolute.");
+  }
+  const homeDirectory = path.resolve(options.homeDirectory);
+  const configPath = configPathFor(homeDirectory, options.provider);
+  const loaded = await readConfiguration(configPath);
+  const hooks = readHooks(loaded.value);
+  const groups = Object.values(hooks).flat();
+  const inspection: ProviderInspection = {
+    provider: options.provider,
+    configPath,
+    exists: loaded.exists,
+    valid: true,
+    expectedEvents: PROVIDER_EVENTS[options.provider].length,
+    existingHookGroups: groups.length,
+    signalHooks: groups
+      .flatMap((group) => group.hooks)
+      .filter((hook) => isManagedCommand(hook.command, options.provider)).length,
+  };
+  if (options.provider === "codex") {
+    inspection.notifyConfigured = await inspectCodexNotify(homeDirectory);
+  }
+  return inspection;
+}
 
 export async function installProviderHooks(
   options: InstallerOptions,
@@ -157,6 +197,25 @@ function configPathFor(homeDirectory: string, provider: InstallableProvider): st
     case "gemini":
       return path.join(homeDirectory, ".gemini", "settings.json");
   }
+}
+
+async function inspectCodexNotify(homeDirectory: string): Promise<boolean> {
+  const configPath = path.join(homeDirectory, ".codex", "config.toml");
+  let metadata;
+  try {
+    metadata = await lstat(configPath);
+  } catch (error) {
+    if (hasCode(error, "ENOENT")) return false;
+    throw error;
+  }
+  if (metadata.isSymbolicLink() || !metadata.isFile()) {
+    throw new Error("Codex config.toml must be a regular file, not a link.");
+  }
+  if (metadata.size > MAX_CONFIG_BYTES) {
+    throw new Error("Codex config.toml is too large to inspect safely.");
+  }
+  const raw = await readFile(configPath, "utf8");
+  return /^\s*notify\s*=/mu.test(raw);
 }
 
 async function validateOptions(

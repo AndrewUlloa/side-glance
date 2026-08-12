@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -166,6 +166,47 @@ test("doctor and preview are deterministic and do not require a live terminal", 
     wash: "3a2f16",
     accent: "e0a726",
   });
+});
+
+test("doctor inspects Claude and Codex plans without mutating existing configuration", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "signal-doctor-home-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  await mkdir(path.join(home, ".claude"), { recursive: true });
+  await mkdir(path.join(home, ".codex"), { recursive: true });
+  const claudePath = path.join(home, ".claude", "settings.json");
+  const codexHooksPath = path.join(home, ".codex", "hooks.json");
+  const codexConfigPath = path.join(home, ".codex", "config.toml");
+  await writeFile(
+    claudePath,
+    '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"/usr/bin/existing"}]}]}}\n',
+  );
+  await writeFile(codexHooksPath, '{"hooks":{}}\n');
+  await writeFile(
+    codexConfigPath,
+    'notify = ["SkyComputerUseClient", "agent-turn-complete"]\n',
+  );
+  const before = await Promise.all(
+    [claudePath, codexHooksPath, codexConfigPath].map((file) => readFile(file, "utf8")),
+  );
+
+  const result = await runCli(["doctor", "--home", home, "--json"], {
+    stateDirectory: directory,
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.providers.claude.valid, true);
+  assert.equal(report.providers.claude.existingHookGroups, 1);
+  assert.equal(report.providers.codex.valid, true);
+  assert.equal(report.providers.codex.notifyConfigured, true);
+  assert.equal(report.providers.codex.signalHooks, 0);
+  assert.deepEqual(
+    await Promise.all(
+      [claudePath, codexHooksPath, codexConfigPath].map((file) => readFile(file, "utf8")),
+    ),
+    before,
+  );
 });
 
 test("supervised run preserves child output and nonzero exit while cleaning its lease", async (context) => {
@@ -361,4 +402,40 @@ test("reset releases only the selected session", async (context) => {
   const sessions = JSON.parse(reset.stdout).sessions;
   assert.equal(sessions["generic:one"].phase, "inactive");
   assert.equal(sessions["generic:two"].phase, "working");
+});
+
+test("reset --all releases every tracked session after abnormal teardown", async (context) => {
+  const directory = await stateDirectory(context);
+  for (const [source, sessionId, surfaceId] of [
+    ["claude", "orphan-one", "test:one"],
+    ["codex", "orphan-two", "test:two"],
+  ] as const) {
+    const submitted = await runCli(["event", "--json"], {
+      stateDirectory: directory,
+      input: JSON.stringify({
+        v: 1,
+        eventId: `start-${sessionId}`,
+        source,
+        sessionId,
+        kind: "turn.started",
+        occurredAt: 1_000,
+        confidence: "wrapper",
+        target: { surfaceId },
+      }),
+    });
+    assert.equal(submitted.code, 0, submitted.stderr);
+  }
+
+  const reset = await runCli(["reset", "--all", "--json"], {
+    stateDirectory: directory,
+  });
+
+  assert.equal(reset.code, 0, reset.stderr);
+  const state = JSON.parse(reset.stdout);
+  assert.ok(Object.values(state.sessions).every(
+    (session) => (session as { phase: string }).phase === "inactive",
+  ));
+  assert.ok(Object.values(state.surfaces).every(
+    (surface) => (surface as { phase: string }).phase === "inactive",
+  ));
 });
