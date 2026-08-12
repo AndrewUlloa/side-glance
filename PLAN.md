@@ -34,21 +34,21 @@ protocol + reducer
 
 ### Phase 1: Deterministic core
 
-- [ ] **Task 1: Reject stale events and resolve session state**
+- [x] **Task 1: Reject stale events and resolve session state**
   - **Acceptance:** Normalized lifecycle transitions are typed; obsolete generations and duplicate event IDs do not alter state; prompt content is absent from the protocol.
   - **Verify:** focused reducer RED/GREEN; `npm run test:unit`.
   - **Depends on:** None
   - **Files:** `tests/unit/reducer.test.ts`, `src/core/protocol.ts`, `src/core/reducer.ts`
   - **Size:** M
 
-- [ ] **Task 2: Arbitrate multiple leases on one surface**
+- [x] **Task 2: Arbitrate multiple leases on one surface**
   - **Acceptance:** Priority is deterministic; releasing one owner recomputes from remaining owners; final release resolves inactive.
   - **Verify:** focused lease RED/GREEN; unit suite.
   - **Depends on:** Task 1
   - **Files:** `tests/unit/leases.test.ts`, `src/core/leases.ts`
   - **Size:** S
 
-- [ ] **Task 3: Preserve thermal urgency as validated policy**
+- [x] **Task 3: Preserve thermal urgency as validated policy**
   - **Acceptance:** Thresholds/palette validate; short tasks suppress; urgency is bounded/monotonic; adaptive response never changes lifecycle ordering.
   - **Verify:** policy RED/GREEN; unit suite.
   - **Depends on:** Task 1
@@ -57,9 +57,9 @@ protocol + reducer
 
 ### Checkpoint: Deterministic core
 
-- [ ] Unit tests pass on Node 24
-- [ ] Typecheck clean
-- [ ] Review stale-event and lease invariants
+- [x] Unit tests pass on Node 24
+- [x] Typecheck clean
+- [x] Review stale-event and lease invariants
 
 ### Phase 2: Persistence and safe rendering
 
