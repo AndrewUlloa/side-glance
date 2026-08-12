@@ -31,6 +31,14 @@ export function reduceSignalEvent(
   ) {
     return state;
   }
+  if (
+    current?.turnId &&
+    event.turnId &&
+    event.turnId !== current.turnId &&
+    isTurnScopedFollowUp(event.kind)
+  ) {
+    return state;
+  }
 
   const generation = nextGeneration(current, event);
   const phase = phaseFor(event.kind);
@@ -94,4 +102,14 @@ function phaseFor(kind: SignalEvent["kind"]): SignalPhase {
     case "session.ended":
       return "inactive";
   }
+}
+
+function isTurnScopedFollowUp(kind: SignalEvent["kind"]): boolean {
+  return [
+    "attention.waiting",
+    "attention.acknowledged",
+    "turn.completed",
+    "turn.failed",
+    "turn.cancelled",
+  ].includes(kind);
 }

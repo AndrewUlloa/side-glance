@@ -79,6 +79,34 @@ test("ignores an older generation after a newer turn starts", () => {
   assert.equal(state.sessions["claude:session-a"]?.turnId, "turn-2");
 });
 
+test("ignores a delayed provider event whose turn ID no longer owns the session", () => {
+  let state = createSignalState();
+  state = reduceSignalEvent(
+    state,
+    event("turn-1-start", "turn.started", { turnId: "turn-1" }),
+  );
+  state = reduceSignalEvent(
+    state,
+    event("turn-2-start", "turn.started", {
+      turnId: "turn-2",
+      occurredAt: 2_000,
+    }),
+  );
+  const beforeDelayedCompletion = state;
+
+  state = reduceSignalEvent(
+    state,
+    event("turn-1-late", "turn.completed", {
+      turnId: "turn-1",
+      occurredAt: 3_000,
+    }),
+  );
+
+  assert.strictEqual(state, beforeDelayedCompletion);
+  assert.equal(state.sessions["claude:session-a"]?.phase, "working");
+  assert.equal(state.sessions["claude:session-a"]?.turnId, "turn-2");
+});
+
 test("applies a duplicate event ID only once", () => {
   const first = event("same-event", "turn.started", {
     generation: 1,

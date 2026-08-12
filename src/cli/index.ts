@@ -5,6 +5,12 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { adaptAiderNotification } from "../adapters/aider.ts";
+import { adaptClaudeHook } from "../adapters/claude.ts";
+import { adaptCodexHook } from "../adapters/codex.ts";
+import { adaptGeminiHook } from "../adapters/gemini.ts";
+import { adaptOpenCodeEvent } from "../adapters/opencode.ts";
+import type { AdapterContext, AdapterResult } from "../adapters/types.ts";
 import { SignalController } from "../core/controller.ts";
 import { urgencyFromElapsed } from "../core/policy.ts";
 import { sessionKey, type SignalPhase } from "../core/protocol.ts";
@@ -23,6 +29,32 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     case "event": {
       requireExactArgs(args.slice(1), ["--json"], "event");
       const event = parseSignalEvent(JSON.parse(await readBoundedStdin()));
+      writeJson(await new SignalController(store).submit(event));
+      return 0;
+    }
+    case "hook": {
+      const provider = parseOption(args, "--provider");
+      const surfaceId = parseOption(args, "--surface");
+      requireOnlyOptions(
+        args.slice(1),
+        ["--provider", "--surface", "--session", "--json"],
+        "hook",
+      );
+      const sessionIndex = args.indexOf("--session");
+      const fallbackSessionId =
+        sessionIndex === -1 ? process.env.SIGNAL_SESSION_ID : args[sessionIndex + 1];
+      const context: AdapterContext = {
+        eventId: randomUUID(),
+        occurredAt: Date.now(),
+        target: { surfaceId },
+        ...(fallbackSessionId ? { fallbackSessionId } : {}),
+      };
+      const rawPayload: unknown = JSON.parse(await readBoundedStdin());
+      const event = adaptProviderHook(provider, rawPayload, context);
+      if (!event) {
+        writeJson({ accepted: false });
+        return 0;
+      }
       writeJson(await new SignalController(store).submit(event));
       return 0;
     }
@@ -86,7 +118,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     default:
       throw new Error(
-        "usage: signal <event|status|doctor|preview|reset|run> [options]",
+        "usage: signal <event|hook|status|doctor|preview|reset|run> [options]",
       );
   }
 }
@@ -165,6 +197,27 @@ function requireOnlyOptions(
 
 function writeJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value)}\n`);
+}
+
+function adaptProviderHook(
+  provider: string,
+  payload: unknown,
+  context: AdapterContext,
+): AdapterResult {
+  switch (provider) {
+    case "claude":
+      return adaptClaudeHook(payload, context);
+    case "codex":
+      return adaptCodexHook(payload, context);
+    case "gemini":
+      return adaptGeminiHook(payload, context);
+    case "opencode":
+      return adaptOpenCodeEvent(payload, context);
+    case "aider":
+      return adaptAiderNotification(payload, context);
+    default:
+      throw new Error(`Unsupported hook provider: ${provider}.`);
+  }
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : undefined;

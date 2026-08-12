@@ -99,7 +99,7 @@ protocol + reducer
   - **Files:** `tests/integration/cli.test.ts`, `src/cli/index.ts`, `src/cli/run.ts`, `package.json`
   - **Size:** M
 
-- [ ] **Task 8: Add provider adapters**
+- [x] **Task 8: Add provider adapters**
   - **Acceptance:** Claude, Codex, Gemini, OpenCode, Aider/generic fixtures map documented events to normalized phases; compact/resume/failure/waiting semantics are distinct.
   - **Verify:** adapter RED/GREEN fixture suite.
   - **Depends on:** Task 7

@@ -1,0 +1,64 @@
+import type {
+  SignalConfidence,
+  SignalEvent,
+  SignalEventKind,
+  SignalSource,
+} from "../core/protocol.ts";
+import { parseSignalEvent } from "../core/validation.ts";
+import type { AdapterContext } from "./types.ts";
+
+export function adapterRecord(
+  value: unknown,
+  provider: string,
+): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${provider} hook payload must be an object.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+export function providerSessionId(
+  payload: Record<string, unknown>,
+  context: AdapterContext,
+  provider: string,
+): string {
+  const candidate =
+    stringValue(payload.session_id) ??
+    stringValue(payload.sessionId) ??
+    stringValue(payload.sessionID) ??
+    context.fallbackSessionId;
+  if (!candidate) {
+    throw new Error(`${provider} hook payload is missing its session ID.`);
+  }
+  return candidate;
+}
+
+export function buildAdapterEvent(options: {
+  source: SignalSource;
+  sessionId: string;
+  kind: SignalEventKind;
+  context: AdapterContext;
+  confidence?: SignalConfidence;
+  turnId?: string;
+  reason?: string;
+}): SignalEvent {
+  return parseSignalEvent({
+    v: 1,
+    eventId: options.context.eventId,
+    source: options.source,
+    sessionId: options.sessionId,
+    kind: options.kind,
+    occurredAt: options.context.occurredAt,
+    ...(options.context.generation !== undefined
+      ? { generation: options.context.generation }
+      : {}),
+    ...(options.turnId ? { turnId: options.turnId } : {}),
+    ...(options.reason ? { reason: options.reason } : {}),
+    confidence: options.confidence ?? "native",
+    ...(options.context.target ? { target: options.context.target } : {}),
+  });
+}
+
+export function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}

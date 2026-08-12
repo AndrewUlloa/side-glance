@@ -80,6 +80,29 @@ test("accepts a normalized event and reports status without prompt content", asy
   assert.equal(status.stdout.includes("prompt"), false);
 });
 
+test("adapts a provider-native hook payload through the executable", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(
+    ["hook", "--provider", "claude", "--surface", "test:hook", "--json"],
+    {
+      stateDirectory: directory,
+      input: JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        session_id: "claude-native-session",
+        prompt: "private prompt",
+      }),
+    },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  const session = JSON.parse(result.stdout).sessions[
+    "claude:claude-native-session"
+  ];
+  assert.equal(session.phase, "working");
+  assert.equal(session.target.surfaceId, "test:hook");
+  assert.equal(result.stdout.includes("private prompt"), false);
+});
+
 test("rejects malformed event JSON without creating executable state", async (context) => {
   const directory = await stateDirectory(context);
   const result = await runCli(["event", "--json"], {
