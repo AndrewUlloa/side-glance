@@ -63,7 +63,7 @@ protocol + reducer
 
 ### Phase 2: Persistence and safe rendering
 
-- [ ] **Task 4: Serialize and recover private state**
+- [x] **Task 4: Serialize and recover private state**
   - **Acceptance:** Concurrent writers cannot lose updates; state writes are atomic/private; corrupt/old state safely resets; stale lock can be reclaimed only after validation.
   - **Verify:** filesystem and concurrent-process RED/GREEN integration tests.
   - **Depends on:** Tasks 1–2
