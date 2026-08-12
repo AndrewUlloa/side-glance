@@ -70,7 +70,7 @@ protocol + reducer
   - **Files:** `tests/integration/store.test.ts`, `src/core/store.ts`, `src/core/controller.ts`
   - **Size:** M
 
-- [ ] **Task 5: Render only to verified terminal surfaces**
+- [x] **Task 5: Render only to verified terminal surfaces**
   - **Acceptance:** Regular files, unsafe symlinks, missing/unowned devices, and control-byte labels are rejected; captured bytes contain only expected OSC sequences; reset uses OSC 111.
   - **Verify:** PTY/fixture RED/GREEN integration tests.
   - **Depends on:** Task 4
