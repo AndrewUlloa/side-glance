@@ -45,7 +45,10 @@ export async function runSupervised(
 
   let result: SupervisedRunResult;
   try {
-    result = await superviseChild(childArgs[0], childArgs.slice(1));
+    result = await superviseChild(childArgs[0], childArgs.slice(1), {
+      SIGNAL_SURFACE_ID: surfaceId,
+      SIGNAL_SESSION_ID: sessionId,
+    });
   } catch (error) {
     await submitEnd(controller, sessionId, surfaceId, "spawn-failed");
     throw error;
@@ -63,9 +66,13 @@ export async function runSupervised(
 async function superviseChild(
   executable: string,
   args: readonly string[],
+  signalEnvironment: Record<string, string>,
 ): Promise<SupervisedRunResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(executable, [...args], { stdio: "inherit" });
+    const child = spawn(executable, [...args], {
+      stdio: "inherit",
+      env: { ...process.env, ...signalEnvironment },
+    });
     const forwardedSignals: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
     const handlers = new Map<NodeJS.Signals, () => void>();
     for (const signal of forwardedSignals) {

@@ -17,7 +17,11 @@ interface CliResult {
 
 async function runCli(
   args: readonly string[],
-  options: { input?: string; stateDirectory: string },
+  options: {
+    input?: string;
+    stateDirectory: string;
+    env?: Record<string, string>;
+  },
 ): Promise<CliResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [cliPath, ...args], {
@@ -25,6 +29,7 @@ async function runCli(
         ...process.env,
         SIGNAL_STATE_DIR: options.stateDirectory,
         NO_COLOR: "1",
+        ...options.env,
       },
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -103,6 +108,25 @@ test("adapts a provider-native hook payload through the executable", async (cont
   assert.equal(result.stdout.includes("private prompt"), false);
 });
 
+test("uses the wrapper-provided surface for an installed hook command", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(["hook", "--provider", "claude", "--json"], {
+    stateDirectory: directory,
+    env: { SIGNAL_SURFACE_ID: "test:wrapper-surface" },
+    input: JSON.stringify({
+      hook_event_name: "SessionStart",
+      session_id: "claude-installed-hook",
+    }),
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(
+    JSON.parse(result.stdout).sessions["claude:claude-installed-hook"].target
+      .surfaceId,
+    "test:wrapper-surface",
+  );
+});
+
 test("rejects malformed event JSON without creating executable state", async (context) => {
   const directory = await stateDirectory(context);
   const result = await runCli(["event", "--json"], {
@@ -170,6 +194,68 @@ test("supervised run preserves child output and nonzero exit while cleaning its 
   };
   assert.equal(session.phase, "inactive");
   assert.equal(session.reason, "exit:7");
+});
+
+test("supervised run passes stable surface and session identity to provider hooks", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(
+    [
+      "run",
+      "--surface",
+      "test:inherited-surface",
+      "--",
+      process.execPath,
+      "-e",
+      "process.stdout.write(JSON.stringify({surface: process.env.SIGNAL_SURFACE_ID, session: process.env.SIGNAL_SESSION_ID}))",
+    ],
+    { stateDirectory: directory },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  const environment = JSON.parse(result.stdout);
+  assert.equal(environment.surface, "test:inherited-surface");
+  assert.match(environment.session, /^wrapper-/u);
+});
+
+test("exposes transactional provider install and uninstall commands", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "signal-cli-install-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "signal-bin");
+  await import("node:fs/promises").then(async ({ chmod, writeFile }) => {
+    await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+    await chmod(executable, 0o700);
+  });
+
+  const installed = await runCli(
+    [
+      "install",
+      "claude",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { stateDirectory: directory },
+  );
+  assert.equal(installed.code, 0, installed.stderr);
+  assert.equal(JSON.parse(installed.stdout).changed, true);
+
+  const uninstalled = await runCli(
+    [
+      "uninstall",
+      "claude",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { stateDirectory: directory },
+  );
+  assert.equal(uninstalled.code, 0, uninstalled.stderr);
+  assert.equal(JSON.parse(uninstalled.stdout).installedHooks, 0);
 });
 
 test(

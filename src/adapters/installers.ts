@@ -1,0 +1,376 @@
+import { constants } from "node:fs";
+import {
+  chmod,
+  copyFile,
+  lstat,
+  mkdir,
+  open,
+  readFile,
+  rename,
+  stat,
+  unlink,
+} from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+
+const MANAGED_MARKER = "SIGNAL_MANAGED_HOOK=1";
+const MAX_CONFIG_BYTES = 2 * 1_048_576;
+
+export type InstallableProvider = "claude" | "codex" | "gemini";
+
+export interface InstallerOptions {
+  provider: InstallableProvider;
+  homeDirectory: string;
+  executablePath: string;
+}
+
+export interface InstallerResult {
+  provider: InstallableProvider;
+  configPath: string;
+  changed: boolean;
+  backupPath?: string;
+  installedHooks: number;
+}
+
+interface HookCommand {
+  type: string;
+  command?: string;
+  [key: string]: unknown;
+}
+
+interface HookGroup {
+  hooks: HookCommand[];
+  [key: string]: unknown;
+}
+
+type HookConfiguration = Record<string, HookGroup[]>;
+
+const PROVIDER_EVENTS: Readonly<Record<InstallableProvider, readonly string[]>> = {
+  claude: [
+    "SessionStart",
+    "UserPromptSubmit",
+    "PermissionRequest",
+    "Notification",
+    "Stop",
+    "StopFailure",
+    "SessionEnd",
+  ],
+  codex: [
+    "SessionStart",
+    "UserPromptSubmit",
+    "PermissionRequest",
+    "Stop",
+    "SessionEnd",
+  ],
+  gemini: [
+    "SessionStart",
+    "BeforeAgent",
+    "AfterAgent",
+    "Notification",
+    "SessionEnd",
+  ],
+};
+
+export async function installProviderHooks(
+  options: InstallerOptions,
+): Promise<InstallerResult> {
+  const validated = await validateOptions(options, true);
+  const loaded = await readConfiguration(validated.configPath);
+  const configuration = loaded.value;
+  const hooks = readHooks(configuration);
+  const command = managedCommand(options.provider, validated.executablePath);
+
+  for (const eventName of PROVIDER_EVENTS[options.provider]) {
+    const groups = hooks[eventName] ?? [];
+    const withoutOldSignalHandlers = removeManagedHandlers(
+      groups,
+      options.provider,
+    );
+    withoutOldSignalHandlers.push({
+      hooks: [{ type: "command", command }],
+    });
+    hooks[eventName] = withoutOldSignalHandlers;
+  }
+  configuration.hooks = hooks;
+
+  const serialized = serializeConfiguration(configuration);
+  if (serialized === loaded.serialized) {
+    return result(options.provider, validated.configPath, false);
+  }
+
+  const backupPath = loaded.exists
+    ? await backupConfiguration(validated.configPath)
+    : undefined;
+  await writeConfigurationAtomic(
+    validated.configPath,
+    serialized,
+    loaded.mode,
+  );
+  return {
+    ...result(options.provider, validated.configPath, true),
+    ...(backupPath ? { backupPath } : {}),
+    installedHooks: PROVIDER_EVENTS[options.provider].length,
+  };
+}
+
+export async function uninstallProviderHooks(
+  options: InstallerOptions,
+): Promise<InstallerResult> {
+  const validated = await validateOptions(options, false);
+  const loaded = await readConfiguration(validated.configPath);
+  if (!loaded.exists) {
+    return result(options.provider, validated.configPath, false);
+  }
+  const configuration = loaded.value;
+  const hooks = readHooks(configuration);
+
+  for (const [eventName, groups] of Object.entries(hooks)) {
+    const retained = removeManagedHandlers(groups, options.provider);
+    if (retained.length > 0) hooks[eventName] = retained;
+    else delete hooks[eventName];
+  }
+  configuration.hooks = hooks;
+
+  const serialized = serializeConfiguration(configuration);
+  if (serialized === loaded.serialized) {
+    return result(options.provider, validated.configPath, false);
+  }
+
+  const backupPath = await backupConfiguration(validated.configPath);
+  await writeConfigurationAtomic(
+    validated.configPath,
+    serialized,
+    loaded.mode,
+  );
+  return {
+    ...result(options.provider, validated.configPath, true),
+    backupPath,
+  };
+}
+
+function configPathFor(homeDirectory: string, provider: InstallableProvider): string {
+  switch (provider) {
+    case "claude":
+      return path.join(homeDirectory, ".claude", "settings.json");
+    case "codex":
+      return path.join(homeDirectory, ".codex", "hooks.json");
+    case "gemini":
+      return path.join(homeDirectory, ".gemini", "settings.json");
+  }
+}
+
+async function validateOptions(
+  options: InstallerOptions,
+  requireExecutable: boolean,
+): Promise<{
+  configPath: string;
+  executablePath: string;
+}> {
+  if (!path.isAbsolute(options.homeDirectory)) {
+    throw new Error("Installer home directory must be absolute.");
+  }
+  if (!path.isAbsolute(options.executablePath)) {
+    throw new Error("Signal executable path must be absolute.");
+  }
+  const executablePath = path.resolve(options.executablePath);
+  if (requireExecutable) {
+    const executableMetadata = await lstat(executablePath);
+    if (executableMetadata.isSymbolicLink() || !executableMetadata.isFile()) {
+      throw new Error("Signal executable must be a regular file, not a symbolic link.");
+    }
+    if ((executableMetadata.mode & 0o111) === 0) {
+      throw new Error("Signal executable must have an executable permission bit.");
+    }
+  }
+
+  return {
+    configPath: configPathFor(path.resolve(options.homeDirectory), options.provider),
+    executablePath,
+  };
+}
+
+async function readConfiguration(configPath: string): Promise<{
+  exists: boolean;
+  value: Record<string, unknown>;
+  serialized: string;
+  mode: number;
+}> {
+  let metadata;
+  try {
+    metadata = await lstat(configPath);
+  } catch (error) {
+    if (hasCode(error, "ENOENT")) {
+      const value = {};
+      return {
+        exists: false,
+        value,
+        serialized: serializeConfiguration(value),
+        mode: 0o600,
+      };
+    }
+    throw error;
+  }
+
+  if (metadata.isSymbolicLink()) {
+    throw new Error("Provider configuration may not be a symbolic link.");
+  }
+  if (!metadata.isFile()) {
+    throw new Error("Provider configuration must be a regular file.");
+  }
+  if (metadata.size > MAX_CONFIG_BYTES) {
+    throw new Error("Provider configuration is too large to update safely.");
+  }
+
+  const raw = await readFile(configPath, "utf8");
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new Error("Provider configuration contains malformed JSON; no changes made.");
+  }
+  if (!isRecord(value)) {
+    throw new Error("Provider configuration JSON must contain an object.");
+  }
+  return {
+    exists: true,
+    value,
+    serialized: serializeConfiguration(value),
+    mode: metadata.mode & 0o777,
+  };
+}
+
+function readHooks(configuration: Record<string, unknown>): HookConfiguration {
+  if (configuration.hooks === undefined) return {};
+  if (!isRecord(configuration.hooks)) {
+    throw new Error("Provider hooks configuration must be an object.");
+  }
+
+  const parsed: HookConfiguration = {};
+  for (const [eventName, value] of Object.entries(configuration.hooks)) {
+    if (!Array.isArray(value)) {
+      throw new Error(`Provider hook event ${eventName} must contain an array.`);
+    }
+    parsed[eventName] = value.map((group) => parseHookGroup(group, eventName));
+  }
+  return parsed;
+}
+
+function parseHookGroup(value: unknown, eventName: string): HookGroup {
+  if (!isRecord(value) || !Array.isArray(value.hooks)) {
+    throw new Error(`Provider hook group ${eventName} must contain a hooks array.`);
+  }
+  const hooks = value.hooks.map((hook) => {
+    if (!isRecord(hook) || typeof hook.type !== "string") {
+      throw new Error(`Provider hook command ${eventName} has an invalid shape.`);
+    }
+    if (hook.command !== undefined && typeof hook.command !== "string") {
+      throw new Error(`Provider hook command ${eventName} must be a string.`);
+    }
+    return { ...hook } as HookCommand;
+  });
+  return { ...value, hooks } as HookGroup;
+}
+
+function removeManagedHandlers(
+  groups: readonly HookGroup[],
+  provider: InstallableProvider,
+): HookGroup[] {
+  return groups.flatMap((group) => {
+    const hooks = group.hooks.filter(
+      (hook) => !isManagedCommand(hook.command, provider),
+    );
+    return hooks.length > 0 ? [{ ...group, hooks }] : [];
+  });
+}
+
+function isManagedCommand(
+  command: string | undefined,
+  provider: InstallableProvider,
+): boolean {
+  return (
+    typeof command === "string" &&
+    command.startsWith(`${MANAGED_MARKER} `) &&
+    command.includes(` hook --provider ${provider} --json`)
+  );
+}
+
+function managedCommand(
+  provider: InstallableProvider,
+  executablePath: string,
+): string {
+  return `${MANAGED_MARKER} ${shellQuote(executablePath)} hook --provider ${provider} --json`;
+}
+
+function shellQuote(value: string): string {
+  if ([...value].some((character) => (character.codePointAt(0) ?? 0) <= 0x1f)) {
+    throw new Error("Signal executable path may not contain control characters.");
+  }
+  return `'${value.replaceAll("'", `'"'"'`)}'`;
+}
+
+async function backupConfiguration(configPath: string): Promise<string> {
+  const backupPath = `${configPath}.signal-backup-${Date.now()}-${randomUUID()}`;
+  await copyFile(configPath, backupPath, constants.COPYFILE_EXCL);
+  const metadata = await stat(configPath);
+  await chmod(backupPath, metadata.mode & 0o777);
+  return backupPath;
+}
+
+async function writeConfigurationAtomic(
+  configPath: string,
+  serialized: string,
+  mode: number,
+): Promise<void> {
+  await mkdir(path.dirname(configPath), { recursive: true, mode: 0o700 });
+  const temporaryPath = path.join(
+    path.dirname(configPath),
+    `.${path.basename(configPath)}.${process.pid}.${randomUUID()}.tmp`,
+  );
+  let handle;
+  try {
+    handle = await open(
+      temporaryPath,
+      constants.O_CREAT |
+        constants.O_EXCL |
+        constants.O_WRONLY |
+        constants.O_NOFOLLOW,
+      mode,
+    );
+    await handle.writeFile(serialized, "utf8");
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await rename(temporaryPath, configPath);
+    await chmod(configPath, mode);
+  } finally {
+    if (handle) await handle.close();
+    await unlink(temporaryPath).catch((error: unknown) => {
+      if (!hasCode(error, "ENOENT")) throw error;
+    });
+  }
+}
+
+function serializeConfiguration(value: Record<string, unknown>): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+function result(
+  provider: InstallableProvider,
+  configPath: string,
+  changed: boolean,
+): InstallerResult {
+  return { provider, configPath, changed, installedHooks: 0 };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasCode(error: unknown, code: string): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === code
+  );
+}

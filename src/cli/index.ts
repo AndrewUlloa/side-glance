@@ -16,6 +16,7 @@ import { urgencyFromElapsed } from "../core/policy.ts";
 import { sessionKey, type SignalPhase } from "../core/protocol.ts";
 import { FileSignalStore } from "../core/store.ts";
 import { parseSignalEvent, parseSignalSource } from "../core/validation.ts";
+import { runInstallCommand } from "./install.ts";
 import { runSupervised } from "./run.ts";
 
 const MAX_STDIN_BYTES = 1_048_576;
@@ -34,7 +35,13 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     case "hook": {
       const provider = parseOption(args, "--provider");
-      const surfaceId = parseOption(args, "--surface");
+      const surfaceId =
+        optionalOption(args, "--surface") ?? process.env.SIGNAL_SURFACE_ID;
+      if (!surfaceId) {
+        throw new Error(
+          "hook requires --surface or the SIGNAL_SURFACE_ID wrapper environment.",
+        );
+      }
       requireOnlyOptions(
         args.slice(1),
         ["--provider", "--surface", "--session", "--json"],
@@ -58,6 +65,9 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       writeJson(await new SignalController(store).submit(event));
       return 0;
     }
+    case "install":
+    case "uninstall":
+      return runInstallCommand(args.slice(1), command);
     case "status": {
       requireExactArgs(args.slice(1), ["--json"], "status");
       writeJson(await store.read());
@@ -118,7 +128,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     default:
       throw new Error(
-        "usage: signal <event|hook|status|doctor|preview|reset|run> [options]",
+        "usage: signal <event|hook|status|doctor|preview|reset|run|install|uninstall> [options]",
       );
   }
 }
@@ -157,6 +167,16 @@ function parseOption(args: readonly string[], name: string): string {
   const index = args.indexOf(name);
   const value = args[index + 1];
   if (index === -1 || value === undefined || value.startsWith("--")) {
+    throw new Error(`${name} requires a value.`);
+  }
+  return value;
+}
+
+function optionalOption(args: readonly string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  if (index === -1) return undefined;
+  const value = args[index + 1];
+  if (value === undefined || value.startsWith("--")) {
     throw new Error(`${name} requires a value.`);
   }
   return value;

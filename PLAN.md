@@ -106,7 +106,7 @@ protocol + reducer
   - **Files:** `tests/unit/adapters.test.ts`, `src/adapters/*.ts`
   - **Size:** M
 
-- [ ] **Task 9: Install and uninstall without clobbering configuration**
+- [x] **Task 9: Install and uninstall without clobbering configuration**
   - **Acceptance:** Temp-home installs are idempotent; existing hooks and Codex notify survive; uninstall removes only Signal-owned entries; generated commands use absolute executable paths.
   - **Verify:** installer RED/GREEN integration suite.
   - **Depends on:** Task 8
