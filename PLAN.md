@@ -92,7 +92,7 @@ protocol + reducer
 
 ### Phase 3: CLI and adapters
 
-- [ ] **Task 7: Add operational CLI and supervised wrapper**
+- [x] **Task 7: Add operational CLI and supervised wrapper**
   - **Acceptance:** `event`, `run`, `status`, `doctor`, `preview`, and `reset` work; wrapper preserves child exit/signal behavior and releases only its own lease.
   - **Verify:** spawned CLI RED/GREEN integration tests.
   - **Depends on:** Safe controller checkpoint

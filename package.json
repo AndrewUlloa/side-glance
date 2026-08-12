@@ -3,8 +3,11 @@
   "version": "0.0.0",
   "description": "A local-first attention layer for coding-agent CLIs.",
   "private": true,
+  "bin": {
+    "signal": "./src/cli/index.ts"
+  },
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
