@@ -1,4 +1,5 @@
 import { resolveSurface } from "./leases.ts";
+import { compactSignalState } from "./compact.ts";
 import { urgencyFromElapsed } from "./policy.ts";
 import type {
   SignalEvent,
@@ -58,7 +59,7 @@ export class SignalController {
       if (!resolution) {
         if (!previous) return next;
         await this.renderer.reset(previous.target, previous);
-        return {
+        return compactSignalState({
           ...next,
           surfaces: {
             ...next.surfaces,
@@ -72,7 +73,7 @@ export class SignalController {
               ownerKey: undefined,
             },
           },
-        };
+        });
       }
 
       const target = resolution.session.target ?? previous?.target ?? event.target;
@@ -82,7 +83,7 @@ export class SignalController {
         visualForSession(resolution.session),
         previous,
       );
-      return {
+      return compactSignalState({
         ...next,
         surfaces: {
           ...next.surfaces,
@@ -99,7 +100,7 @@ export class SignalController {
               : {}),
           },
         },
-      };
+      });
     });
   }
 }

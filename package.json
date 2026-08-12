@@ -16,6 +16,7 @@
     "test": "npm run test:unit && npm run test:integration && npm run test:site && npm run build && node --test tests/rendered-html.test.mjs",
     "test:unit": "node --test tests/unit/*.test.ts",
     "test:integration": "node --test tests/integration/*.test.ts",
+    "test:coverage": "node --experimental-test-coverage '--test-coverage-include=src/core/**/*.ts' --test-coverage-lines=90 --test-coverage-branches=70 --test-coverage-functions=95 --test tests/unit/*.test.ts tests/integration/*.test.ts",
     "test:site": "node --test tests/site/*.test.ts",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",

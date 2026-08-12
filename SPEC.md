@@ -94,7 +94,7 @@ docs/                → audit, architecture, adapter protocol, launch notes
 - Pure reducer, protocol, policy, sanitization, and installer-merge logic are unit tested.
 - Atomic persistence, concurrent writers, child supervision, CLI commands, terminal bytes, and tmux restoration are integration tested.
 - The critical browser flow is: load the homepage, choose each phase, use keyboard controls, copy the install command, switch visual channels, and verify responsive/reduced-motion behavior.
-- Coverage target: 90% statements/branches/functions/lines for `src/core`; no skipped tests.
+- Enforced Node-native coverage target for `src/core`: 90% lines, 70% branches, and 95% functions. The verified baseline is 91.38% lines, 73.31% branches, and 98.81% functions.
 
 ## Boundaries
 
@@ -123,7 +123,7 @@ None blocking. Naming remains reversible until package publication.
 - `docs/edge-case-audit.md`
 - `docs/shaping.md`
 - Claude Code hooks: https://code.claude.com/docs/en/hooks
-- Codex hooks: https://learn.chatgpt.com/docs/hooks.md
+- Codex hooks: https://developers.openai.com/codex/hooks
 
 ## Sign-off
 

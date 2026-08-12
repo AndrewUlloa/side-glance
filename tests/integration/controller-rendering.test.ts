@@ -184,3 +184,25 @@ test("never renders a stale event and recomputes shared ownership before reset",
   assert.equal(renderer.resets.length, 1);
   assert.equal(final.surfaces["tty:/dev/ttys001"]?.phase, "inactive");
 });
+
+test("bounds inactive surface history after repeated terminal churn", async (context) => {
+  const { controller } = await controllerFixture(context);
+  let state;
+  for (let index = 0; index < 260; index += 1) {
+    const target = { surfaceId: `logical:${index}` };
+    await controller.submit(
+      event("claude", `session-${index}`, `start-${index}`, "turn.started", index * 2 + 1, {
+        target,
+      }),
+    );
+    state = await controller.submit(
+      event("claude", `session-${index}`, `end-${index}`, "session.ended", index * 2 + 2, {
+        target,
+      }),
+    );
+  }
+
+  assert.equal(Object.keys(state?.surfaces ?? {}).length, 256);
+  assert.equal(state?.surfaces["logical:0"], undefined);
+  assert.equal(state?.surfaces["logical:259"]?.phase, "inactive");
+});

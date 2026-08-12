@@ -25,6 +25,7 @@ Before reporting work complete, run with Node 24 or newer:
 ```bash
 npm run test:unit
 npm run test:integration
+npm run test:coverage
 npm run lint
 npm run typecheck
 npm run build

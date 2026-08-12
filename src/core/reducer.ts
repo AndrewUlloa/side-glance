@@ -5,6 +5,7 @@ import {
   type SignalSessionState,
   type SignalState,
 } from "./protocol.ts";
+import { compactSignalState } from "./compact.ts";
 
 const MAX_SEEN_EVENT_IDS = 4_096;
 
@@ -69,7 +70,7 @@ export function reduceSignalEvent(
     updatedAt: event.occurredAt,
   };
 
-  return {
+  return compactSignalState({
     ...state,
     sessions: {
       ...state.sessions,
@@ -78,7 +79,7 @@ export function reduceSignalEvent(
     seenEventIds: [...state.seenEventIds, event.eventId].slice(
       -MAX_SEEN_EVENT_IDS,
     ),
-  };
+  });
 }
 
 function nextGeneration(

@@ -9,7 +9,7 @@ import type {
   SurfaceRenderResult,
   SurfaceVisual,
 } from "../core/controller.ts";
-import { renderTerminal } from "./terminal.ts";
+import { renderTerminal, TerminalGoneError } from "./terminal.ts";
 import {
   applyTmuxPaint,
   captureTmuxSnapshot,
@@ -70,14 +70,39 @@ async function resetSurface(
   previous: SignalSurfaceState,
 ): Promise<void> {
   if (target.tty && previous.terminalPainted) {
-    await renderTerminal(target.tty, "reset");
+    try {
+      await renderTerminal(target.tty, "reset");
+    } catch (error) {
+      if (!isGoneSurfaceError(error)) throw error;
+    }
   }
   if (previous.tmuxSnapshot) {
-    await restoreTmuxSnapshot(
-      createTmuxRunner(),
-      asTmuxSnapshot(previous.tmuxSnapshot),
-    );
+    try {
+      await restoreTmuxSnapshot(
+        createTmuxRunner(),
+        asTmuxSnapshot(previous.tmuxSnapshot),
+      );
+    } catch (error) {
+      if (!isGoneSurfaceError(error)) throw error;
+    }
   }
+}
+
+function isGoneSurfaceError(error: unknown): boolean {
+  if (error instanceof TerminalGoneError) return true;
+  if (typeof error !== "object" || error === null) return false;
+  if (
+    "code" in error &&
+    ["ENOENT", "ENXIO", "EIO", "ENODEV", "ESRCH", "EPERM"].includes(
+      String(error.code),
+    )
+  ) {
+    return true;
+  }
+  const message = "message" in error ? String(error.message) : "";
+  return /can't find (?:pane|window|session)|no server running|failed to connect|error connecting/iu.test(
+    message,
+  );
 }
 
 function asTmuxSnapshot(snapshot: SignalTmuxSnapshot): TmuxSnapshot {

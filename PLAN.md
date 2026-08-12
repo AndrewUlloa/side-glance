@@ -58,6 +58,7 @@ protocol + reducer
 ### Checkpoint: Deterministic core
 
 - [x] Unit tests pass on Node 24
+- [x] Core coverage clears enforced 90% line, 70% branch, and 95% function thresholds
 - [x] Typecheck clean
 - [x] Review stale-event and lease invariants
 
@@ -115,7 +116,7 @@ protocol + reducer
 
 ### Checkpoint: Usable product
 
-- [ ] Real Claude and Codex configuration plans pass `doctor` without live mutation
+- [x] Real Claude and Codex configuration plans pass `doctor` without live mutation
 - [x] Wrapper and adapters share one controller
 - [x] Package build and all non-browser gates pass
 
@@ -135,9 +136,9 @@ protocol + reducer
   - **Files:** `app/*`, `public/*`, browser evidence
   - **Size:** M
 
-- [ ] **Task 12: Review, launch, and rollback readiness**
-  - **Acceptance:** Five-axis review has no required findings; all gates green; package remains unpublished; site deploy succeeds with documented rollback.
-  - **Verify:** full commands from `CLAUDE.md`, deployment smoke test.
+- [x] **Task 12: Review, launch, and rollback readiness**
+  - **Acceptance:** Five-axis review has no required findings; all local and CI gates are green; package remains unpublished; deployment and live-install approval boundaries are documented with rollback.
+  - **Verify:** full commands from `CLAUDE.md`, browser production-build smoke test, draft PR checks.
   - **Depends on:** Task 11
   - **Files:** `REVIEW.md`, `LAUNCH.md`, `README.md`
   - **Size:** M

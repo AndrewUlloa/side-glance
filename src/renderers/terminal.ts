@@ -14,6 +14,10 @@ export interface TerminalPaint {
   allowTitle?: boolean;
 }
 
+export class TerminalGoneError extends Error {
+  override readonly name = "TerminalGoneError";
+}
+
 export function encodeTerminalPaint(paint: TerminalPaint): Uint8Array {
   if (!/^[0-9a-f]{6}$/i.test(paint.wash)) {
     throw new Error("Terminal wash color must be six hexadecimal digits.");
@@ -68,7 +72,7 @@ async function inspectTerminalPath(ttyPath: string) {
     metadata = await lstat(ttyPath);
   } catch (error) {
     if (hasCode(error, "ENOENT")) {
-      throw new Error(`Terminal target does not exist: ${ttyPath}`);
+      throw new TerminalGoneError(`Terminal target does not exist: ${ttyPath}`);
     }
     throw error;
   }
@@ -113,7 +117,9 @@ async function writeAll(
       bytes.byteLength - offset,
     );
     if (bytesWritten === 0) {
-      throw new Error("Terminal closed before Signal could finish rendering.");
+      throw new TerminalGoneError(
+        "Terminal closed before Signal could finish rendering.",
+      );
     }
     offset += bytesWritten;
   }

@@ -152,3 +152,39 @@ test("bounds the replay cache without changing the newest event order", () => {
   assert.equal(state.seenEventIds[0], "event-4");
   assert.equal(state.seenEventIds.at(-1), "event-4099");
 });
+
+test("bounds inactive session history while preserving every active session", () => {
+  let state = createSignalState();
+  for (let index = 0; index < 520; index += 1) {
+    const sessionId = `inactive-${index}`;
+    state = reduceSignalEvent(
+      state,
+      event(`start-${index}`, "turn.started", {
+        sessionId,
+        occurredAt: index * 2 + 1,
+      }),
+    );
+    state = reduceSignalEvent(
+      state,
+      event(`end-${index}`, "session.ended", {
+        sessionId,
+        occurredAt: index * 2 + 2,
+      }),
+    );
+  }
+  for (let index = 0; index < 3; index += 1) {
+    state = reduceSignalEvent(
+      state,
+      event(`active-${index}`, "turn.started", {
+        sessionId: `active-${index}`,
+        occurredAt: 2_000 + index,
+      }),
+    );
+  }
+
+  const sessions = Object.values(state.sessions);
+  assert.equal(sessions.filter(({ phase }) => phase === "inactive").length, 512);
+  assert.equal(sessions.filter(({ phase }) => phase !== "inactive").length, 3);
+  assert.equal(state.sessions["claude:inactive-0"], undefined);
+  assert.equal(state.sessions["claude:inactive-519"]?.phase, "inactive");
+});
