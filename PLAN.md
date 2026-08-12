@@ -77,7 +77,7 @@ protocol + reducer
   - **Files:** `tests/integration/terminal-renderer.test.ts`, `src/renderers/terminal.ts`, `src/core/sanitize.ts`
   - **Size:** M
 
-- [ ] **Task 6: Preserve exact Signal-owned tmux options**
+- [x] **Task 6: Preserve exact Signal-owned tmux options**
   - **Acceptance:** Existing local styles/formats are snapshotted and restored; inherited values remain inherited; shared panes do not blindly clear each other.
   - **Verify:** isolated tmux RED/GREEN tests.
   - **Depends on:** Tasks 2, 4
@@ -86,9 +86,9 @@ protocol + reducer
 
 ### Checkpoint: Safe controller
 
-- [ ] Unit and integration suites pass
-- [ ] No external path can become executable state or a terminal write target
-- [ ] Failure/recovery behavior reviewed
+- [x] Unit and integration suites pass
+- [x] No external path can become executable state or a terminal write target
+- [x] Failure/recovery behavior reviewed
 
 ### Phase 3: CLI and adapters
 
