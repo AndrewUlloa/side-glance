@@ -116,19 +116,19 @@ protocol + reducer
 ### Checkpoint: Usable product
 
 - [ ] Real Claude and Codex configuration plans pass `doctor` without live mutation
-- [ ] Wrapper and adapters share one controller
-- [ ] Package build and all non-browser gates pass
+- [x] Wrapper and adapters share one controller
+- [x] Package build and all non-browser gates pass
 
 ### Phase 4: Interactive site and shipping
 
-- [ ] **Task 10: Build the real state playground**
+- [x] **Task 10: Build the real state playground**
   - **Acceptance:** Page uses shared phase/theme data; visitors can use keyboard/touch to change state and renderer channel; copy/install command are product-specific.
   - **Verify:** component/model RED/GREEN, SSR test, local build.
   - **Depends on:** Task 3 and usable product checkpoint
   - **Files:** `app/page.tsx`, `app/globals.css`, `app/components/*`, `tests/site/*`
   - **Size:** M
 
-- [ ] **Task 11: Complete responsive, accessible product storytelling**
+- [x] **Task 11: Complete responsive, accessible product storytelling**
   - **Acceptance:** Original first viewport, capability/limitation story, CLI coverage, setup, FAQ, reduced motion, focus/touch/mobile behavior, bespoke metadata/social preview.
   - **Verify:** lint/type/build, real browser desktop/mobile/keyboard/reduced-motion/console/network check.
   - **Depends on:** Task 10

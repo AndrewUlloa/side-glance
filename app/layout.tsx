@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,12 +13,42 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Starter Project",
-  description: "A clean starting point for building your site.",
+  metadataBase: new URL("https://terminal-signal.pages.dev"),
+  title: "Signal — attention for coding agents",
+  description:
+    "A local-first terminal and tmux attention layer for Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any coding CLI.",
+  applicationName: "Signal",
+  keywords: [
+    "coding agents",
+    "terminal",
+    "tmux",
+    "Claude Code",
+    "Codex",
+    "developer tools",
+  ],
+  openGraph: {
+    type: "website",
+    title: "Signal — your terminal knows when it needs you",
+    description:
+      "Local-first lifecycle attention for coding-agent CLIs, with safe ordering, cleanup, and restoration.",
+    siteName: "Signal",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Signal — attention for coding agents",
+    description:
+      "A quiet thermal status layer across terminal backgrounds and tmux.",
+  },
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
   },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#0a0d0c",
 };
 
 export default function RootLayout({
@@ -28,9 +58,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
       </body>
     </html>
