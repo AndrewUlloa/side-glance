@@ -75,6 +75,7 @@ export function SignalPlayground() {
       <div
         className="terminal-demo"
         data-channel={channel}
+        data-motion-surface
         data-phase={phase}
         style={style}
       >

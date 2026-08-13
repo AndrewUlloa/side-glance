@@ -240,6 +240,22 @@ protocol + reducer
   - **Files:** `LAUNCH.md`, deployment evidence
   - **Size:** S
 
+### Phase 8: Linear-inspired motion system
+
+- [x] **Task 23: Add a test-covered motion contract**
+  - **Acceptance:** The site defines semantic hero entrances, viewport reveal hooks, ambient visual motion, explicit-property transitions, and a reduced-motion escape hatch without adding a motion dependency.
+  - **Verify:** focused RED/GREEN source contract plus rendered HTML test.
+  - **Depends on:** Task 22
+  - **Files:** `SPEC.md`, `PLAN.md`, `tests/site/motion-contract.test.ts`
+  - **Size:** S
+
+- [ ] **Task 24: Implement and ship the motion system**
+  - **Acceptance:** Motion matches the reference principles while preserving Signal’s visual identity; desktop, mobile, keyboard, and reduced-motion paths remain usable; an exact verified Vercel candidate is promoted with rollback recorded.
+  - **Verify:** lint, typecheck, build, full tests, coverage, production audit, real-browser desktop/mobile/reduced-motion checks, Vercel candidate inspection, and public smoke test.
+  - **Depends on:** Task 23
+  - **Files:** `app/page.tsx`, `app/components/MotionOrchestrator.tsx`, `app/components/SignalPlayground.tsx`, `app/globals.css`, review/launch notes
+  - **Size:** M
+
 ## Risks and Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |

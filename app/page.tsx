@@ -1,3 +1,4 @@
+import { MotionOrchestrator } from "./components/MotionOrchestrator";
 import { SignalPlayground } from "./components/SignalPlayground";
 
 const providers = [
@@ -63,6 +64,7 @@ const steps = [
 export default function Home() {
   return (
     <div className="site-shell">
+      <MotionOrchestrator />
       <header className="site-header">
         <nav className="nav-wrap" aria-label="Primary navigation">
           <a className="brand" href="#top" aria-label="Signal home">
@@ -88,17 +90,19 @@ export default function Home() {
       <main id="top">
         <section className="hero section-wrap" aria-labelledby="hero-title">
           <div className="hero-copy">
-            <div className="eyebrow">
+            <div className="eyebrow hero-enter hero-enter-1">
               <span className="pulse-dot" aria-hidden="true" />
               Local-first attention layer
             </div>
-            <h1 id="hero-title">Your terminal knows when it needs you.</h1>
-            <p className="hero-lede">
+            <h1 className="hero-enter hero-enter-2" id="hero-title">
+              Your terminal knows when it needs you.
+            </h1>
+            <p className="hero-lede hero-enter hero-enter-3">
               Signal turns coding-agent lifecycle events into a quiet, thermal
               status layer across terminal backgrounds and tmux—without reading
               your work.
             </p>
-            <div className="hero-actions">
+            <div className="hero-actions hero-enter hero-enter-4">
               <a className="primary-action" href="#playground">
                 Try the signal <span aria-hidden="true">↓</span>
               </a>
@@ -106,7 +110,10 @@ export default function Home() {
                 See the setup
               </a>
             </div>
-            <dl className="hero-proof" aria-label="Signal guarantees">
+            <dl
+              className="hero-proof hero-enter hero-enter-5"
+              aria-label="Signal guarantees"
+            >
               <div>
                 <dt>0</dt>
                 <dd>prompt content stored</dd>
@@ -122,13 +129,16 @@ export default function Home() {
             </dl>
           </div>
 
-          <div id="playground" className="hero-playground">
+          <div
+            id="playground"
+            className="hero-playground hero-enter hero-enter-visual"
+          >
             <SignalPlayground />
           </div>
         </section>
 
         <section className="trust-strip" aria-label="Supported coding agents">
-          <div className="section-wrap trust-inner">
+          <div className="section-wrap trust-inner" data-reveal>
             <span>One signal for</span>
             <div className="agent-wordmarks" aria-label="Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any CLI">
               <strong>Claude Code</strong>
@@ -146,7 +156,7 @@ export default function Home() {
           className="story-section section-wrap"
           aria-labelledby="how-title"
         >
-          <div className="section-heading">
+          <div className="section-heading" data-reveal>
             <p className="section-kicker">One event path</p>
             <h2 id="how-title">Lifecycle in. Attention out.</h2>
             <p>
@@ -156,7 +166,12 @@ export default function Home() {
           </div>
           <div className="step-grid">
             {steps.map((step) => (
-              <article className="step-card" key={step.number}>
+              <article
+                className="step-card"
+                data-reveal
+                data-reveal-order={step.number}
+                key={step.number}
+              >
                 <div className="step-number">{step.number}</div>
                 <h3>{step.title}</h3>
                 <p>{step.copy}</p>
@@ -168,7 +183,7 @@ export default function Home() {
 
         <section id="coverage" className="coverage-section">
           <div className="section-wrap coverage-wrap">
-            <div className="section-heading coverage-heading">
+            <div className="section-heading coverage-heading" data-reveal>
               <p className="section-kicker">Coverage without pretending</p>
               <h2>Every CLI gets a baseline. Native hooks add fidelity.</h2>
               <p>
@@ -177,8 +192,14 @@ export default function Home() {
               </p>
             </div>
             <div className="coverage-table" role="table" aria-label="Coding agent coverage">
-              {providers.map((provider) => (
-                <div className="coverage-row" role="row" key={provider.name}>
+              {providers.map((provider, index) => (
+                <div
+                  className="coverage-row"
+                  data-reveal
+                  data-reveal-order={Math.min(index + 1, 4)}
+                  role="row"
+                  key={provider.name}
+                >
                   <div className="provider-name" role="cell">
                     <span className="provider-mark" aria-hidden="true">
                       {provider.name.slice(0, 1)}
@@ -201,7 +222,7 @@ export default function Home() {
         </section>
 
         <section id="setup" className="setup-section section-wrap" aria-labelledby="setup-title">
-          <div className="setup-copy">
+          <div className="setup-copy" data-reveal>
             <p className="section-kicker">Start local</p>
             <h2 id="setup-title">Wrap any agent. Add native hooks when you want them.</h2>
             <p>
@@ -216,7 +237,12 @@ export default function Home() {
               <li>Manual doctor, status, preview, and reset</li>
             </ul>
           </div>
-          <div className="command-panel" aria-label="Signal setup commands">
+          <div
+            className="command-panel"
+            data-reveal
+            data-reveal-order="02"
+            aria-label="Signal setup commands"
+          >
             <div className="command-panel-head">
               <span>terminal</span>
               <span className="command-beta">release candidate · v0.1</span>
@@ -241,14 +267,14 @@ export default function Home() {
         </section>
 
         <section className="boundary-section section-wrap" aria-labelledby="boundary-title">
-          <div className="boundary-visual" aria-hidden="true">
+          <div className="boundary-visual" data-reveal aria-hidden="true">
             <div className="boundary-ring boundary-ring-one" />
             <div className="boundary-ring boundary-ring-two" />
             <div className="boundary-core">
               <SignalMark />
             </div>
           </div>
-          <div className="boundary-copy">
+          <div className="boundary-copy" data-reveal data-reveal-order="02">
             <p className="section-kicker">The honest boundary</p>
             <h2 id="boundary-title">Recovery, not magic.</h2>
             <p>
@@ -271,11 +297,11 @@ export default function Home() {
         </section>
 
         <section className="faq-section section-wrap" aria-labelledby="faq-title">
-          <div className="section-heading faq-heading">
+          <div className="section-heading faq-heading" data-reveal>
             <p className="section-kicker">Small print, in plain language</p>
             <h2 id="faq-title">Frequently asked questions</h2>
           </div>
-          <div className="faq-list">
+          <div className="faq-list" data-reveal data-reveal-order="02">
             <details>
               <summary>Does Signal read my prompts or transcripts?</summary>
               <p>
@@ -312,7 +338,11 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="closing-section section-wrap" aria-labelledby="closing-title">
+        <section
+          className="closing-section section-wrap"
+          data-reveal
+          aria-labelledby="closing-title"
+        >
           <SignalMark />
           <h2 id="closing-title">Keep the work moving. Let the terminal ask for you.</h2>
           <div className="closing-actions">

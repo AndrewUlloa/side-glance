@@ -147,6 +147,19 @@ The requester explicitly approved deploying the landing page to Vercel. Success 
 - metadata resolves to the Vercel production hostname; and
 - the production URL and rollback command are recorded in `LAUNCH.md`.
 
+## Landing Page Motion Contract
+
+The requester chose the current Linear homepage as the motion-quality reference. Signal borrows its restraint and hierarchy, not its branding or exact visual assets. Success means:
+
+- the hero enters in semantic chunks with a short, tightly staggered opacity/translate/blur sequence;
+- below-the-fold headings, product surfaces, rows, and calls to action reveal once as they enter the viewport;
+- slow ambient motion is confined to terminal, status, and recovery visuals so reading remains calm;
+- hover, press, and selected-state feedback uses interruptible transitions over explicit properties, never `transition: all`;
+- animations use compositor-friendly opacity, transform, and filter properties without adding a motion dependency;
+- controls remain operable during animation and keep at least 40px hit targets;
+- `prefers-reduced-motion: reduce` removes entrances, ambient loops, smooth scrolling, and meaningful transition delay while leaving every element visible; and
+- desktop and 390×844 mobile browser checks show no overflow, runtime errors, console errors, or failed resources.
+
 ## Open Questions
 
 No local implementation decision is blocking. The first public release still requires explicit approval and external setup for repository visibility, protected rulesets/environments, npm ownership and trusted publishing, private vulnerability reporting, and the Homebrew tap destination.
@@ -157,6 +170,7 @@ No local implementation decision is blocking. The first public release still req
 - `PLAN.md`
 - Claude Code hooks: https://code.claude.com/docs/en/hooks
 - Codex hooks: https://developers.openai.com/codex/hooks
+- Motion reference: https://linear.app/homepage
 
 ## Sign-off
 

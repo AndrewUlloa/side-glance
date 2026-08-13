@@ -14,6 +14,7 @@ Status: release-candidate implementation; external publication deferred
 | Homebrew | Generator passes locally | Immutable URLs and digests are schema-validated and the formula passes Ruby and Homebrew style checks. Tap `readall`, audit, URL installation, and upgrade tests require a real release and tap. |
 | UX and accessibility | Pass in production | The Vercel deployment was checked on desktop and 390×844 mobile, including playground interaction, overflow, console, runtime errors, and network resources. Install commands remain explicitly labeled unavailable until the beta is published. |
 | Site architecture | Pass in production | The only site runtime is standard Next.js 16.3 on Vercel. Cloudflare Worker, vinext, Wrangler, Vite bridge, D1 starter code, Worker types, and their lockfile graph were removed. Vercel built the canonical `npm run build` path, and deployment `dpl_CVPTgQi8hUGfjtfTJFaZxmgDyVWp` passed HTTP and real-browser verification before and after promotion. |
+| Motion and interaction | Pass locally; deployment pending | The Linear-inspired motion system keeps Signal’s identity while adding a 40–350ms hero stagger, one-time IntersectionObserver reveals, slow ambient product motion, and interruptible explicit-property hover/press feedback. Desktop, 390×844 mobile, keyboard focus, state interaction, and browser-emulated reduced motion pass with no overflow or runtime errors; reduced motion reveals all 19 elements with zero running animations. |
 
 ## Required findings
 
