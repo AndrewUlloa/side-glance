@@ -249,7 +249,7 @@ protocol + reducer
   - **Files:** `SPEC.md`, `PLAN.md`, `tests/site/motion-contract.test.ts`
   - **Size:** S
 
-- [ ] **Task 24: Implement and ship the motion system**
+- [x] **Task 24: Implement and ship the motion system**
   - **Acceptance:** Motion matches the reference principles while preserving Signal’s visual identity; desktop, mobile, keyboard, and reduced-motion paths remain usable; an exact verified Vercel candidate is promoted with rollback recorded.
   - **Verify:** lint, typecheck, build, full tests, coverage, production audit, real-browser desktop/mobile/reduced-motion checks, Vercel candidate inspection, and public smoke test.
   - **Depends on:** Task 23
