@@ -6,16 +6,16 @@ Signal is a release candidate. The requester approved the Vercel landing-page de
 
 - Public URL: https://terminal-signal.vercel.app
 - Project: `andrew-243s-projects/terminal-signal`
-- Promoted deployment: `dpl_GPpoXD6MML86fTWYXtHqTTWYPMcB`
-- Deployed source commit: `5363ca515419b1ab4a6a6584505278ac66b74ecb`
-- Previous known-good deployment: `dpl_AuxQwwaiHWE9dyycPNs3jduoy7gt`
+- Production deployment: `dpl_Fw8wk8gGHuFWyTjZYfn7Co7xnS5p`
+- Deployed source commit: `33d213ab47650f6f3e6d98b9402fa8d1729ae018`
+- Previous known-good deployment: `dpl_GPpoXD6MML86fTWYXtHqTTWYPMcB`
 - Build contract: Vercel ran the repository's canonical `npm run build` command using standard Next.js 16.3; no Cloudflare/vinext compatibility build remains.
-- Verification: HTTP 200 and correct deployment identity; `html.lenis` root initialization; trusted anchor navigation enters `lenis-smooth` and lands on the requested section; reduced motion navigates immediately without smoothing; 1440×800 desktop and 390×844 mobile have no horizontal overflow or browser errors.
+- Verification: deployment Ready and correctly aliased; live browser at 1256×833 shows the simplified hero with zero eyebrow/proof elements, zero Agentation UI roots or requests, no horizontal overflow, and no runtime errors. Vercel's one-hour error scan returned no logs.
 
 Rollback the promoted site to the previous known-good deployment with:
 
 ```bash
-vercel rollback dpl_AuxQwwaiHWE9dyycPNs3jduoy7gt --yes
+vercel rollback dpl_GPpoXD6MML86fTWYXtHqTTWYPMcB --yes
 ```
 
 ## Vercel Preview annotation tooling
@@ -25,7 +25,7 @@ vercel rollback dpl_AuxQwwaiHWE9dyycPNs3jduoy7gt --yes
 - Source commit: `a14d540`
 - Environment boundary: Agentation is enabled for local Next.js development and Vercel Preview/development, and disabled for production or unknown environments.
 - Data boundary: no endpoint, MCP configuration mutation, or remote sync is configured; annotations remain browser-local unless a reviewer explicitly adds a connection in their own toolbar.
-- Verification: the protected Preview returns HTTP 200 through `vercel curl`, its server payload passes `enabled: true`, and the reviewed hero contains neither the eyebrow nor proof strip. Local hydrated browser verification at 1256×833 shows Agentation 3.0.2, no horizontal overflow, and no browser errors. The public production alias remains on `dpl_GPpoXD6MML86fTWYXtHqTTWYPMcB`, where a fresh browser reports zero Agentation UI roots and zero Agentation requests.
+- Verification: the protected Preview returns HTTP 200 through `vercel curl`, its server payload passes `enabled: true`, and the reviewed hero contains neither the eyebrow nor proof strip. Local hydrated browser verification at 1256×833 shows Agentation 3.0.2, no horizontal overflow, and no browser errors. The public production alias now points to the separately built production deployment `dpl_Fw8wk8gGHuFWyTjZYfn7Co7xnS5p`, where a fresh browser reports zero Agentation UI roots and zero Agentation requests.
 - Promotion boundary: this Preview was not promoted and must not be promoted while the Agentation toolbar is part of its preview-only review surface.
 
 Preview rollback is isolation by default: leave the Preview unpromoted. Reverting `a14d540` removes the latest hero feedback from future previews without changing the public production alias.
