@@ -201,6 +201,29 @@ protocol + reducer
 - [x] No registry package, public release, visibility change, tap mutation, or live provider mutation occurred
 - [x] Release review and rollback documents match the artifacts
 
+### Phase 6: Vercel landing-page deployment
+
+- [x] **Task 18: Add a test-covered Vercel runtime contract**
+  - **Acceptance:** Standard Next.js is an explicit dependency; Vercel uses a dedicated build command; deployment metadata derives from the production hostname; the existing Cloudflare build remains available.
+  - **Verify:** focused RED/GREEN deployment-contract test, typecheck, Next.js production build, and existing vinext production build.
+  - **Depends on:** Task 12
+  - **Files:** `package.json`, `package-lock.json`, `vercel.json`, `app/layout.tsx`, `tests/site/vercel-deployment.test.ts`
+  - **Size:** M
+
+- [ ] **Task 19: Verify a real Vercel preview**
+  - **Acceptance:** The linked project belongs to the authenticated owner; the preview returns 200, renders the landing page, supports playground interaction, and has no browser console or failed-network errors.
+  - **Verify:** `vercel build`, `vercel deploy --prebuilt`, deployment inspection, and real-browser desktop/mobile checks.
+  - **Depends on:** Task 18
+  - **Files:** `.vercel/project.json` (ignored), deployment evidence
+  - **Size:** S
+
+- [ ] **Task 20: Promote the verified deployment and record rollback**
+  - **Acceptance:** The exact preview is promoted to the production alias; public verification passes; `LAUNCH.md` records the URL, deployment identity, and rollback command.
+  - **Verify:** `vercel promote`, `vercel inspect`, public HTTP/browser smoke test, and clean repository status.
+  - **Depends on:** Task 19
+  - **Files:** `LAUNCH.md`
+  - **Size:** S
+
 ## Risks and Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |

@@ -2,6 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+const productionHostname = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+const siteUrl = productionHostname
+  ? `https://${productionHostname}`
+  : "https://terminal-signal.vercel.app";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -13,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://terminal-signal.pages.dev"),
+  metadataBase: new URL(siteUrl),
   title: "Signal — attention for coding agents",
   description:
     "A local-first terminal and tmux attention layer for Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any coding CLI.",

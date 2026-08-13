@@ -70,10 +70,10 @@ Success means all controller invariants have executable regression tests; Claude
 ## Tech Stack
 
 - Language: TypeScript 5.9; Node 24 for development and release builds; bundled JavaScript targets the documented npm runtime floor
-- Site: React 19 + vinext + Tailwind 4, packaged for Sites/Cloudflare
+- Site: React 19 + Next.js 16 + Tailwind 4 on Vercel; the existing vinext/Cloudflare build remains a verified compatibility target
 - CLI persistence: versioned JSON with atomic rename and cross-process lock directory
 - Tests: Node test runner for unit/integration, isolated PTYs/tmux where available, browser verification for the site
-- Hosting: OpenAI Sites after local gates pass
+- Hosting: Vercel production deployment after a verified preview; rollback retains the prior deployment
 - Distribution: npm workspace package, Node single-executable artifacts, GitHub Releases, and a Homebrew formula generated from release metadata
 
 ## Commands
@@ -117,7 +117,7 @@ docs/                → audit, architecture, adapter protocol, launch notes
 
 **Always do:** validate external input; preserve existing configuration; test failure paths; keep state private; use explicit capability detection; document degraded behavior.
 
-**Ask first:** change GitHub repository visibility; create a public release/tag; publish or stage to npm; create or mutate a Homebrew tap repository; mutate the user’s live Claude/Codex configuration; replace an existing completion notifier; deploy outside the configured Sites project.
+**Ask first:** change GitHub repository visibility; create a public release/tag; publish or stage to npm; create or mutate a Homebrew tap repository; mutate the user’s live Claude/Codex configuration; replace an existing completion notifier; delete the Vercel project or change its production domain.
 
 **Never do:** write to an unverified path as a TTY; execute state; log prompt/transcript content; use `SIGKILL` cleanup as a product claim; overwrite unrelated hooks; hide a failing gate.
 
@@ -133,6 +133,18 @@ docs/                → audit, architecture, adapter protocol, launch notes
 | npm cache or version-manager path becomes a permanent hook | Medium | High | Resolve durable installs, reject ephemeral cache paths, and test global-prefix installation |
 | Release artifact differs from tested source | Low | High | Build after tests from an immutable tag, generate checksums/attestations in the same workflow, smoke-test downloaded artifacts |
 | Public supply chain is compromised | Low | Critical | Minimal workflow permissions, protected release environment, npm OIDC trusted publishing after repository visibility permits provenance |
+| Vercel and Cloudflare builds diverge | Medium | Medium | Keep separate explicit build commands and require both builds in the deployment gate |
+
+## Vercel Deployment Contract
+
+The requester explicitly approved deploying the landing page to Vercel. Success means:
+
+- the repository has an explicit, test-covered Vercel build contract using standard Next.js;
+- the existing Cloudflare/vinext build continues to pass;
+- a Vercel preview is built first and returns the Signal page with no browser console or network errors;
+- the exact verified preview is promoted to the production alias rather than rebuilt;
+- metadata resolves to the Vercel production hostname; and
+- the production URL and rollback command are recorded in `LAUNCH.md`.
 
 ## Open Questions
 
