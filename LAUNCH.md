@@ -18,6 +18,18 @@ Rollback the promoted site to the previous known-good deployment with:
 vercel rollback dpl_AuxQwwaiHWE9dyycPNs3jduoy7gt --yes
 ```
 
+## Vercel Preview annotation tooling
+
+- Preview URL: https://terminal-signal-hubsn8pfg-andrew-243s-projects.vercel.app
+- Preview deployment: `dpl_H6ESrFbeXwHxtpM8Wy5z5SaWi5h1`
+- Source commit: `fad886a`
+- Environment boundary: Agentation is enabled for local Next.js development and Vercel Preview/development, and disabled for production or unknown environments.
+- Data boundary: no endpoint, MCP configuration mutation, or remote sync is configured; annotations remain browser-local unless a reviewer explicitly adds a connection in their own toolbar.
+- Verification: the protected Preview returns HTTP 200 through `vercel curl` and its server payload passes `enabled: true`; local hydrated browser verification shows Agentation 3.0.2. The public production alias remains on `dpl_GPpoXD6MML86fTWYXtHqTTWYPMcB`, where a fresh browser reports zero Agentation UI roots and zero Agentation requests.
+- Promotion boundary: this Preview was not promoted and must not be promoted while the Agentation toolbar is part of its preview-only review surface.
+
+Preview rollback is isolation by default: leave the Preview unpromoted. Reverting `fad886a` removes the integration from future previews without changing the public production alias.
+
 ## Technical preflight
 
 1. Use Node 24.18.0 and run every repository gate from [CONTRIBUTING.md](./CONTRIBUTING.md).
