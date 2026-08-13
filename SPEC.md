@@ -147,18 +147,24 @@ The requester explicitly approved deploying the landing page to Vercel. Success 
 - metadata resolves to the Vercel production hostname; and
 - the production URL and rollback command are recorded in `LAUNCH.md`.
 
-## Landing Page Motion Contract
+## Linear Homepage Token-Parity Contract
 
-The requester chose the current Linear homepage as the motion-quality reference. Signal borrows its restraint and hierarchy, not its branding or exact visual assets. Success means:
+The requester chose the current Linear homepage as the implementation reference, not merely a mood reference. Signal keeps its own content, phase colors, and four-terminal product story, but its marketing typography, neutral surfaces, control feedback, and entrance timing must use the measured values served by `linear.app/homepage` on 2026-08-13. The dated evidence and source asset hashes live in `docs/linear-homepage-token-audit.md`.
 
-- the hero enters in semantic chunks with a short, tightly staggered opacity/translate/blur sequence;
-- below-the-fold headings, product surfaces, rows, and calls to action reveal once as they enter the viewport;
-- slow ambient motion is confined to terminal, status, and recovery visuals so reading remains calm;
-- hover, press, and selected-state feedback uses interruptible transitions over explicit properties, never `transition: all`;
-- simple entrances and ambient effects use compositor-friendly CSS opacity, transform, and filter properties; staged spatial choreography may use the pinned Motion dependency where interruptible spring geometry materially improves the result;
-- controls remain operable during animation and keep at least 40px hit targets;
+Success means:
+
+- marketing text uses Inter Variable with weights 400, 510, 590, and 680, `"cv01", "ss03"` OpenType features, and automatic optical sizing;
+- the proportional fallback stack and display scale match Linear's current tokens; the live hero uses 64px at weight 510, line-height 1, and `-.022em` tracking on desktop, 56px/1.1 on laptop, and 38px/1.1 on mobile;
+- the site exposes Linear's measured layout, radius, neutral color, shadow, duration, and easing values as named CSS custom properties rather than scattered approximations;
+- the hero text uses Linear's current shared reveal primitive exactly: a 1-second tween with `cubic-bezier(.25, .1, .25, 1)`, entering from opacity 0, blur 10px, and translateY 20%, with desktop line delays of .4s and .5s and description delay of .6s;
+- ordinary interactive controls transition explicit properties for .16s with `cubic-bezier(.25, .46, .45, .94)` and press to scale .97;
+- ambient illustration timing uses the measured 1.3s delay, 1.5s duration, and `cubic-bezier(.455, .03, .515, .955)` where it corresponds to Linear's background/UI reveal;
+- hero and below-the-fold entrances run only on a fresh, no-hash, no-reduced-motion visit and are cancelled rather than restarted after the visitor scrolls;
+- staged spatial choreography may still use Motion where geometry changes, but its timing and easing values must import from the same typed token module used by the CSS contract;
+- Signal's semantic Working, Ready, Waiting, and Failed palette remains the canonical CLI palette and is not replaced by Linear's brand colors;
+- Berkeley Mono is named as the preferred terminal font only when it is already licensed and installed by the visitor; Signal does not redistribute or hotlink Linear's proprietary font asset, and uses a documented system-monospace fallback otherwise;
 - `prefers-reduced-motion: reduce` removes entrances, ambient loops, smooth scrolling, and meaningful transition delay while leaving every element visible; and
-- desktop and 390×844 mobile browser checks show no overflow, runtime errors, console errors, or failed resources.
+- desktop at 1440×900 and 1256×833 plus mobile at 390×844 pass computed-style, animation-timing, overflow, keyboard, console, and network checks against the captured values.
 
 ## Four-Terminal Storyboard Contract
 

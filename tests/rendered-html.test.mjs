@@ -11,14 +11,23 @@ async function render() {
   return new Response(html, { headers: { "content-type": "text/html" } });
 }
 
+function renderedText(html) {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 test("server-renders Signal's real product and live playground", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
+  const text = renderedText(html);
   assert.match(html, /<title>Signal — attention for coding agents<\/title>/i);
-  assert.match(html, /Your terminal knows when it needs you\./);
+  assert.match(text, /Your terminal knows when it needs you\./);
   assert.match(html, /Try the signal/);
   assert.match(html, /Working/);
   assert.match(html, /Waiting/);

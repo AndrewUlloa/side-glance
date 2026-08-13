@@ -1,0 +1,16 @@
+export const LINEAR_MOTION = {
+  copyDuration: 1,
+  copyEase: [0.25, 0.1, 0.25, 1] as const,
+  lineOneDelay: 0.4,
+  lineTwoDelay: 0.5,
+  descriptionDelay: 0.6,
+  announcementDelay: 0.85,
+  mobileStagger: 0.033,
+  illustrationDelay: 1.3,
+  illustrationDuration: 1.5,
+  illustrationEase: [0.455, 0.03, 0.515, 0.955] as const,
+  shineDelay: 0.4,
+  shineDuration: 0.5,
+  interactionDuration: 0.16,
+  interactionEase: [0.25, 0.46, 0.45, 0.94] as const,
+} as const;

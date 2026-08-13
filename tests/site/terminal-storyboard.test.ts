@@ -37,6 +37,8 @@ test("storyboard is data-driven, stage-driven, replayable, and finite", () => {
   assert.match(storyboardSource, /setTimeout/);
   assert.match(storyboardSource, /clearTimeout/);
   assert.match(storyboardSource, /Replay/);
+  assert.match(storyboardSource, /from\s+"\.\.\/lib\/motion-tokens"/);
+  assert.match(storyboardSource, /DEFAULT_SIGNAL_THEME/);
   assert.doesNotMatch(storyboardSource, /repeat:\s*Infinity/);
 });
 
@@ -53,22 +55,17 @@ test("storyboard renders four lifecycle colors and a reduced-motion final stack"
 });
 
 test("reduced motion preserves server markup through the first hydration render", () => {
-  assert.match(
-    storyboardSource,
-    /const \[hasHydrated, setHasHydrated\]\s*=\s*useState\(false\)/,
-  );
+  assert.match(storyboardSource, /const \[hasHydrated, setHasHydrated\]\s*=\s*useState\(false\)/);
   assert.match(storyboardSource, /shouldReduceMotion && hasHydrated/);
   assert.match(storyboardSource, /setTimeout\(\(\) => setHasHydrated\(true\)/);
-  assert.doesNotMatch(
-    storyboardSource,
-    /const visibleStage = shouldReduceMotion \? STAGE\.complete : stage/,
-  );
+  assert.doesNotMatch(storyboardSource, /const visibleStage = shouldReduceMotion \? STAGE\.complete : stage/);
 });
 
-test("hero uses one compact dynamic viewport gutter above and below", () => {
+test("hero uses one compact dynamic viewport gutter on every side", () => {
   const heroRule = stylesheet.match(/\.hero\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
-  assert.match(heroRule, /min-height:\s*calc\(100dvh - 68px\)/);
-  assert.match(heroRule, /padding-block:\s*clamp\(24px, 4dvh, 48px\)/);
+  assert.match(heroRule, /--hero-padding:\s*clamp\(24px, 4dvh, 48px\)/);
+  assert.match(heroRule, /min-height:\s*calc\(100dvh - var\(--header-height\)\)/);
+  assert.match(heroRule, /padding:\s*var\(--hero-padding\)/);
   assert.doesNotMatch(stylesheet, /padding-block:\s*72px 64px/);
 });

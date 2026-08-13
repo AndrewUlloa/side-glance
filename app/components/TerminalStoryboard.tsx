@@ -2,6 +2,8 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState, type CSSProperties } from "react";
+import { DEFAULT_SIGNAL_THEME } from "../../src/core/theme";
+import { LINEAR_MOTION } from "../lib/motion-tokens";
 
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD
@@ -9,22 +11,24 @@ import { useEffect, useState, type CSSProperties } from "react";
  * Read top-to-bottom. Each `at` value is ms after mount/replay.
  *
  *    0ms   four quiet sessions hold in a 2×2 workspace
- *  420ms   Working wakes in cyan
- *  860ms   Ready wakes in green
- * 1300ms   Waiting wakes in amber
- * 1740ms   Failed wakes in red
- * 2460ms   grid → cool-to-urgent layered stack
- * 3500ms   replay control appears after the stack settles
+ *  400ms   Working wakes in cyan
+ *  500ms   Ready wakes in green
+ *  600ms   Waiting wakes in amber
+ *  850ms   Failed wakes in red
+ * 1300ms   grid → cool-to-urgent layered stack
+ * 2800ms   replay control appears after the stack settles
  * ───────────────────────────────────────────────────────── */
 
 const TIMING = {
   gridStart: 0,      // reset to the quiet four-window grid
-  workingWake: 420,  // Working wakes in cyan
-  readyWake: 860,    // Ready wakes in green
-  waitingWake: 1300, // Waiting wakes in amber
-  failedWake: 1740,  // Failed wakes in red
-  stackResolve: 2460,// four windows converge into one stack
-  replayReady: 3500, // replay becomes available after settling
+  workingWake: LINEAR_MOTION.lineOneDelay * 1000,
+  readyWake: LINEAR_MOTION.lineTwoDelay * 1000,
+  waitingWake: LINEAR_MOTION.descriptionDelay * 1000,
+  failedWake: LINEAR_MOTION.announcementDelay * 1000,
+  stackResolve: LINEAR_MOTION.illustrationDelay * 1000,
+  replayReady:
+    (LINEAR_MOTION.illustrationDelay + LINEAR_MOTION.illustrationDuration) *
+    1000,
 } as const;
 
 const STAGE = {
@@ -39,15 +43,36 @@ const STAGE = {
 
 type StoryboardStage = (typeof STAGE)[keyof typeof STAGE];
 
+const PHASE_COLORS = {
+  working: {
+    accent: `#${DEFAULT_SIGNAL_THEME.workingAccent}`,
+    wash: `#${DEFAULT_SIGNAL_THEME.workingWash}`,
+    border: "rgba(0, 157, 137, 0.52)",
+  },
+  ready: {
+    accent: `#${DEFAULT_SIGNAL_THEME.tmuxStops[1]}`,
+    wash: `#${DEFAULT_SIGNAL_THEME.washStops[1]}`,
+    border: "rgba(63, 168, 78, 0.5)",
+  },
+  waiting: {
+    accent: `#${DEFAULT_SIGNAL_THEME.waitingAccent}`,
+    wash: `#${DEFAULT_SIGNAL_THEME.waitingWash}`,
+    border: "rgba(240, 167, 38, 0.54)",
+  },
+  failed: {
+    accent: `#${DEFAULT_SIGNAL_THEME.tmuxStops[6]}`,
+    wash: `#${DEFAULT_SIGNAL_THEME.washStops[6]}`,
+    border: "rgba(243, 53, 51, 0.58)",
+  },
+} as const;
+
 const TERMINALS = [
   {
     id: "working",
     phase: "working",
     title: "controller — claude",
     state: "Working",
-    accent: "#35d7f1",
-    wash: "#102f3a",
-    border: "rgba(53, 215, 241, 0.52)",
+    ...PHASE_COLORS.working,
     wakeStage: STAGE.working,
     command: "signal run -- claude",
     activity: "reconciling lease generation",
@@ -58,9 +83,7 @@ const TERMINALS = [
     phase: "completed",
     title: "release — codex",
     state: "Ready",
-    accent: "#78dda0",
-    wash: "#173428",
-    border: "rgba(120, 221, 160, 0.5)",
+    ...PHASE_COLORS.ready,
     wakeStage: STAGE.ready,
     command: "signal run -- codex",
     activity: "turn complete — review ready",
@@ -71,9 +94,7 @@ const TERMINALS = [
     phase: "waiting",
     title: "docs — gemini",
     state: "Waiting",
-    accent: "#f2b632",
-    wash: "#3a2b12",
-    border: "rgba(242, 182, 50, 0.54)",
+    ...PHASE_COLORS.waiting,
     wakeStage: STAGE.waiting,
     command: "signal run -- gemini",
     activity: "permission required",
@@ -84,9 +105,7 @@ const TERMINALS = [
     phase: "failed",
     title: "deploy — aider",
     state: "Failed",
-    accent: "#ff6b5f",
-    wash: "#491d19",
-    border: "rgba(255, 107, 95, 0.58)",
+    ...PHASE_COLORS.failed,
     wakeStage: STAGE.failed,
     command: "signal run -- aider",
     activity: "process exited with code 1",
@@ -117,17 +136,16 @@ const STACK = {
 } as const;
 
 const WINDOW = {
-  sleepingWash: "#151b20",
-  sleepingBorder: "rgba(255, 255, 255, 0.12)",
+  sleepingWash: "#141516",
+  sleepingBorder: "#ffffff14",
   sleepingOpacity: 0.68,
   awakeOpacity: 1,
   sleepingFilter: "saturate(0.28) brightness(0.72)",
   awakeFilter: "saturate(1) brightness(1)",
-  spring: {
-    type: "spring" as const,
-    stiffness: 180,
-    damping: 26,
-    mass: 0.9,
+  transition: {
+    type: "tween" as const,
+    duration: LINEAR_MOTION.illustrationDuration,
+    ease: LINEAR_MOTION.illustrationEase,
   },
   instant: { duration: 0 },
 } as const;
@@ -137,10 +155,10 @@ const REPLAY = {
   visibleOpacity: 1,
   hiddenY: 8,
   visibleY: 0,
-  spring: {
-    type: "spring" as const,
-    stiffness: 420,
-    damping: 28,
+  transition: {
+    type: "tween" as const,
+    duration: LINEAR_MOTION.interactionDuration,
+    ease: LINEAR_MOTION.interactionEase,
   },
 } as const;
 
@@ -156,7 +174,13 @@ export function TerminalStoryboard() {
   useEffect(() => {
     const timers: Array<ReturnType<typeof setTimeout>> = [];
     timers.push(setTimeout(() => setHasHydrated(true), TIMING.gridStart));
-    if (shouldReduceMotion) {
+
+    const shouldSkipInitialSequence =
+      replayTrigger === 0 &&
+      document.documentElement.dataset.heroMotion !== "ready";
+
+    if (shouldReduceMotion || shouldSkipInitialSequence) {
+      timers.push(setTimeout(() => setStage(STAGE.complete), TIMING.gridStart));
       return () => timers.forEach(clearTimeout);
     }
 
@@ -206,7 +230,7 @@ export function TerminalStoryboard() {
                 : REPLAY.hiddenOpacity,
             y: isComplete ? REPLAY.visibleY : REPLAY.hiddenY,
           }}
-          transition={shouldReduceMotion ? WINDOW.instant : REPLAY.spring}
+          transition={shouldReduceMotion ? WINDOW.instant : REPLAY.transition}
         >
           <span aria-hidden="true">↻</span> Replay
         </motion.button>
@@ -240,7 +264,7 @@ export function TerminalStoryboard() {
                 backgroundColor: isAwake ? terminal.wash : WINDOW.sleepingWash,
                 borderColor: isAwake ? terminal.border : WINDOW.sleepingBorder,
               }}
-              transition={shouldReduceMotion ? WINDOW.instant : WINDOW.spring}
+              transition={shouldReduceMotion ? WINDOW.instant : WINDOW.transition}
               style={style}
             >
               <div className="story-terminal-bar">

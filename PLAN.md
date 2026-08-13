@@ -304,6 +304,24 @@ protocol + reducer
   - **Files:** `package.json`, `package-lock.json`, `app/layout.tsx`, `app/components/AgentationToolbar.tsx`, `app/lib/agentation-environment.ts`, `tests/site/agentation-environment.test.ts`, `tests/rendered-html.test.mjs`
   - **Size:** M
 
+### Phase 12: Measured Linear homepage parity
+
+- [x] **Task 31: Capture the current Linear token and motion contract**
+  - **Description:** Record the first-party font, CSS-token, component-style, and motion-bundle values served by Linear's homepage, including asset URLs and hashes, then translate the requested 1:1 direction into executable Signal contracts.
+  - **Acceptance:** evidence separates source facts from mapping decisions; exact tests cover font, visual tokens, timing, and reduced motion; Berkeley Mono is neither copied nor hotlinked.
+  - **Verify:** `npm run test:site -- --test-name-pattern="Linear homepage token parity"` must fail for observable value mismatches before production edits.
+  - **Depends on:** Task 30
+  - **Files:** `SPEC.md`, `PLAN.md`, `docs/linear-homepage-token-audit.md`, `tests/site/linear-design-token-contract.test.ts`
+  - **Size:** M
+
+- [ ] **Task 32: Implement and preview the measured parity system**
+  - **Description:** Replace hand-tuned Geist and motion values with measured Inter/type, neutral design, interaction, and animation tokens; keep Signal's lifecycle palette and terminal story; remove reveal-delay leakage; deploy a Vercel Preview without touching production.
+  - **Acceptance:** computed styles match the contract; fresh-load, replay, and reduced-motion paths work; Agentation is visible on Preview and absent from unchanged production.
+  - **Verify:** focused GREEN tests, all `CLAUDE.md` gates, browser comparisons at three viewports, and Vercel Preview checks.
+  - **Depends on:** Task 31
+  - **Files:** site source, token module, tests, review and launch evidence
+  - **Size:** L
+
 ## Risks and Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |

@@ -1,73 +1,41 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
-const revealSelector = "[data-reveal]";
+const animatedKeys = new Set<string>();
+const heroKey = "signal-homepage-hero";
 
 export function MotionOrchestrator() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const reducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     );
-    const elements = Array.from(
-      document.querySelectorAll<HTMLElement>(revealSelector),
-    );
-    const reveal = (element: HTMLElement) => {
-      element.dataset.revealed = "true";
+    const hasHash = window.location.hash.length > 1;
+    const shouldAnimate =
+      !reducedMotion.matches && !hasHash && !animatedKeys.has(heroKey);
+
+    root.dataset.heroMotion = shouldAnimate ? "ready" : "settled";
+    animatedKeys.add(heroKey);
+
+    const settle = () => {
+      root.dataset.heroMotion = "settled";
     };
-    const revealAll = () => elements.forEach(reveal);
-
-    if (!("IntersectionObserver" in window)) {
-      root.dataset.motion = "reduced";
-      revealAll();
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            reveal(entry.target as HTMLElement);
-            observer.unobserve(entry.target);
-          }
-        }
-      },
-      { rootMargin: "0px 0px -10% 0px", threshold: 0.12 },
-    );
-
-    if (reducedMotion.matches) {
-      root.dataset.motion = "reduced";
-      revealAll();
-    } else {
-      for (const element of elements) {
-        if (element.getBoundingClientRect().top < window.innerHeight * 0.92) {
-          reveal(element);
-        }
-      }
-      root.dataset.motion = "ready";
-      for (const element of elements) {
-        if (element.dataset.revealed !== "true") {
-          observer.observe(element);
-        }
-      }
+    if (shouldAnimate) {
+      window.addEventListener("scroll", settle, { once: true, passive: true });
     }
 
     const handleMotionPreference = (event: MediaQueryListEvent) => {
       if (event.matches) {
-        observer.disconnect();
-        root.dataset.motion = "reduced";
-        revealAll();
-      } else {
-        root.dataset.motion = "ready";
+        settle();
       }
     };
     reducedMotion.addEventListener("change", handleMotionPreference);
 
     return () => {
-      observer.disconnect();
+      window.removeEventListener("scroll", settle);
       reducedMotion.removeEventListener("change", handleMotionPreference);
-      delete root.dataset.motion;
+      delete root.dataset.heroMotion;
     };
   }, []);
 
