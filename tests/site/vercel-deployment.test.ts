@@ -10,12 +10,16 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   const dependencies = packageManifest.dependencies as Record<string, string>;
   const scripts = packageManifest.scripts as Record<string, string>;
   const vercel = await readJson("vercel.json");
+  const vercelIgnore = await readFile(".vercelignore", "utf8");
   const layout = await readFile("app/layout.tsx", "utf8");
 
   assert.equal(dependencies.next, "16.3.0");
   assert.equal(scripts["build:vercel"], "next build");
   assert.equal(vercel.framework, "nextjs");
   assert.equal(vercel.buildCommand, "npm run build:vercel");
+  for (const generatedDirectory of [".vinext", ".wrangler", "dist", "outputs", "work"]) {
+    assert.match(vercelIgnore, new RegExp(`^${generatedDirectory}$`, "mu"));
+  }
   assert.match(layout, /VERCEL_PROJECT_PRODUCTION_URL/u);
   assert.doesNotMatch(layout, /terminal-signal\.pages\.dev/u);
 });
