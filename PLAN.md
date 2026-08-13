@@ -8,15 +8,22 @@
 
 Build Signal in vertical red-green slices: first make one normalized event deterministically resolve to one surface state; then harden persistence and rendering; then expose that behavior through the CLI and provider adapters; finally make the landing page an interactive view of the same model and publish only after the full local and browser gates pass.
 
+The publication-readiness extension keeps the repository private while it proves the exact artifacts that will later be released: a minimal npm workspace package, standalone macOS/Linux executables, checksums and attestations, and a Homebrew formula derived from immutable release metadata.
+
 ## Architecture Decisions
 
-- **Decision:** One package contains core, CLI, and site, while adapter modules stay thin. **Rationale:** The site must reuse the exact phase/palette contract and package distribution remains simple at this stage.
+- **Decision:** The root is a private workspace containing the site and development tooling; `packages/cli` is the only publishable npm package. **Rationale:** Users must not install React, Cloudflare, database, or site tooling to run a terminal hook.
+- **Decision:** Compile one dependency-free JavaScript bundle for npm and inject the same bundle into platform-native Node single-executable artifacts. **Rationale:** npm users get a conventional package while Homebrew and direct-download users get a stable runtime independent of their Node installation.
+- **Decision:** `npx` may run diagnostics but may not install permanent hooks from an ephemeral npm cache. **Rationale:** Lifecycle hooks must remain executable offline and across cache cleanup.
+- **Decision:** Release workflows build on native GitHub-hosted macOS/Linux runners, smoke-test each executable, and publish only from an explicit version tag plus protected release environment. **Rationale:** Native artifacts cannot be inferred from a source-only test and publication must be intentional.
 - **Decision:** Use typed JSON, an atomic lock directory, and atomic rename before adding a resident daemon. **Rationale:** This satisfies serialization and crash-recovery invariants with fewer failure domains; a future daemon can reuse the same controller contract.
 - **Decision:** Native hooks submit events; only the controller renders. **Rationale:** Terminal/tmux state is a shared surface requiring one ownership decision.
 - **Decision:** The wrapper establishes the surface and lifecycle fallback. **Rationale:** Provider hooks often lack a stable controlling TTY and cannot cover child-process termination alone.
 - **Decision:** Title mutation is opt-in and terminal background reset means configured default. **Rationale:** Exact arbitrary prior terminal state is not portably knowable.
 
 Rejected: direct painting from each provider hook, because it preserves the current ordering and ownership races.
+
+Rejected: publishing the current root package, because it includes unrelated site dependencies and exposes a raw TypeScript executable. Rejected: permanent `npx` hook commands, because npm cache/network resolution is not a durable runtime contract.
 
 ## Dependency Graph
 
@@ -148,6 +155,51 @@ protocol + reducer
 - **Safe to parallelize after contracts exist:** provider fixture research, site content structure, renderer capability documentation.
 - **Must be sequential:** reducer → leases → store/controller → renderers → CLI → installers; site claims follow proven product capabilities.
 - **Contract-first:** normalized protocol and phase/theme model precede all adapters and site interaction.
+
+### Phase 5: Public distribution readiness
+
+- [ ] **Task 13: Isolate the npm CLI package**
+  - **Acceptance:** Root stays private; `packages/cli` owns `terminal-signal`; the packed allowlist contains a compiled executable and package docs only; no site runtime dependency is installed.
+  - **Verify:** focused pack-manifest RED/GREEN test; isolated `npm install --prefix` smoke test on the minimum supported Node.
+  - **Depends on:** Task 12
+  - **Files:** `package.json`, `packages/cli/package.json`, `scripts/build-cli.mjs`, `tests/distribution/npm-package.test.mjs`
+  - **Size:** M
+
+- [ ] **Task 14: Make provider activation durable across npm symlinks**
+  - **Acceptance:** Global npm bin symlinks resolve to a validated stable target; known ephemeral npm cache paths cannot be written into provider hooks; standalone execution resolves itself correctly.
+  - **Verify:** installer RED/GREEN tests using an isolated global prefix and synthetic cache path.
+  - **Depends on:** Task 13
+  - **Files:** `src/cli/install.ts`, `src/adapters/installers.ts`, installer/distribution tests
+  - **Size:** M
+
+- [ ] **Task 15: Build standalone release artifacts**
+  - **Acceptance:** The compiled CLI is injected into a native executable; local native smoke test passes with a stripped `PATH`; archive and checksum manifest are deterministic in name/content.
+  - **Verify:** artifact RED/GREEN test plus native local build; CI matrix covers macOS arm64/Intel and Linux arm64/x64.
+  - **Depends on:** Task 13
+  - **Files:** `scripts/release/*`, `.github/workflows/release.yml`, distribution tests
+  - **Size:** M
+
+- [ ] **Task 16: Generate and verify Homebrew packaging**
+  - **Acceptance:** A formula is generated from versioned artifact URLs and SHA-256 values; it installs only `signal`; local formula syntax/audit/install tests run when Homebrew is available.
+  - **Verify:** formula snapshot RED/GREEN test and isolated Homebrew install smoke test.
+  - **Depends on:** Task 15
+  - **Files:** `packaging/homebrew/*`, release scripts/workflow, distribution tests
+  - **Size:** M
+
+- [ ] **Task 17: Secure and rehearse publication**
+  - **Acceptance:** CI verifies pack contents and artifacts; release workflow uses least privilege, protected environment, attestations, and npm trusted-publishing shape; dry runs cannot publish; docs distinguish install, activation, update, and rollback.
+  - **Verify:** workflow policy test, `npm publish --dry-run`, full gates, GitHub Actions green, five-axis release review.
+  - **Depends on:** Tasks 14–16
+  - **Files:** workflows, `README.md`, `LAUNCH.md`, `REVIEW.md`, distribution tests
+  - **Size:** M
+
+### Checkpoint: Publication-ready but unpublished
+
+- [ ] Exact npm tarball installed and exercised from an isolated prefix
+- [ ] Native artifact exercised without relying on the developer checkout
+- [ ] Homebrew formula generated and locally verified
+- [ ] No registry package, public release, visibility change, tap mutation, or live provider mutation occurred
+- [ ] Release review and rollback documents match the artifacts
 
 ## Risks and Mitigations
 
