@@ -42,3 +42,16 @@ test("storyboard renders four lifecycle colors and a reduced-motion final stack"
   assert.match(stylesheet, /\.story-terminal/);
   assert.match(stylesheet, /@media \(prefers-reduced-motion: reduce\)/);
 });
+
+test("reduced motion preserves server markup through the first hydration render", () => {
+  assert.match(
+    storyboardSource,
+    /const \[hasHydrated, setHasHydrated\]\s*=\s*useState\(false\)/,
+  );
+  assert.match(storyboardSource, /shouldReduceMotion && hasHydrated/);
+  assert.match(storyboardSource, /setTimeout\(\(\) => setHasHydrated\(true\)/);
+  assert.doesNotMatch(
+    storyboardSource,
+    /const visibleStage = shouldReduceMotion \? STAGE\.complete : stage/,
+  );
+});

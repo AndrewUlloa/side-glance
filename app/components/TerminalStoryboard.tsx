@@ -148,16 +148,18 @@ export function TerminalStoryboard() {
   const shouldReduceMotion = useReducedMotion();
   const [stage, setStage] = useState<StoryboardStage>(STAGE.grid);
   const [replayTrigger, setReplayTrigger] = useState(0);
-  const visibleStage = shouldReduceMotion ? STAGE.complete : stage;
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const visibleStage = shouldReduceMotion && hasHydrated ? STAGE.complete : stage;
   const isStacked = visibleStage >= STAGE.stack;
   const isComplete = visibleStage >= STAGE.complete;
 
   useEffect(() => {
+    const timers: Array<ReturnType<typeof setTimeout>> = [];
+    timers.push(setTimeout(() => setHasHydrated(true), TIMING.gridStart));
     if (shouldReduceMotion) {
-      return;
+      return () => timers.forEach(clearTimeout);
     }
 
-    const timers: Array<ReturnType<typeof setTimeout>> = [];
     const schedule = (nextStage: StoryboardStage, at: number) => {
       timers.push(setTimeout(() => setStage(nextStage), at));
     };
