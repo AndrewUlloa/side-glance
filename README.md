@@ -84,7 +84,7 @@ See [SPEC.md](./SPEC.md), [PLAN.md](./PLAN.md), [architecture](./docs/architectu
 
 ## Status
 
-Release candidate. Local package and native artifact rehearsals are implemented. Repository visibility, protected environments/rulesets, first npm ownership, the Homebrew tap, live provider migration, and site deployment remain explicit external approval gates.
+Release candidate. Local package and native artifact rehearsals are implemented, and the repository now has protected `main`/version tags plus tag-restricted release environments. Public visibility, environment reviewers, first npm ownership, the Homebrew tap, live provider migration, and site deployment remain explicit owner-approval gates.
 
 ## License
 

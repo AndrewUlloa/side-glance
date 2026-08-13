@@ -4,15 +4,14 @@ Signal releases are assembled once from a protected version tag. The exact npm t
 
 ## One-time public setup
 
-These external changes require the repository owner's explicit approval and cannot be completed by a local test:
+The repository already has protected `main` and `v*` refs, tag-restricted `github-release` and `npm-release` environments, Discussions, and squash/rebase merge hygiene. These remaining external changes require the repository owner's explicit approval and cannot be completed by a local test:
 
 1. Make `AndrewUlloa/terminal-signal` public.
-2. Enable private vulnerability reporting, Discussions, immutable releases, and tag protection for `v*`.
-3. Protect `main` and require the full CI workflow before merge.
-4. Create `github-release` and `npm-release` environments with required reviewers.
-5. Reserve `terminal-signal` on npm. If npm requires a bootstrap publish before trusted publishing can be configured, use a one-time short-lived granular token in the protected environment and revoke it immediately.
-6. Configure npm trusted publishing for owner `AndrewUlloa`, repository `terminal-signal`, workflow `release.yml`, and environment `npm-release`; then disallow legacy automation tokens.
-7. Create `AndrewUlloa/homebrew-tap` only after the first immutable release exists, and update it through a narrowly scoped pull request rather than this repository's release token.
+2. Enable private vulnerability reporting and immutable releases after the repository is public.
+3. Add required reviewers to the existing `github-release` and `npm-release` environments after the repository plan makes that control available.
+4. Reserve `terminal-signal` on npm. If npm requires a bootstrap publish before trusted publishing can be configured, use a one-time short-lived granular token in the protected environment and revoke it immediately.
+5. Configure npm trusted publishing for owner `AndrewUlloa`, repository `terminal-signal`, workflow `release.yml`, and environment `npm-release`; then disallow legacy automation tokens.
+6. Create `AndrewUlloa/homebrew-tap` only after the first immutable release exists, and update it through a narrowly scoped pull request rather than this repository's release token.
 
 ## Release pull request
 

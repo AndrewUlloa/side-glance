@@ -10,16 +10,15 @@ Status: release-candidate implementation; external publication deferred
 | Security and privacy | Pass locally | Fixed private JSON state, atomic writes, bounded input/state, no shell evaluation, canonical owned TTY validation, safe tmux arguments, prompt/transcript exclusion, and symlink/config refusal are tested. |
 | npm distribution | Pass locally | A clean `npm pack` builds a four-file dependency-free package, isolated global installation and upgrade preserve durable hooks, and `npx` diagnostics work while activation is refused. Node 22.14/24.18 remain CI evidence after push. |
 | Native distribution | Pass on local macOS arm64 | The exact extracted SEA archive runs without Node on `PATH`, has recomputed metadata, and is ad-hoc signed. Linux and Intel macOS require their release runners; Developer ID signing and notarization are not present. |
-| Release security | Implemented, externally gated | Actions are commit-pinned; the workflow requires canonical public visibility, protected matching tags, `main` reachability, protected environments, exact artifacts, attestations, draft staging, npm integrity idempotency, and post-release download verification. Rulesets, environments, npm ownership, and trusted publishing are not local state. |
+| Release security | Implemented, externally gated | Actions are commit-pinned; the workflow requires canonical public visibility, protected matching tags, `main` reachability, protected environments, exact artifacts, attestations, draft staging, npm integrity idempotency, and post-release download verification. The repository rulesets and tag-restricted environments are configured; public visibility, required environment reviewers, npm ownership, and trusted publishing remain owner gates. |
 | Homebrew | Generator passes locally | Immutable URLs and digests are schema-validated and the formula passes Ruby and Homebrew style checks. Tap `readall`, audit, URL installation, and upgrade tests require a real release and tap. |
 | UX and accessibility | Pass locally | Desktop/mobile, keyboard, touch sizing, focus visibility, copy state, reduced motion, console, and network behavior were previously checked in a real browser. Deployment remains ordered after publication. |
 
 ## Required findings
 
-1. Run the expanded pinned CI matrix on the pushed commit.
-2. Complete the owner-only public-repository, ruleset, protected-environment, vulnerability-reporting, and npm trusted-publisher setup in [docs/releasing.md](./docs/releasing.md).
-3. Run all native release runners and the real Homebrew tap install/upgrade path before calling those channels supported.
-4. Keep macOS signing language limited to ad-hoc signing unless Developer ID signing and notarization are added.
+1. Complete the remaining owner-only public-repository, environment-reviewer, vulnerability-reporting, and npm trusted-publisher setup in [docs/releasing.md](./docs/releasing.md).
+2. Run all native release runners and the real Homebrew tap install/upgrade path before calling those channels supported.
+3. Keep macOS signing language limited to ad-hoc signing unless Developer ID signing and notarization are added.
 
 ## Explicit non-guarantees
 
