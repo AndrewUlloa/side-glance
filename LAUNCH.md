@@ -6,16 +6,16 @@ Signal is a release candidate. The requester approved the Vercel landing-page de
 
 - Public URL: https://terminal-signal.vercel.app
 - Project: `andrew-243s-projects/terminal-signal`
-- Promoted deployment: `dpl_FDanFoyjSm4XSvkcbmEkA2qhZCis`
-- Deployed source commit: `f0e24c73d2df056c6f9dc933f7e9e01444c1895f`
-- Previous known-good deployment: `dpl_FVz7gj8T1pS26nS36XNrUbAQiC1c`
+- Promoted deployment: `dpl_AuxQwwaiHWE9dyycPNs3jduoy7gt`
+- Deployed source commit: `9045929e51af5d799382a273eb26f4c7002e00a6`
+- Previous known-good deployment: `dpl_FDanFoyjSm4XSvkcbmEkA2qhZCis`
 - Build contract: Vercel ran the repository's canonical `npm run build` command using standard Next.js 16.3; no Cloudflare/vinext compatibility build remains.
-- Verification: HTTP 200 and correct deployment identity; server-rendered four-terminal 2×2 grid; desktop Replay resolves the grid into the cyan/green/amber/red stack; 390×844 mobile layout and interactive Waiting state; no overflow or browser errors; reduced motion hydrates cleanly into four awake terminals with zero running animations.
+- Verification: HTTP 200 and correct deployment identity; symmetric hero block padding resolves from `clamp(24px, 4dvh, 48px)` (`32px` at 1440×800 and `33.76px` at 390×844); dynamic viewport minimum height; server-rendered four-terminal 2×2 grid; no horizontal overflow or browser errors.
 
 Rollback the promoted site to the previous known-good deployment with:
 
 ```bash
-vercel rollback dpl_FVz7gj8T1pS26nS36XNrUbAQiC1c --yes
+vercel rollback dpl_FDanFoyjSm4XSvkcbmEkA2qhZCis --yes
 ```
 
 ## Technical preflight
