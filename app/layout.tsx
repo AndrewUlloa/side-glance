@@ -1,13 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "lenis/dist/lenis.css";
+import { AgentationToolbar } from "./components/AgentationToolbar";
 import { SmoothScroll } from "./components/SmoothScroll";
+import { shouldShowAgentation } from "./lib/agentation-environment";
 import "./globals.css";
 
 const productionHostname = process.env.VERCEL_PROJECT_PRODUCTION_URL;
 const siteUrl = productionHostname
   ? `https://${productionHostname}`
   : "https://terminal-signal.vercel.app";
+const showAgentation = shouldShowAgentation({
+  nodeEnv: process.env.NODE_ENV,
+  vercelEnv: process.env.VERCEL_ENV,
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,6 +74,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <SmoothScroll />
         {children}
+        <AgentationToolbar enabled={showAgentation} />
       </body>
     </html>
   );

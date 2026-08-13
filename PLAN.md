@@ -288,6 +288,22 @@ protocol + reducer
   - **Files:** `package.json`, `package-lock.json`, `app/layout.tsx`, `app/components/SmoothScroll.tsx`, `app/globals.css`, `tests/site/lenis-scroll.test.ts`
   - **Size:** M
 
+### Phase 11: Preview-only Agentation
+
+- [x] **Task 29: Specify the Agentation environment boundary**
+  - **Acceptance:** The contract defines the exact local development, Vercel preview/development, local production, Vercel production, and unknown-environment outcomes.
+  - **Verify:** Review against Agentation's official install/security guidance and Vercel environment semantics.
+  - **Depends on:** Task 28
+  - **Files:** `SPEC.md`, `PLAN.md`
+  - **Size:** XS
+
+- [x] **Task 30: Integrate Agentation without production exposure**
+  - **Acceptance:** Agentation is a pinned development dependency; one client-only toolbar is selected by a tested server-side environment predicate; no endpoint or remote sync is configured.
+  - **Verify:** Focused RED/GREEN matrix and source contract, lint, typecheck, full tests/build, local dev browser, local production browser, Vercel Preview browser/HTTP, and public production absence check.
+  - **Depends on:** Task 29
+  - **Files:** `package.json`, `package-lock.json`, `app/layout.tsx`, `app/components/AgentationToolbar.tsx`, `app/lib/agentation-environment.ts`, `tests/site/agentation-environment.test.ts`, `tests/rendered-html.test.mjs`
+  - **Size:** M
+
 ## Risks and Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |

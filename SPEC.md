@@ -186,6 +186,18 @@ The landing page uses Lenis's supported React adapter at the document root. Succ
 - the previous global `scroll-behavior: smooth` declaration is removed so Lenis is the only smooth-scroll controller; and
 - desktop, mobile, and reduced-motion browser checks show the Lenis root class, working anchor navigation, no horizontal overflow, and no runtime errors.
 
+## Agentation Environment Contract
+
+Agentation is an annotation aid for development review, never a production feature. Success means:
+
+- `agentation` is pinned as a development dependency and mounted through a client-only component with no sync endpoint;
+- the toolbar renders when `NODE_ENV=development`, `VERCEL_ENV=development`, or `VERCEL_ENV=preview`;
+- the toolbar does not render for a local production build, `VERCEL_ENV=production`, an unknown environment, or the public production alias;
+- the environment decision is centralized in one pure predicate with a complete test matrix rather than scattered JSX checks;
+- the ordinary production build's rendered HTML contains no Agentation toolbar markup;
+- the Vercel Preview deployment visibly exposes the toolbar and returns HTTP 200; and
+- the existing production deployment remains untouched and is browser-verified without Agentation after the preview ships.
+
 ## Open Questions
 
 No local implementation decision is blocking. The first public release still requires explicit approval and external setup for repository visibility, protected rulesets/environments, npm ownership and trusted publishing, private vulnerability reporting, and the Homebrew tap destination.
@@ -198,6 +210,7 @@ No local implementation decision is blocking. The first public release still req
 - Codex hooks: https://developers.openai.com/codex/hooks
 - Motion reference: https://linear.app/homepage
 - Lenis React README: https://github.com/darkroomengineering/lenis/blob/main/packages/react/README.md
+- Agentation install guide: https://www.agentation.com/install
 
 ## Sign-off
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 async function render() {
   const html = await readFile(
@@ -33,6 +34,28 @@ test("server-renders Signal's real product and live playground", async () => {
   assert.match(html, /Frequently asked questions/);
   assert.doesNotMatch(html, /Your site is taking shape|react-loading-skeleton/);
   assert.doesNotMatch(html, /codex-preview/);
+  assert.doesNotMatch(html, /Manage MCP & Webhooks/);
+
+  const chunkSources = [...html.matchAll(/src="([^"]+\.js)"/g)]
+    .map((match) => match[1])
+    .filter((source) => source.startsWith("/_next/static/chunks/"));
+  const loadedJavaScript = (
+    await Promise.all(
+      chunkSources.map((source) =>
+        readFile(
+          fileURLToPath(
+            new URL(
+              `../.next${source.replace(/^\/_next/, "")}`,
+              import.meta.url,
+            ),
+          ),
+          "utf8",
+        ),
+      ),
+    )
+  ).join("\n");
+  assert.doesNotMatch(loadedJavaScript, /Manage MCP & Webhooks/);
+  assert.doesNotMatch(loadedJavaScript, /data-agentation-theme/);
 });
 
 test("keeps the site wired to shared phase data and accessible controls", async () => {
