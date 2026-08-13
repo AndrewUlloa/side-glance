@@ -265,7 +265,7 @@ protocol + reducer
   - **Files:** `SPEC.md`, `PLAN.md`
   - **Size:** XS
 
-- [ ] **Task 26: Build and ship the staged terminal storyboard**
+- [x] **Task 26: Build and ship the staged terminal storyboard**
   - **Acceptance:** The hero loads as a four-terminal 2×2 workspace, animates through named stages into a cool-to-urgent stack, exposes replay, and skips to the final composition for reduced motion; the playground remains available below it.
   - **Verify:** focused RED/GREEN contract test, lint, typecheck, site tests, build, full tests, coverage, production audit, real-browser desktop/mobile/reduced-motion checks, Vercel candidate inspection, and public smoke test.
   - **Depends on:** Task 25
