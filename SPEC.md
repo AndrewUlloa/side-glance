@@ -160,6 +160,20 @@ The requester chose the current Linear homepage as the motion-quality reference.
 - `prefers-reduced-motion: reduce` removes entrances, ambient loops, smooth scrolling, and meaningful transition delay while leaving every element visible; and
 - desktop and 390×844 mobile browser checks show no overflow, runtime errors, console errors, or failed resources.
 
+## Four-Terminal Storyboard Contract
+
+The requester’s real workflow is four coding-agent terminals open at once. The hero visual must explain that origin story before it explains individual controls. Success means:
+
+- the first rendered frame contains four distinct terminal sessions in a legible 2×2 grid, matching the supplied desktop workspace rather than a generic single-window mockup;
+- a finite, human-readable stage sequence wakes the sessions in lifecycle order and then resolves the grid into one layered stack;
+- the final stack is ordered from cool to urgent—Working (cyan), Ready (green), Waiting (amber), Failed (red)—with all four state colors still visible;
+- animation timing, terminal data, layout values, and spring values live in named storyboard/config objects rather than inline JSX magic numbers;
+- repeated terminal windows render from one data array, and one integer stage drives the visual sequence;
+- the sequence runs once on load, completes in under five seconds, remains fully operable while moving, and offers an explicit Replay control after completion;
+- the existing interactive single-terminal state playground remains available below the hero rather than competing with the opening storyboard;
+- `prefers-reduced-motion: reduce` skips directly to the ordered final stack with no running animation; and
+- desktop and 390×844 mobile browser checks show all four windows, no horizontal overflow, no runtime/console errors, and successful playground interaction.
+
 ## Open Questions
 
 No local implementation decision is blocking. The first public release still requires explicit approval and external setup for repository visibility, protected rulesets/environments, npm ownership and trusted publishing, private vulnerability reporting, and the Homebrew tap destination.

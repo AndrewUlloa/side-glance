@@ -256,6 +256,22 @@ protocol + reducer
   - **Files:** `app/page.tsx`, `app/components/MotionOrchestrator.tsx`, `app/components/SignalPlayground.tsx`, `app/globals.css`, review/launch notes
   - **Size:** M
 
+### Phase 9: Four-terminal origin storyboard
+
+- [x] **Task 25: Specify the four-terminal visual story**
+  - **Acceptance:** The contract names the opening grid, lifecycle color order, finite stacked resolution, replay, reduced-motion behavior, and preserved interactive playground.
+  - **Verify:** Review the contract against the supplied four-terminal screenshot and the interface-craft storyboard rules.
+  - **Depends on:** Task 24
+  - **Files:** `SPEC.md`, `PLAN.md`
+  - **Size:** XS
+
+- [ ] **Task 26: Build and ship the staged terminal storyboard**
+  - **Acceptance:** The hero loads as a four-terminal 2×2 workspace, animates through named stages into a cool-to-urgent stack, exposes replay, and skips to the final composition for reduced motion; the playground remains available below it.
+  - **Verify:** focused RED/GREEN contract test, lint, typecheck, site tests, build, full tests, coverage, production audit, real-browser desktop/mobile/reduced-motion checks, Vercel candidate inspection, and public smoke test.
+  - **Depends on:** Task 25
+  - **Files:** `app/page.tsx`, `app/components/TerminalStoryboard.tsx`, `app/globals.css`, `package.json`, `package-lock.json`, `tests/site/terminal-storyboard.test.ts`, review/launch notes
+  - **Size:** M
+
 ## Risks and Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |
