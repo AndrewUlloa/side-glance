@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const cliPath = fileURLToPath(new URL("../../src/cli/index.ts", import.meta.url));
+const cliPath = fileURLToPath(new URL("../../src/cli/entry.ts", import.meta.url));
 
 interface CliResult {
   code: number | null;

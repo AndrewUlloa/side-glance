@@ -1,9 +1,6 @@
-#!/usr/bin/env node
-
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
 import { adaptAiderNotification } from "../adapters/aider.ts";
 import { adaptClaudeHook } from "../adapters/claude.ts";
@@ -20,6 +17,7 @@ import { discoverTerminalTarget } from "../core/target.ts";
 import { parseSignalEvent, parseSignalSource } from "../core/validation.ts";
 import { runInstallCommand } from "./install.ts";
 import { runSupervised } from "./run.ts";
+import { SIGNAL_VERSION } from "../version.ts";
 
 const MAX_STDIN_BYTES = 1_048_576;
 
@@ -29,6 +27,14 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
   const command = args[0];
 
   switch (command) {
+    case "--version":
+    case "-v":
+      process.stdout.write(`${SIGNAL_VERSION}\n`);
+      return 0;
+    case "--help":
+    case "-h":
+      process.stdout.write(helpText());
+      return 0;
     case "event": {
       requireExactArgs(args.slice(1), ["--json"], "event");
       const event = parseSignalEvent(JSON.parse(await readBoundedStdin()));
@@ -84,7 +90,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       );
       writeJson({
         stateDirectory,
-        node: { version: process.versions.node, supported: majorVersion >= 24 },
+        node: { version: process.versions.node, supported: majorVersion >= 22 },
         terminal: {
           tty: Boolean(process.stdout.isTTY),
           tmux: Boolean(process.env.TMUX),
@@ -160,6 +166,26 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         "usage: signal <event|hook|status|doctor|preview|reset|run|install|uninstall> [options]",
       );
   }
+}
+
+function helpText(): string {
+  return `Signal ${SIGNAL_VERSION}
+
+Usage:
+  signal doctor --json
+  signal preview --phase <phase> --elapsed <seconds> --json
+  signal run [--surface <id>] -- <command> [args...]
+  signal install <claude|codex|gemini> --json
+  signal uninstall <claude|codex|gemini> --json
+  signal status --json
+  signal reset (--all | --source <source> --session <id>) --json
+  signal event --json
+  signal hook --provider <provider> --json
+
+Options:
+  -h, --help      Show this help
+  -v, --version   Show the installed version
+`;
 }
 
 function resolveStateDirectory(): string {
@@ -267,18 +293,4 @@ function adaptProviderHook(
     default:
       throw new Error(`Unsupported hook provider: ${provider}.`);
   }
-}
-
-const invokedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : undefined;
-if (invokedPath === import.meta.url) {
-  main()
-    .then((exitCode) => {
-      process.exitCode = exitCode;
-    })
-    .catch((error: unknown) => {
-      process.stderr.write(
-        `signal: ${error instanceof Error ? error.message : String(error)}\n`,
-      );
-      process.exitCode = 1;
-    });
 }

@@ -1,0 +1,39 @@
+{
+  "name": "terminal-signal",
+  "version": "0.1.0-beta.1",
+  "description": "A local-first attention layer for coding-agent CLIs.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "signal": "dist/signal.mjs",
+    "terminal-signal": "dist/signal.mjs"
+  },
+  "files": [
+    "dist/signal.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndrewUlloa/terminal-signal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AndrewUlloa/terminal-signal/issues"
+  },
+  "homepage": "https://github.com/AndrewUlloa/terminal-signal#readme",
+  "keywords": [
+    "terminal",
+    "claude-code",
+    "codex",
+    "coding-agent",
+    "cli",
+    "tmux"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
