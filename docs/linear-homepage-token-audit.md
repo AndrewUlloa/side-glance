@@ -21,6 +21,16 @@ Signal adopts the measurable typography, neutral design-token, control-feedback,
 
 Hashed filenames are a dated snapshot and may change independently of behavior.
 
+| Captured asset | SHA-256 |
+|---|---|
+| `index.DBhe20pm.css` | `8cc74e5f4935802a8b48f02483f93df43d3a6c87d47359aa5150c23b58a6e208` |
+| `Hero-DtVVJNsn.js` | `6f31038a9967564d22436b3ca96b72e228702ea2892d938c92ee038d688b65c7` |
+| `Hero.D42gc8OB.css` | `e560368ae2a7132cf36e9a8512d9dd9372579b09677763d09ef3ef0b58fbad59` |
+| `motion-BWyn8xNP.js` | `d057814baf05463b6f1ebb63e8d10197671edf2649b9de08eeaf859689d94582` |
+| `NewHeroIllustration-B6FjYVzc.js` | `2c0ee66f0b471b8bb45d6d03b5406513464f540266bcbd6ff712fb2094f70bf7` |
+| `NewHeroIllustration.WjPxlfcr.css` | `2e4945071ead93861bfaf7cb19a956c1946b7140ca88a6664e9f0eea53dadf71` |
+| `useAnimateOnce-C3afxKUL.js` | `ac9c62ff5444475d5acc457142151802bd257b17626fea8b3f1fcf391169d1fd` |
+
 ## Typography facts
 
 - Marketing family: Inter Variable, normal and italic, weight range 100–900.

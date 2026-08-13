@@ -314,7 +314,7 @@ protocol + reducer
   - **Files:** `SPEC.md`, `PLAN.md`, `docs/linear-homepage-token-audit.md`, `tests/site/linear-design-token-contract.test.ts`
   - **Size:** M
 
-- [ ] **Task 32: Implement and preview the measured parity system**
+- [x] **Task 32: Implement and preview the measured parity system**
   - **Description:** Replace hand-tuned Geist and motion values with measured Inter/type, neutral design, interaction, and animation tokens; keep Signal's lifecycle palette and terminal story; remove reveal-delay leakage; deploy a Vercel Preview without touching production.
   - **Acceptance:** computed styles match the contract; fresh-load, replay, and reduced-motion paths work; Agentation is visible on Preview and absent from unchanged production.
   - **Verify:** focused GREEN tests, all `CLAUDE.md` gates, browser comparisons at three viewports, and Vercel Preview checks.

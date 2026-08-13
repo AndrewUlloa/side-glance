@@ -20,15 +20,15 @@ vercel rollback dpl_GPpoXD6MML86fTWYXtHqTTWYPMcB --yes
 
 ## Vercel Preview annotation tooling
 
-- Preview URL: https://terminal-signal-hnt8cmjsb-andrew-243s-projects.vercel.app
-- Preview deployment: `dpl_D8TxW8oebtacgRantEBqPgoQjqmn`
-- Source commit: `a14d540`
+- Preview URL: https://terminal-signal-ew5j2bgoj-andrew-243s-projects.vercel.app
+- Preview deployment: `dpl_ADsEBwQPnQuvUgNif7WeGpYsknd9`
+- Source commit: `0ecbd3da1202837f2769c06597cc80e2e469ae86`
 - Environment boundary: Agentation is enabled for local Next.js development and Vercel Preview/development, and disabled for production or unknown environments.
 - Data boundary: no endpoint, MCP configuration mutation, or remote sync is configured; annotations remain browser-local unless a reviewer explicitly adds a connection in their own toolbar.
-- Verification: the protected Preview returns HTTP 200 through `vercel curl`, its server payload passes `enabled: true`, and the reviewed hero contains neither the eyebrow nor proof strip. Local hydrated browser verification at 1256×833 shows Agentation 3.0.2, no horizontal overflow, and no browser errors. The public production alias now points to the separately built production deployment `dpl_Fw8wk8gGHuFWyTjZYfn7Co7xnS5p`, where a fresh browser reports zero Agentation UI roots and zero Agentation requests.
+- Verification: the protected Preview is Ready, returns authenticated HTTP 200 through `vercel curl`, embeds `AgentationToolbar { enabled: true }`, and contains the Inter parity build. The exact source production build passes desktop, mobile, keyboard Replay, reduced motion, hash-load, console, network, and overflow checks. The public production alias still points to `dpl_Fw8wk8gGHuFWyTjZYfn7Co7xnS5p`, where a fresh browser reports zero Agentation roots and requests.
 - Promotion boundary: this Preview was not promoted and must not be promoted while the Agentation toolbar is part of its preview-only review surface.
 
-Preview rollback is isolation by default: leave the Preview unpromoted. Reverting `a14d540` removes the latest hero feedback from future previews without changing the public production alias.
+Preview rollback is isolation by default: leave the Preview unpromoted. Reverting `0ecbd3d` removes the measured parity revision from future previews without changing the public production alias.
 
 ## Technical preflight
 
