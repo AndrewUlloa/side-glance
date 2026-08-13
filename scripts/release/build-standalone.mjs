@@ -17,6 +17,10 @@ const repository = fileURLToPath(new URL("../..", import.meta.url));
 const manifest = JSON.parse(
   await readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
 );
+const expectedNodeVersion = process.env.SIGNAL_RELEASE_NODE_VERSION;
+if (expectedNodeVersion && process.version !== `v${expectedNodeVersion}`) {
+  throw new Error(`Node runtime ${process.version} does not match pinned release runtime v${expectedNodeVersion}`);
+}
 const target = platformTarget();
 const expectedTarget = process.env.SIGNAL_RELEASE_TARGET;
 if (expectedTarget && expectedTarget !== target) {

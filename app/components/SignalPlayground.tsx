@@ -22,7 +22,7 @@ const channels: Array<{ channel: PlaygroundChannel; label: string }> = [
   { channel: "both", label: "Both" },
 ];
 
-const installCommand = "npm install -g terminal-signal";
+const installCommand = "npm install -g terminal-signal@beta";
 
 export function SignalPlayground() {
   const [phase, setPhase] = useState<PlaygroundPhase>("completed");

@@ -2,23 +2,29 @@
 
 Date: 2026-08-12  
 Branch: `codex/core-controller`  
-Status: local implementation ready; draft PR open; external publication deferred
+Status: release-candidate implementation; external publication deferred
 
 | Axis | Result | Evidence and remaining boundary |
 |---|---|---|
-| Correctness | Pass | Reducer, lease, controller, wrapper, adapter, installer, terminal, tmux, site, and rendered-output suites pass on Node 24. Core coverage is 91.38% lines, 73.31% branches, and 98.81% functions against enforced 90/70/95 thresholds. |
-| Security and privacy | Pass | Fixed private JSON state, atomic writes, bounded stdin/state, no shell evaluation, canonical owned TTY validation, safe tmux argv, prompt/transcript exclusion, and symlink/config refusal are tested. |
-| Compatibility | Pass with documented degradation | Claude and Codex real configs pass read-only doctor; installed local CLIs were fixture/live audited where available. tmux has an opt-in real-server test. Unsupported terminal channels no-op safely. |
-| UX and accessibility | Pass | Desktop/mobile, keyboard, touch sizing, focus visibility, copy state, reduced motion, console, and network behavior were checked in a real browser. |
-| Operability and rollback | Pass for pre-release | `doctor`, `status`, `preview`, targeted/reset-all recovery, install/uninstall, backups, wrapper exit/signal propagation, CI, and rollback steps exist. Live config mutation, package publication, and deployment still require approval. |
+| Correctness | Pass locally | Reducer, lease, controller, wrapper, adapter, installer, terminal, tmux, site, and rendered-output suites pass. Core coverage is enforced at 90% lines, 70% branches, and 95% functions. |
+| Security and privacy | Pass locally | Fixed private JSON state, atomic writes, bounded input/state, no shell evaluation, canonical owned TTY validation, safe tmux arguments, prompt/transcript exclusion, and symlink/config refusal are tested. |
+| npm distribution | Pass locally | A clean `npm pack` builds a four-file dependency-free package, isolated global installation and upgrade preserve durable hooks, and `npx` diagnostics work while activation is refused. Node 22.14/24.18 remain CI evidence after push. |
+| Native distribution | Pass on local macOS arm64 | The exact extracted SEA archive runs without Node on `PATH`, has recomputed metadata, and is ad-hoc signed. Linux and Intel macOS require their release runners; Developer ID signing and notarization are not present. |
+| Release security | Implemented, externally gated | Actions are commit-pinned; the workflow requires canonical public visibility, protected matching tags, `main` reachability, protected environments, exact artifacts, attestations, draft staging, npm integrity idempotency, and post-release download verification. Rulesets, environments, npm ownership, and trusted publishing are not local state. |
+| Homebrew | Generator passes locally | Immutable URLs and digests are schema-validated and the formula passes Ruby and Homebrew style checks. Tap `readall`, audit, URL installation, and upgrade tests require a real release and tap. |
+| UX and accessibility | Pass locally | Desktop/mobile, keyboard, touch sizing, focus visibility, copy state, reduced motion, console, and network behavior were previously checked in a real browser. Deployment remains ordered after publication. |
 
 ## Required findings
 
-None open.
+1. Run the expanded pinned CI matrix on the pushed commit.
+2. Complete the owner-only public-repository, ruleset, protected-environment, vulnerability-reporting, and npm trusted-publisher setup in [docs/releasing.md](./docs/releasing.md).
+3. Run all native release runners and the real Homebrew tap install/upgrade path before calling those channels supported.
+4. Keep macOS signing language limited to ad-hoc signing unless Developer ID signing and notarization are added.
 
 ## Explicit non-guarantees
 
 - No synchronous cleanup claim after `SIGKILL`, power loss, or terminal-emulator death.
 - OSC 111 restores the configured default, not an unknowable arbitrary prior OSC 11 value.
 - Separate tmux panes cannot own distinct whole-client background colors; Signal uses tmux status there.
-- Gemini, OpenCode, and Aider were contract-tested but not live-executed because their CLIs were not installed locally.
+- Gemini, OpenCode, and Aider were contract-tested but not live-executed when their CLIs were unavailable locally.
+- Windows, Alpine/musl, and other unlisted native targets are unsupported.

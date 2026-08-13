@@ -219,11 +219,11 @@ export default function Home() {
           <div className="command-panel" aria-label="Signal setup commands">
             <div className="command-panel-head">
               <span>terminal</span>
-              <span className="command-beta">public beta · v0.1</span>
+              <span className="command-beta">release candidate · v0.1</span>
             </div>
             <div className="command-block">
-              <span className="command-comment"># package publish follows beta verification</span>
-              <code><span>$</span> npm install -g terminal-signal</code>
+              <span className="command-comment"># available after the first verified beta release</span>
+              <code><span>$</span> npm install -g terminal-signal@beta</code>
             </div>
             <div className="command-block">
               <span className="command-comment"># supervise any coding CLI</span>

@@ -13,16 +13,32 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 - TTY targets must be owned character devices. tmux options are captured and restored exactly; pane sessions use tmux status instead of a whole-client background wash.
 - Prompt, response, and transcript content are not part of the protocol or persisted state.
 
-## Try it from source
+## Installation status
 
-Node.js 24 or newer is required. This repository is private and the package is not published.
+Signal is a release candidate. The commands below become public only after the verified beta is published; the repository will not deploy the landing page before that release exists.
 
 ```bash
-npm install
-npm link
-signal doctor --json
-signal run -- claude
+# Durable Node installation after publication
+npm install --global terminal-signal@beta
+
+# Ephemeral diagnostics or preview only
+npx terminal-signal@beta doctor --json
 ```
+
+Standalone macOS and Linux archives will be attached to each GitHub Release. Homebrew is the preferred macOS path after the generated formula is accepted into the project tap.
+
+## Try it from source
+
+Repository development uses Node.js 24.18.0.
+
+```bash
+npm ci
+npm run build:cli
+node packages/cli/dist/signal.mjs doctor --json
+node packages/cli/dist/signal.mjs run -- claude
+```
+
+For a durable installation from a checkout, use `npm install --global ./packages/cli` after building. Provider hooks must never point at `npx` or an npm cache path.
 
 The wrapper automatically discovers the controlling TTY and passes a stable surface identity to native hooks. Explicit targets remain available for automation:
 
@@ -68,7 +84,7 @@ See [SPEC.md](./SPEC.md), [PLAN.md](./PLAN.md), [architecture](./docs/architectu
 
 ## Status
 
-Pre-release. The implementation and interactive site are complete locally and tracked in a draft pull request. Live provider installation, package publication, and site deployment remain explicit approval gates.
+Release candidate. Local package and native artifact rehearsals are implemented. Repository visibility, protected environments/rulesets, first npm ownership, the Homebrew tap, live provider migration, and site deployment remain explicit external approval gates.
 
 ## License
 

@@ -8,7 +8,7 @@
 
 Build a safe, local-first attention layer that lets any coding CLI report working, waiting, ready, failed, and inactive state through a shared terminal/tmux controller, with a polished interactive product site.
 
-Signal is distributed like a native terminal tool: GitHub is the canonical source and release record, signed/checksummed standalone artifacts are the primary runtime, Homebrew is the preferred macOS installer, and `terminal-signal` on npm provides a Node-based install plus an `npx` trial path.
+Signal is distributed like a native terminal tool: GitHub is the canonical source and release record, checksummed standalone artifacts with workflow attestations are the primary runtime, Homebrew is the preferred macOS installer, and `terminal-signal` on npm provides a Node-based install plus an `npx` trial path.
 
 ## Objective
 
@@ -20,8 +20,8 @@ Success means all controller invariants have executable regression tests; Claude
 
 ## Assumptions
 
-- [x] Signal is a separate product from ChangeScribe and will move to `/Users/andrewulloa/Developer/signal` after it passes its own gates.
-- [x] Node 24+ is the initial runtime; macOS and Linux receive terminal-background support, while unsupported/Windows surfaces safely degrade to status and notification channels.
+- [x] Signal is a separate product from ChangeScribe and lives in its own `terminal-signal` GitHub repository and local worktree.
+- [x] Node 24.18.0 is the pinned development and release-build runtime; the bundled npm CLI supports Node 22+; macOS and Linux receive terminal-background support, while unsupported/Windows surfaces safely degrade to status and notification channels.
 - [x] Claude Code and Codex are the first installed adapters; Gemini CLI, OpenCode, and Aider receive tested adapter contracts/install manifests without pretending they are locally available for live verification.
 - [x] The current thermal palette and adaptive urgency concept remain, but lifecycle ordering and ownership take precedence over cosmetic behavior.
 - [x] “Any coding CLI” means every executable can use the wrapper/protocol baseline; native semantic fidelity depends on events the underlying CLI actually exposes.
@@ -111,7 +111,7 @@ docs/                → audit, architecture, adapter protocol, launch notes
 - Atomic persistence, concurrent writers, child supervision, CLI commands, terminal bytes, and tmux restoration are integration tested.
 - The critical browser flow is: load the homepage, choose each phase, use keyboard controls, copy the install command, switch visual channels, and verify responsive/reduced-motion behavior.
 - Enforced Node-native coverage target for `src/core`: 90% lines, 70% branches, and 95% functions. The verified baseline is 91.38% lines, 73.31% branches, and 98.81% functions.
-- Distribution tests inspect the exact packed tarball, install it into an isolated npm prefix, execute its `signal` bin, build a native artifact, and install the generated Homebrew formula without touching live configuration.
+- Distribution tests inspect the exact packed tarball, install it into an isolated npm prefix, execute its `signal` bin, extract and smoke the exact native archive, and validate the generated Homebrew formula. Tap audit and URL installation run only after immutable release assets exist.
 
 ## Boundaries
 
@@ -136,12 +136,12 @@ docs/                → audit, architecture, adapter protocol, launch notes
 
 ## Open Questions
 
-None blocking for release readiness. The first public release still requires explicit approval for repository visibility, npm ownership/trusted-publisher setup, and the Homebrew tap destination.
+No local implementation decision is blocking. The first public release still requires explicit approval and external setup for repository visibility, protected rulesets/environments, npm ownership and trusted publishing, private vulnerability reporting, and the Homebrew tap destination.
 
 ## References
 
 - `docs/edge-case-audit.md`
-- `docs/shaping.md`
+- `PLAN.md`
 - Claude Code hooks: https://code.claude.com/docs/en/hooks
 - Codex hooks: https://developers.openai.com/codex/hooks
 

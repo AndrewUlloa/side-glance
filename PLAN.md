@@ -158,14 +158,14 @@ protocol + reducer
 
 ### Phase 5: Public distribution readiness
 
-- [ ] **Task 13: Isolate the npm CLI package**
+- [x] **Task 13: Isolate the npm CLI package**
   - **Acceptance:** Root stays private; `packages/cli` owns `terminal-signal`; the packed allowlist contains a compiled executable and package docs only; no site runtime dependency is installed.
   - **Verify:** focused pack-manifest RED/GREEN test; isolated `npm install --prefix` smoke test on the minimum supported Node.
   - **Depends on:** Task 12
   - **Files:** `package.json`, `packages/cli/package.json`, `scripts/build-cli.mjs`, `tests/distribution/npm-package.test.mjs`
   - **Size:** M
 
-- [ ] **Task 14: Make provider activation durable across npm symlinks**
+- [x] **Task 14: Make provider activation durable across npm symlinks**
   - **Acceptance:** Global npm bin symlinks resolve to a validated stable target; known ephemeral npm cache paths cannot be written into provider hooks; standalone execution resolves itself correctly.
   - **Verify:** installer RED/GREEN tests using an isolated global prefix and synthetic cache path.
   - **Depends on:** Task 13
@@ -173,15 +173,15 @@ protocol + reducer
   - **Size:** M
 
 - [ ] **Task 15: Build standalone release artifacts**
-  - **Acceptance:** The compiled CLI is injected into a native executable; local native smoke test passes with a stripped `PATH`; archive and checksum manifest are deterministic in name/content.
+  - **Acceptance:** The compiled CLI is injected into a native executable; local native smoke test passes with a stripped `PATH`; archive naming is deterministic and the exact content is checksummed.
   - **Verify:** artifact RED/GREEN test plus native local build; CI matrix covers macOS arm64/Intel and Linux arm64/x64.
   - **Depends on:** Task 13
   - **Files:** `scripts/release/*`, `.github/workflows/release.yml`, distribution tests
   - **Size:** M
 
 - [ ] **Task 16: Generate and verify Homebrew packaging**
-  - **Acceptance:** A formula is generated from versioned artifact URLs and SHA-256 values; it installs only `signal`; local formula syntax/audit/install tests run when Homebrew is available.
-  - **Verify:** formula snapshot RED/GREEN test and isolated Homebrew install smoke test.
+  - **Acceptance:** A formula is generated from versioned artifact URLs and SHA-256 values; it installs only `signal`; local syntax and Homebrew style tests pass; tap readall, audit, install, and upgrade tests run after immutable URLs exist.
+  - **Verify:** formula schema RED/GREEN test and local style check; isolated tap install/upgrade smoke test after release.
   - **Depends on:** Task 15
   - **Files:** `packaging/homebrew/*`, release scripts/workflow, distribution tests
   - **Size:** M
@@ -195,11 +195,11 @@ protocol + reducer
 
 ### Checkpoint: Publication-ready but unpublished
 
-- [ ] Exact npm tarball installed and exercised from an isolated prefix
-- [ ] Native artifact exercised without relying on the developer checkout
-- [ ] Homebrew formula generated and locally verified
-- [ ] No registry package, public release, visibility change, tap mutation, or live provider mutation occurred
-- [ ] Release review and rollback documents match the artifacts
+- [x] Exact npm tarball installed and exercised from an isolated prefix
+- [x] Native artifact exercised without relying on the developer checkout
+- [x] Homebrew formula generated and locally verified
+- [x] No registry package, public release, visibility change, tap mutation, or live provider mutation occurred
+- [x] Release review and rollback documents match the artifacts
 
 ## Risks and Mitigations
 

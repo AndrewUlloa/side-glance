@@ -78,6 +78,20 @@ test("builds and smokes the exact versioned standalone archive without Node on P
   assert.equal(JSON.parse(preview.stdout).urgency, 500);
 });
 
+test("refuses a different embedded Node release runtime", async () => {
+  await assert.rejects(
+    () => command(process.execPath, [builder], {
+      cwd: repository,
+      env: {
+        ...process.env,
+        SIGNAL_RELEASE_TARGET: platformTarget(),
+        SIGNAL_RELEASE_NODE_VERSION: "0.0.0",
+      },
+    }),
+    /Node runtime.*does not match pinned release runtime/iu,
+  );
+});
+
 test("refuses to label a native build as a different release target", async () => {
   const wrongTarget = process.platform === "darwin" ? "linux-x64-gnu" : "darwin-arm64";
   await assert.rejects(

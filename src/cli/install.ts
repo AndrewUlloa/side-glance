@@ -13,7 +13,7 @@ export async function runInstallCommand(
 ): Promise<number> {
   if (action === "install" && isEphemeralNpmExecution(process.env, process.argv[1])) {
     throw new Error(
-      "Permanent provider hooks cannot be installed from npx/npm exec. Install Signal with Homebrew or `npm install --global terminal-signal`, then run `signal install` again.",
+      "Permanent provider hooks cannot be installed from npx/npm exec. Install Signal from a standalone release or with `npm install --global terminal-signal`, then run `signal install` again.",
     );
   }
   const provider = parseProvider(args[0]);
