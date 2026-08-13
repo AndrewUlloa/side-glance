@@ -180,3 +180,25 @@ test("refuses malformed and symlinked provider configuration", async (context) =
   );
   assert.equal(await readFile(outside, "utf8"), "{}");
 });
+
+test("accepts a stable package-manager bin symlink and preserves its path", async (context) => {
+  const home = await fixtureHome(context);
+  const executableTarget = await executableFixture(home);
+  const stableBin = path.join(home, "stable-prefix", "bin", "signal");
+  await mkdir(path.dirname(stableBin), { recursive: true });
+  await symlink(executableTarget, stableBin);
+
+  await installProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+    executablePath: stableBin,
+  });
+
+  const installed = JSON.parse(await readFile(configPath(home, "claude"), "utf8"));
+  const commands = Object.values(installed.hooks)
+    .flatMap((groups) => groups as Array<{ hooks: Array<{ command: string }> }>)
+    .flatMap((group) => group.hooks)
+    .map((hook) => hook.command);
+  assert.ok(commands.every((command) => command.includes(stableBin)));
+  assert.ok(commands.every((command) => !command.includes(executableTarget)));
+});

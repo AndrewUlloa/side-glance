@@ -69,6 +69,61 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
   const report = JSON.parse(doctor.stdout);
   assert.equal(report.node.supported, true);
   assert.equal(report.stateDirectory, stateDirectory);
+  const installedHome = path.join(temporary, "installed-home");
+  const runtimeEnvironment = {
+    SIGNAL_STATE_DIR: stateDirectory,
+    PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+  };
+  await command(
+    executable,
+    ["install", "claude", "--home", installedHome, "--json"],
+    { cwd: temporary, env: runtimeEnvironment },
+  );
+  const settingsPath = path.join(installedHome, ".claude", "settings.json");
+  const installedSettings = JSON.parse(await readFile(settingsPath, "utf8"));
+  const hookCommand = installedSettings.hooks.SessionStart[0].hooks[0].command;
+  assert.match(hookCommand, new RegExp(escapeRegularExpression(executable), "u"));
+  const hookPayload = JSON.stringify({
+    hook_event_name: "SessionStart",
+    session_id: "packaged-hook-session",
+  });
+  const firstHook = await command("/bin/sh", ["-c", hookCommand], {
+    cwd: temporary,
+    env: { ...runtimeEnvironment, SIGNAL_SURFACE_ID: "test:packaged-hook" },
+    input: hookPayload,
+  });
+  assert.equal(
+    JSON.parse(firstHook.stdout).sessions["claude:packaged-hook-session"].phase,
+    "working",
+  );
+
+  await command(
+    npmExecutable,
+    [
+      "install",
+      "--global",
+      "--prefix",
+      prefix,
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+      archive,
+    ],
+    { cwd: temporary, env: npmEnvironment },
+  );
+  const hookAfterReinstall = await command("/bin/sh", ["-c", hookCommand], {
+    cwd: temporary,
+    env: { ...runtimeEnvironment, SIGNAL_SURFACE_ID: "test:packaged-hook" },
+    input: JSON.stringify({
+      hook_event_name: "SessionEnd",
+      session_id: "packaged-hook-session",
+      reason: "reinstalled",
+    }),
+  });
+  assert.equal(
+    JSON.parse(hookAfterReinstall.stdout).sessions["claude:packaged-hook-session"].phase,
+    "inactive",
+  );
   const version = await command(executable, ["--version"], {
     cwd: temporary,
     env: { PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}` },
@@ -111,6 +166,40 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
     },
   );
   assert.equal(npxVersion.stdout.trim(), "0.1.0-beta.1");
+
+  const npxHome = path.join(temporary, "npx-home");
+  await assert.rejects(
+    () =>
+      command(
+        npmExecutable,
+        [
+          "exec",
+          "--yes",
+          "--offline",
+          "--package",
+          archive,
+          "--",
+          "terminal-signal",
+          "install",
+          "claude",
+          "--home",
+          npxHome,
+          "--json",
+        ],
+        {
+          cwd: temporary,
+          env: {
+            ...npmEnvironment,
+            PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+          },
+        },
+      ),
+    /Permanent provider hooks cannot be installed from npx/u,
+  );
+  await assert.rejects(
+    () => readFile(path.join(npxHome, ".claude", "settings.json"), "utf8"),
+    /ENOENT/u,
+  );
 });
 
 function command(executable, args, options) {
@@ -118,7 +207,7 @@ function command(executable, args, options) {
     const child = spawn(executable, args, {
       cwd: options.cwd,
       env: { ...process.env, ...options.env },
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: [options.input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -131,6 +220,7 @@ function command(executable, args, options) {
       stderr += chunk;
     });
     child.once("error", reject);
+    if (options.input !== undefined) child.stdin.end(options.input);
     child.once("close", (code, signal) => {
       if (code === 0) {
         resolve({ stdout, stderr });
@@ -143,4 +233,8 @@ function command(executable, args, options) {
       );
     });
   });
+}
+
+function escapeRegularExpression(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }

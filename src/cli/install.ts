@@ -11,6 +11,11 @@ export async function runInstallCommand(
   args: readonly string[],
   action: "install" | "uninstall",
 ): Promise<number> {
+  if (action === "install" && isEphemeralNpmExecution(process.env, process.argv[1])) {
+    throw new Error(
+      "Permanent provider hooks cannot be installed from npx/npm exec. Install Signal with Homebrew or `npm install --global terminal-signal`, then run `signal install` again.",
+    );
+  }
   const provider = parseProvider(args[0]);
   const homeDirectory = option(args, "--home") ?? homedir();
   const executablePath =
@@ -21,6 +26,17 @@ export async function runInstallCommand(
   const result = await operation({ provider, homeDirectory, executablePath });
   process.stdout.write(`${JSON.stringify(result)}\n`);
   return 0;
+}
+
+function isEphemeralNpmExecution(
+  environment: Readonly<Record<string, string | undefined>>,
+  invokedPath: string | undefined,
+): boolean {
+  return (
+    environment.npm_lifecycle_event === "npx" ||
+    environment.npm_command === "exec" ||
+    /(?:^|[/\\])_npx(?:[/\\]|$)/u.test(invokedPath ?? "")
+  );
 }
 
 function parseProvider(value: string | undefined): InstallableProvider {

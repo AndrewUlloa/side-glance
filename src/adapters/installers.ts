@@ -233,9 +233,9 @@ async function validateOptions(
   }
   const executablePath = path.resolve(options.executablePath);
   if (requireExecutable) {
-    const executableMetadata = await lstat(executablePath);
-    if (executableMetadata.isSymbolicLink() || !executableMetadata.isFile()) {
-      throw new Error("Signal executable must be a regular file, not a symbolic link.");
+    const executableMetadata = await stat(executablePath);
+    if (!executableMetadata.isFile()) {
+      throw new Error("Signal executable must resolve to a regular file.");
     }
     if ((executableMetadata.mode & 0o111) === 0) {
       throw new Error("Signal executable must have an executable permission bit.");

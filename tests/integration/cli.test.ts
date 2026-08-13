@@ -319,6 +319,27 @@ test("exposes transactional provider install and uninstall commands", async (con
   assert.equal(JSON.parse(uninstalled.stdout).installedHooks, 0);
 });
 
+test("refuses permanent provider activation from an ephemeral npm execution", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "signal-npx-home-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+
+  const result = await runCli(
+    ["install", "claude", "--home", home, "--executable", cliPath, "--json"],
+    {
+      stateDirectory: directory,
+      env: { npm_command: "exec", npm_lifecycle_event: "npx" },
+    },
+  );
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /permanent|global|Homebrew|npm install/iu);
+  await assert.rejects(
+    () => readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+    /ENOENT/u,
+  );
+});
+
 test(
   "supervised run forwards termination, records cleanup, and exits by the same signal",
   { skip: process.platform === "win32" },
