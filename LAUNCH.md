@@ -6,14 +6,16 @@ Signal is a release candidate. The requester approved the Vercel landing-page de
 
 - Public URL: https://terminal-signal.vercel.app
 - Project: `andrew-243s-projects/terminal-signal`
-- Promoted deployment: `dpl_8kAcfiqJ8gEJVnx9V67HVAG9Ft7k`
-- Previous known-good deployment: `dpl_7FwR2PaphSk325hg8tKycT2GN9aA`
+- Promoted deployment: `dpl_CVPTgQi8hUGfjtfTJFaZxmgDyVWp`
+- Deployed source commit: `8e991e578c76dcee54e931a6b7b6d1385693a7fe`
+- Previous known-good deployment: `dpl_8kAcfiqJ8gEJVnx9V67HVAG9Ft7k`
+- Build contract: Vercel ran the repository's canonical `npm run build` command using standard Next.js 16.3; no Cloudflare/vinext compatibility build remains.
 - Verification: HTTP 200, correct deployment ID/title/canonical metadata, desktop and 390×844 mobile layouts, interactive Waiting state, no overflow, no browser errors or console output, and all recorded resources returned 200.
 
 Rollback the promoted site to the previous known-good deployment with:
 
 ```bash
-vercel rollback dpl_7FwR2PaphSk325hg8tKycT2GN9aA --yes
+vercel rollback dpl_8kAcfiqJ8gEJVnx9V67HVAG9Ft7k --yes
 ```
 
 ## Technical preflight

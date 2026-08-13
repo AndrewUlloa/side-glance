@@ -39,3 +39,49 @@ Vercel CLI does not infer every generated directory from `.gitignore`; the repos
 ## Fix
 
 Add a test-covered `.vercelignore` for non-site generated artifacts, verify the dry-run payload is bounded, and retry the preview deployment.
+
+---
+
+# Clean-CI rendered HTML failure after the Vercel-only migration
+
+## Observations
+
+- GitHub Actions run `31664448256`, job `94335901839`, failed only in `tests/rendered-html.test.mjs` after a successful standard `next build`.
+- The exact error was `ERR_MODULE_NOT_FOUND` for `dist/server/index.js`.
+- That path was the removed vinext Worker output; standard Next.js writes the prerendered homepage to `.next/server/app/index.html`.
+- The test passed locally because an ignored, stale `dist/server/index.js` remained from the previous vinext build. The file is not tracked, so it does not exist in a clean checkout.
+- Unit, integration, distribution, site-contract, Next build, npm compatibility, and native artifact checks passed.
+
+## Hypotheses
+
+### H1: The rendered-output test still targets vinext output, and stale local state masked it (ROOT HYPOTHESIS)
+
+- Supports: the failing path is `dist/server/index.js`; the test imports that exact path; local `dist/server/index.js` exists but is untracked; Next produced `.next/server/app/index.html` in both local and CI builds.
+- Conflicts: none.
+- Test: prove the old file is untracked and the Next artifact exists after `next build`.
+
+### H2: Next.js emits a different output layout on Linux
+
+- Supports: the failure occurred on Linux CI and not on local macOS.
+- Conflicts: the log fails before reading any Next artifact; both environments report the same static route, and the test explicitly asks for vinext's `dist` path.
+- Test: inspect the CI build route output and local `.next/server/app` layout.
+
+### H3: CI did not run the site build before the rendered-output test
+
+- Supports: a missing generated file can mean a missing build step.
+- Conflicts: the log records a successful `next build` immediately before the failing test.
+- Test: inspect command ordering in the workflow log.
+
+## Experiments
+
+- H1 confirmed without source changes: `test -f dist/server/index.js` succeeds locally while `git ls-files dist/server/index.js` returns nothing; `.next/server/app/index.html` exists after the canonical build.
+- H2 rejected: the successful CI route report matches the local build, and no platform-specific output was requested by the test.
+- H3 rejected: CI completed the Next.js build directly before executing `tests/rendered-html.test.mjs`.
+
+## Root Cause
+
+The Vercel-only migration changed the canonical build output from vinext's ignored `dist/server` tree to Next.js's `.next/server/app` tree, but the rendered HTML test kept importing the obsolete path, and a stale local artifact hid that dependency.
+
+## Fix
+
+Read and assert against Next.js's generated `.next/server/app/index.html`, add a regression assertion forbidding the obsolete `dist/server/index.js` reference, and verify after removing generated output and rebuilding.

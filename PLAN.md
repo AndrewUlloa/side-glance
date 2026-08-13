@@ -233,7 +233,7 @@ protocol + reducer
   - **Files:** site build configuration, package manifests, obsolete compatibility sources, contract tests, deployment docs
   - **Size:** M
 
-- [ ] **Task 22: Deploy and verify the Vercel-only revision**
+- [x] **Task 22: Deploy and verify the Vercel-only revision**
   - **Acceptance:** an unaliased production candidate built from the committed revision passes HTTP and real-browser verification; that exact candidate is promoted; rollback identity and production deployment identity are recorded.
   - **Verify:** Vercel inspection, authenticated candidate request, desktop/mobile browser checks, promotion, and public smoke test.
   - **Depends on:** Task 21
