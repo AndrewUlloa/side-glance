@@ -272,6 +272,22 @@ protocol + reducer
   - **Files:** `app/page.tsx`, `app/components/TerminalStoryboard.tsx`, `app/globals.css`, `package.json`, `package-lock.json`, `tests/site/terminal-storyboard.test.ts`, review/launch notes
   - **Size:** M
 
+### Phase 10: Lenis root scrolling
+
+- [x] **Task 27: Specify the Lenis integration contract**
+  - **Acceptance:** The contract fixes root ownership, automatic RAF, anchor behavior, reduced-motion handling, native touch, and removal of the competing CSS smooth-scroll controller.
+  - **Verify:** Review against the official Lenis core and React READMEs.
+  - **Depends on:** Task 26
+  - **Files:** `SPEC.md`, `PLAN.md`
+  - **Size:** XS
+
+- [x] **Task 28: Integrate and verify Lenis React**
+  - **Acceptance:** The pinned Lenis dependency mounts once at the app root with recommended CSS, smooth anchors, navigation inertia cleanup, and reduced-motion support; no custom RAF loop or touch smoothing is added.
+  - **Verify:** Focused RED/GREEN site contract, lint, typecheck, full tests/build, and real-browser desktop/mobile/reduced-motion checks.
+  - **Depends on:** Task 27
+  - **Files:** `package.json`, `package-lock.json`, `app/layout.tsx`, `app/components/SmoothScroll.tsx`, `app/globals.css`, `tests/site/lenis-scroll.test.ts`
+  - **Size:** M
+
 ## Risks and Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |

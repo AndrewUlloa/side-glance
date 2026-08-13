@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "lenis/dist/lenis.css";
+import { SmoothScroll } from "./components/SmoothScroll";
 import "./globals.css";
 
 const productionHostname = process.env.VERCEL_PROJECT_PRODUCTION_URL;
@@ -64,6 +66,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <SmoothScroll />
         {children}
       </body>
     </html>

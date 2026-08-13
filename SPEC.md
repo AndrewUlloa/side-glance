@@ -174,6 +174,18 @@ The requester’s real workflow is four coding-agent terminals open at once. The
 - `prefers-reduced-motion: reduce` skips directly to the ordered final stack with no running animation; and
 - desktop and 390×844 mobile browser checks show all four windows, no horizontal overflow, no runtime/console errors, and successful playground interaction.
 
+## Lenis Smooth Scrolling Contract
+
+The landing page uses Lenis's supported React adapter at the document root. Success means:
+
+- the app imports `lenis/dist/lenis.css` and mounts one root `ReactLenis` instance from `lenis/react`;
+- Lenis owns its automatic animation-frame loop and enables the site's existing anchor links;
+- navigation stops any previous scroll inertia before beginning the next anchor transition;
+- `respectReducedMotion` remains enabled so wheel smoothing is disabled and anchor navigation is immediate when the visitor requests reduced motion;
+- touch scrolling remains native and the integration does not add custom easing, multipliers, nested-scroll traversal, or a second animation loop;
+- the previous global `scroll-behavior: smooth` declaration is removed so Lenis is the only smooth-scroll controller; and
+- desktop, mobile, and reduced-motion browser checks show the Lenis root class, working anchor navigation, no horizontal overflow, and no runtime errors.
+
 ## Open Questions
 
 No local implementation decision is blocking. The first public release still requires explicit approval and external setup for repository visibility, protected rulesets/environments, npm ownership and trusted publishing, private vulnerability reporting, and the Homebrew tap destination.
@@ -185,6 +197,7 @@ No local implementation decision is blocking. The first public release still req
 - Claude Code hooks: https://code.claude.com/docs/en/hooks
 - Codex hooks: https://developers.openai.com/codex/hooks
 - Motion reference: https://linear.app/homepage
+- Lenis React README: https://github.com/darkroomengineering/lenis/blob/main/packages/react/README.md
 
 ## Sign-off
 
