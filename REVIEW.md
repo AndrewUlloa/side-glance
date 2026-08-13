@@ -13,12 +13,14 @@ Status: release-candidate implementation; external publication deferred
 | Release security | Implemented, externally gated | Actions are commit-pinned; the workflow requires canonical public visibility, protected matching tags, `main` reachability, protected environments, exact artifacts, attestations, draft staging, npm integrity idempotency, and post-release download verification. The repository rulesets and tag-restricted environments are configured; public visibility, required environment reviewers, npm ownership, and trusted publishing remain owner gates. |
 | Homebrew | Generator passes locally | Immutable URLs and digests are schema-validated and the formula passes Ruby and Homebrew style checks. Tap `readall`, audit, URL installation, and upgrade tests require a real release and tap. |
 | UX and accessibility | Pass in production | The Vercel deployment was checked on desktop and 390×844 mobile, including playground interaction, overflow, console, runtime errors, and network resources. Install commands remain explicitly labeled unavailable until the beta is published. |
+| Site architecture | Pass locally; deployment pending | The only site runtime is standard Next.js 16.3 on Vercel. Cloudflare Worker, vinext, Wrangler, Vite bridge, D1 starter code, Worker types, and their lockfile graph were removed. The canonical Next.js production build and a regression contract both pass. |
 
 ## Required findings
 
 1. Complete the remaining owner-only public-repository, environment-reviewer, vulnerability-reporting, and npm trusted-publisher setup in [docs/releasing.md](./docs/releasing.md).
 2. Run all native release runners and the real Homebrew tap install/upgrade path before calling those channels supported.
 3. Keep macOS signing language limited to ad-hoc signing unless Developer ID signing and notarization are added.
+4. Production dependencies audit clean. Four audit findings remain in development-only build/lint dependencies and are outside the deployed Vercel runtime.
 
 ## Explicit non-guarantees
 

@@ -204,8 +204,8 @@ protocol + reducer
 ### Phase 6: Vercel landing-page deployment
 
 - [x] **Task 18: Add a test-covered Vercel runtime contract**
-  - **Acceptance:** Standard Next.js is an explicit dependency; Vercel uses a dedicated build command; deployment metadata derives from the production hostname; the existing Cloudflare build remains available.
-  - **Verify:** focused RED/GREEN deployment-contract test, typecheck, Next.js production build, and existing vinext production build.
+  - **Acceptance:** Standard Next.js is an explicit dependency; Vercel uses the canonical build command; deployment metadata derives from the production hostname; Cloudflare/vinext compatibility is intentionally removed.
+  - **Verify:** focused RED/GREEN deployment-contract test, typecheck, and Next.js production build.
   - **Depends on:** Task 12
   - **Files:** `package.json`, `package-lock.json`, `vercel.json`, `app/layout.tsx`, `tests/site/vercel-deployment.test.ts`
   - **Size:** M
@@ -222,6 +222,22 @@ protocol + reducer
   - **Verify:** `vercel promote`, `vercel inspect`, public HTTP/browser smoke test, and clean repository status.
   - **Depends on:** Task 19
   - **Files:** `LAUNCH.md`
+  - **Size:** S
+
+### Phase 7: Vercel-only site toolchain
+
+- [x] **Task 21: Replace the Cloudflare compatibility build**
+  - **Acceptance:** `npm run dev`, `npm run build`, and `npm start` are standard Next.js commands; Vercel calls `npm run build`; no Cloudflare/vinext/wrangler code, dependencies, types, or D1 starter files remain.
+  - **Verify:** focused RED/GREEN deployment-contract test, package lock inspection, lint, typecheck, production audit, and the full repository test/build gates.
+  - **Depends on:** Task 20
+  - **Files:** site build configuration, package manifests, obsolete compatibility sources, contract tests, deployment docs
+  - **Size:** M
+
+- [ ] **Task 22: Deploy and verify the Vercel-only revision**
+  - **Acceptance:** an unaliased production candidate built from the committed revision passes HTTP and real-browser verification; that exact candidate is promoted; rollback identity and production deployment identity are recorded.
+  - **Verify:** Vercel inspection, authenticated candidate request, desktop/mobile browser checks, promotion, and public smoke test.
+  - **Depends on:** Task 21
+  - **Files:** `LAUNCH.md`, deployment evidence
   - **Size:** S
 
 ## Risks and Mitigations

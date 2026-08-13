@@ -70,7 +70,7 @@ Success means all controller invariants have executable regression tests; Claude
 ## Tech Stack
 
 - Language: TypeScript 5.9; Node 24 for development and release builds; bundled JavaScript targets the documented npm runtime floor
-- Site: React 19 + Next.js 16 + Tailwind 4 on Vercel; the existing vinext/Cloudflare build remains a verified compatibility target
+- Site: React 19 + Next.js 16 + Tailwind 4, built and hosted exclusively through the standard Next.js/Vercel path
 - CLI persistence: versioned JSON with atomic rename and cross-process lock directory
 - Tests: Node test runner for unit/integration, isolated PTYs/tmux where available, browser verification for the site
 - Hosting: Vercel production deployment after a verified unaliased candidate; rollback retains the prior deployment
@@ -133,14 +133,15 @@ docs/                → audit, architecture, adapter protocol, launch notes
 | npm cache or version-manager path becomes a permanent hook | Medium | High | Resolve durable installs, reject ephemeral cache paths, and test global-prefix installation |
 | Release artifact differs from tested source | Low | High | Build after tests from an immutable tag, generate checksums/attestations in the same workflow, smoke-test downloaded artifacts |
 | Public supply chain is compromised | Low | Critical | Minimal workflow permissions, protected release environment, npm OIDC trusted publishing after repository visibility permits provenance |
-| Vercel and Cloudflare builds diverge | Medium | Medium | Keep separate explicit build commands and require both builds in the deployment gate |
+| A second hosting toolchain silently returns | Low | Medium | Contract-test the canonical Next.js scripts and reject Cloudflare/vinext dependencies and source artifacts |
 
 ## Vercel Deployment Contract
 
 The requester explicitly approved deploying the landing page to Vercel. Success means:
 
 - the repository has an explicit, test-covered Vercel build contract using standard Next.js;
-- the existing Cloudflare/vinext build continues to pass;
+- `dev`, `build`, and `start` use the standard Next.js CLI, and Vercel invokes the canonical `build` script;
+- no Cloudflare Worker, vinext, Wrangler, Vite bridge, or D1 starter artifact remains in the site toolchain;
 - an unaliased Vercel candidate is built first and returns the Signal page with no browser console or network errors;
 - the exact verified candidate is promoted to the production alias rather than rebuilt;
 - metadata resolves to the Vercel production hostname; and

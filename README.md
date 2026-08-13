@@ -68,7 +68,7 @@ OSC 111 restores the terminal's configured default background; terminals do not 
 
 ## Development
 
-The CLI and interactive site share the same phase and palette model. The required gates are:
+The CLI and interactive site share the same phase and palette model. The site uses the standard Next.js commands and deploys only to Vercel; it has no Cloudflare Worker, vinext, or Wrangler compatibility build. The required gates are:
 
 ```bash
 npm run test:unit
