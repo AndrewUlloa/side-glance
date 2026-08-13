@@ -91,19 +91,15 @@ export default function Home() {
       <main id="top">
         <section className="hero section-wrap" aria-labelledby="hero-title">
           <div className="hero-copy">
-            <div className="eyebrow hero-enter hero-enter-1">
-              <span className="pulse-dot" aria-hidden="true" />
-              Local-first attention layer
-            </div>
-            <h1 className="hero-enter hero-enter-2" id="hero-title">
+            <h1 className="hero-enter hero-enter-1" id="hero-title">
               Your terminal knows when it needs you.
             </h1>
-            <p className="hero-lede hero-enter hero-enter-3">
+            <p className="hero-lede hero-enter hero-enter-2">
               Signal turns coding-agent lifecycle events into a quiet, thermal
               status layer across terminal backgrounds and tmux—without reading
               your work.
             </p>
-            <div className="hero-actions hero-enter hero-enter-4">
+            <div className="hero-actions hero-enter hero-enter-3">
               <a className="primary-action" href="#playground">
                 Try the signal <span aria-hidden="true">↓</span>
               </a>
@@ -111,23 +107,6 @@ export default function Home() {
                 See the setup
               </a>
             </div>
-            <dl
-              className="hero-proof hero-enter hero-enter-5"
-              aria-label="Signal guarantees"
-            >
-              <div>
-                <dt>0</dt>
-                <dd>prompt content stored</dd>
-              </div>
-              <div>
-                <dt>6</dt>
-                <dd>agent paths covered</dd>
-              </div>
-              <div>
-                <dt>1</dt>
-                <dd>shared state model</dd>
-              </div>
-            </dl>
           </div>
 
           <div className="hero-storyboard hero-enter hero-enter-visual">

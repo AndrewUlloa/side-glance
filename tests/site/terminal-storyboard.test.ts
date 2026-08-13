@@ -18,6 +18,15 @@ test("hero tells the four-terminal origin story before the playground", () => {
   );
 });
 
+test("hero stays focused on the headline, actions, and four-terminal story", () => {
+  assert.doesNotMatch(pageSource, /Local-first attention layer/);
+  assert.doesNotMatch(pageSource, /className="eyebrow/);
+  assert.doesNotMatch(pageSource, /className="hero-proof/);
+  assert.doesNotMatch(pageSource, /aria-label="Signal guarantees"/);
+  assert.doesNotMatch(stylesheet, /\.eyebrow/);
+  assert.doesNotMatch(stylesheet, /\.hero-proof/);
+});
+
 test("storyboard is data-driven, stage-driven, replayable, and finite", () => {
   assert.match(storyboardSource, /ANIMATION STORYBOARD/);
   assert.match(storyboardSource, /const TIMING\s*=/);

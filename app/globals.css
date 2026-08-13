@@ -232,10 +232,6 @@ a {
   grid-template-columns: minmax(340px, 0.7fr) minmax(620px, 1.3fr);
 }
 
-.hero-copy {
-  padding-bottom: 12px;
-}
-
 .hero-enter {
   animation: hero-enter 720ms var(--motion-enter) both;
 }
@@ -252,21 +248,12 @@ a {
   animation-delay: 190ms;
 }
 
-.hero-enter-4 {
-  animation-delay: 270ms;
-}
-
-.hero-enter-5 {
-  animation-delay: 350ms;
-}
-
 .hero-enter-visual {
   animation-delay: 170ms;
   animation-name: hero-visual-enter;
   animation-duration: 860ms;
 }
 
-.eyebrow,
 .section-kicker,
 .playground-kicker {
   color: #a9b6b2;
@@ -277,24 +264,9 @@ a {
   text-transform: uppercase;
 }
 
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.pulse-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--teal);
-  box-shadow: 0 0 0 5px rgba(32, 189, 169, 0.09);
-  animation: breathe 2.4s ease-in-out infinite;
-}
-
 .hero h1 {
   max-width: 650px;
-  margin: 24px 0 24px;
+  margin: 0 0 24px;
   font-size: clamp(54px, 6.4vw, 92px);
   font-weight: 520;
   letter-spacing: -0.072em;
@@ -350,39 +322,6 @@ a {
 .text-action {
   color: #aab5b1;
   font-size: 13px;
-}
-
-.hero-proof {
-  display: grid;
-  max-width: 510px;
-  margin: 54px 0 0;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.hero-proof div {
-  min-width: 0;
-  padding: 0 18px;
-  border-left: 1px solid var(--line);
-}
-
-.hero-proof div:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-
-.hero-proof dt {
-  margin-bottom: 4px;
-  color: #dfe8e5;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-}
-
-.hero-proof dd {
-  margin: 0;
-  color: var(--faint);
-  font-size: 11px;
-  line-height: 1.4;
 }
 
 .hero-storyboard {
@@ -1713,11 +1652,6 @@ a {
   }
 }
 
-@keyframes breathe {
-  0%, 100% { opacity: 0.65; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1); }
-}
-
 @keyframes cursor-blink {
   0%, 48% { opacity: 1; }
   49%, 100% { opacity: 0; }
@@ -1812,10 +1746,6 @@ a {
 
   .hero h1 {
     font-size: clamp(49px, 16vw, 72px);
-  }
-
-  .hero-proof {
-    margin-top: 40px;
   }
 
   .playground {
@@ -1945,11 +1875,6 @@ a {
   .closing-actions {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .hero-proof {
-    gap: 16px 0;
-    grid-template-columns: 1fr 1fr;
   }
 
   .storyboard-head h2 {
