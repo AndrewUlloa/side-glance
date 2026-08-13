@@ -1,6 +1,20 @@
 # Launch and rollback
 
-Signal is a release candidate. Local packaging and release automation are implemented, but no package, tag, public release, Homebrew tap, site deployment, or live provider migration occurs without explicit approval.
+Signal is a release candidate. The requester approved the Vercel landing-page deployment, and that deployment is complete. No package, tag, public release, Homebrew tap, or live provider migration occurs without separate explicit approval.
+
+## Vercel production
+
+- Public URL: https://terminal-signal.vercel.app
+- Project: `andrew-243s-projects/terminal-signal`
+- Promoted deployment: `dpl_8kAcfiqJ8gEJVnx9V67HVAG9Ft7k`
+- Previous known-good deployment: `dpl_7FwR2PaphSk325hg8tKycT2GN9aA`
+- Verification: HTTP 200, correct deployment ID/title/canonical metadata, desktop and 390×844 mobile layouts, interactive Waiting state, no overflow, no browser errors or console output, and all recorded resources returned 200.
+
+Rollback the promoted site to the previous known-good deployment with:
+
+```bash
+vercel rollback dpl_7FwR2PaphSk325hg8tKycT2GN9aA --yes
+```
 
 ## Technical preflight
 
@@ -16,11 +30,10 @@ Signal is a release candidate. Local packaging and release automation are implem
 Follow [docs/releasing.md](./docs/releasing.md). Publication remains blocked until the repository owner explicitly approves and completes:
 
 - public repository visibility plus private vulnerability reporting;
-- `main` and `v*` rulesets and reviewed `github-release`/`npm-release` environments;
+- required reviewers on the existing `github-release` and `npm-release` environments;
 - first npm package ownership and trusted-publisher binding;
 - an immutable GitHub prerelease from the exact tested artifacts;
-- a separate Homebrew tap pull request after those artifact URLs exist;
-- landing-page deployment only after its displayed install command succeeds publicly.
+- a separate Homebrew tap pull request after those artifact URLs exist.
 
 ## Controlled migration from stoplight.sh
 

@@ -73,7 +73,7 @@ Success means all controller invariants have executable regression tests; Claude
 - Site: React 19 + Next.js 16 + Tailwind 4 on Vercel; the existing vinext/Cloudflare build remains a verified compatibility target
 - CLI persistence: versioned JSON with atomic rename and cross-process lock directory
 - Tests: Node test runner for unit/integration, isolated PTYs/tmux where available, browser verification for the site
-- Hosting: Vercel production deployment after a verified preview; rollback retains the prior deployment
+- Hosting: Vercel production deployment after a verified unaliased candidate; rollback retains the prior deployment
 - Distribution: npm workspace package, Node single-executable artifacts, GitHub Releases, and a Homebrew formula generated from release metadata
 
 ## Commands
@@ -141,8 +141,8 @@ The requester explicitly approved deploying the landing page to Vercel. Success 
 
 - the repository has an explicit, test-covered Vercel build contract using standard Next.js;
 - the existing Cloudflare/vinext build continues to pass;
-- a Vercel preview is built first and returns the Signal page with no browser console or network errors;
-- the exact verified preview is promoted to the production alias rather than rebuilt;
+- an unaliased Vercel candidate is built first and returns the Signal page with no browser console or network errors;
+- the exact verified candidate is promoted to the production alias rather than rebuilt;
 - metadata resolves to the Vercel production hostname; and
 - the production URL and rollback command are recorded in `LAUNCH.md`.
 

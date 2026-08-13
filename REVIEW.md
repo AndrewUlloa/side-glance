@@ -12,7 +12,7 @@ Status: release-candidate implementation; external publication deferred
 | Native distribution | Pass on local macOS arm64 | The exact extracted SEA archive runs without Node on `PATH`, has recomputed metadata, and is ad-hoc signed. Linux and Intel macOS require their release runners; Developer ID signing and notarization are not present. |
 | Release security | Implemented, externally gated | Actions are commit-pinned; the workflow requires canonical public visibility, protected matching tags, `main` reachability, protected environments, exact artifacts, attestations, draft staging, npm integrity idempotency, and post-release download verification. The repository rulesets and tag-restricted environments are configured; public visibility, required environment reviewers, npm ownership, and trusted publishing remain owner gates. |
 | Homebrew | Generator passes locally | Immutable URLs and digests are schema-validated and the formula passes Ruby and Homebrew style checks. Tap `readall`, audit, URL installation, and upgrade tests require a real release and tap. |
-| UX and accessibility | Pass locally | Desktop/mobile, keyboard, touch sizing, focus visibility, copy state, reduced motion, console, and network behavior were previously checked in a real browser. Deployment remains ordered after publication. |
+| UX and accessibility | Pass in production | The Vercel deployment was checked on desktop and 390×844 mobile, including playground interaction, overflow, console, runtime errors, and network resources. Install commands remain explicitly labeled unavailable until the beta is published. |
 
 ## Required findings
 

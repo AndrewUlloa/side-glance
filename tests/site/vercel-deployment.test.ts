@@ -12,6 +12,8 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   const vercel = await readJson("vercel.json");
   const vercelIgnore = await readFile(".vercelignore", "utf8");
   const layout = await readFile("app/layout.tsx", "utf8");
+  const launch = await readFile("LAUNCH.md", "utf8");
+  const readme = await readFile("README.md", "utf8");
 
   assert.equal(dependencies.next, "16.3.0");
   assert.equal(scripts["build:vercel"], "next build");
@@ -22,4 +24,7 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   }
   assert.match(layout, /VERCEL_PROJECT_PRODUCTION_URL/u);
   assert.doesNotMatch(layout, /terminal-signal\.pages\.dev/u);
+  assert.match(readme, /https:\/\/terminal-signal\.vercel\.app/u);
+  assert.match(launch, /dpl_[A-Za-z0-9]+/u);
+  assert.match(launch, /vercel rollback dpl_[A-Za-z0-9]+ --yes/u);
 });

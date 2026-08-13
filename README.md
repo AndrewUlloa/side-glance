@@ -15,7 +15,7 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 
 ## Installation status
 
-Signal is a release candidate. The commands below become public only after the verified beta is published; the repository will not deploy the landing page before that release exists.
+Signal is a release candidate. The [interactive landing page](https://terminal-signal.vercel.app) is live, but the commands below become public only after the verified beta is published. The deployed copy labels that boundary explicitly.
 
 ```bash
 # Durable Node installation after publication
@@ -84,7 +84,7 @@ See [SPEC.md](./SPEC.md), [PLAN.md](./PLAN.md), [architecture](./docs/architectu
 
 ## Status
 
-Release candidate. Local package and native artifact rehearsals are implemented, and the repository now has protected `main`/version tags plus tag-restricted release environments. Public visibility, environment reviewers, first npm ownership, the Homebrew tap, live provider migration, and site deployment remain explicit owner-approval gates.
+Release candidate. The landing page is deployed on Vercel; local package and native artifact rehearsals are implemented; and the repository has protected `main`/version tags plus tag-restricted release environments. Public visibility, environment reviewers, first npm ownership, the Homebrew tap, and live provider migration remain explicit owner-approval gates.
 
 ## License
 

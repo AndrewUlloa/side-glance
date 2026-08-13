@@ -210,15 +210,15 @@ protocol + reducer
   - **Files:** `package.json`, `package-lock.json`, `vercel.json`, `app/layout.tsx`, `tests/site/vercel-deployment.test.ts`
   - **Size:** M
 
-- [ ] **Task 19: Verify a real Vercel preview**
-  - **Acceptance:** The linked project belongs to the authenticated owner; the preview returns 200, renders the landing page, supports playground interaction, and has no browser console or failed-network errors.
-  - **Verify:** `vercel build`, `vercel deploy --prebuilt`, deployment inspection, and real-browser desktop/mobile checks.
+- [x] **Task 19: Verify a real Vercel candidate**
+  - **Acceptance:** The linked project belongs to the authenticated owner; the candidate returns 200, renders the landing page, supports playground interaction, and has no browser console or failed-network errors.
+  - **Verify:** `vercel deploy --prod --skip-domain`, authenticated `vercel curl`, deployment inspection, and real-browser desktop/mobile checks.
   - **Depends on:** Task 18
   - **Files:** `.vercel/project.json` (ignored), deployment evidence
   - **Size:** S
 
-- [ ] **Task 20: Promote the verified deployment and record rollback**
-  - **Acceptance:** The exact preview is promoted to the production alias; public verification passes; `LAUNCH.md` records the URL, deployment identity, and rollback command.
+- [x] **Task 20: Promote the verified deployment and record rollback**
+  - **Acceptance:** The exact candidate is promoted to the production alias; public verification passes; `LAUNCH.md` records the URL, deployment identity, and rollback command.
   - **Verify:** `vercel promote`, `vercel inspect`, public HTTP/browser smoke test, and clean repository status.
   - **Depends on:** Task 19
   - **Files:** `LAUNCH.md`
