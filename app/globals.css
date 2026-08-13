@@ -226,8 +226,8 @@ a {
 
 .hero {
   display: grid;
-  min-height: calc(100vh - 68px);
-  padding-block: clamp(64px, 9vw, 126px) 90px;
+  min-height: calc(100dvh - 68px);
+  padding-block: clamp(24px, 4dvh, 48px);
   align-items: center;
   gap: clamp(50px, 7vw, 104px);
   grid-template-columns: minmax(340px, 0.7fr) minmax(620px, 1.3fr);
@@ -1784,8 +1784,6 @@ a {
   }
 
   .hero {
-    min-height: auto;
-    padding-block: 72px 64px;
     gap: 52px;
   }
 

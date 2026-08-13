@@ -55,3 +55,11 @@ test("reduced motion preserves server markup through the first hydration render"
     /const visibleStage = shouldReduceMotion \? STAGE\.complete : stage/,
   );
 });
+
+test("hero uses one compact dynamic viewport gutter above and below", () => {
+  const heroRule = stylesheet.match(/\.hero\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+
+  assert.match(heroRule, /min-height:\s*calc\(100dvh - 68px\)/);
+  assert.match(heroRule, /padding-block:\s*clamp\(24px, 4dvh, 48px\)/);
+  assert.doesNotMatch(stylesheet, /padding-block:\s*72px 64px/);
+});
