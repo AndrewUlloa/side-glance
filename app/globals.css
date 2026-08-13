@@ -230,7 +230,7 @@ a {
   padding-block: clamp(64px, 9vw, 126px) 90px;
   align-items: center;
   gap: clamp(50px, 7vw, 104px);
-  grid-template-columns: minmax(0, 0.88fr) minmax(520px, 1.12fr);
+  grid-template-columns: minmax(340px, 0.7fr) minmax(620px, 1.3fr);
 }
 
 .hero-copy {
@@ -386,7 +386,282 @@ a {
   line-height: 1.4;
 }
 
-.hero-playground {
+.hero-storyboard {
+  min-width: 0;
+}
+
+.terminal-storyboard {
+  position: relative;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(53, 215, 241, 0.08), transparent 34%),
+    rgba(14, 18, 20, 0.94);
+  box-shadow: 0 38px 100px rgba(0, 0, 0, 0.42);
+}
+
+.terminal-storyboard::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 24px 24px;
+  content: "";
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+  pointer-events: none;
+}
+
+.storyboard-head,
+.storyboard-legend {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.storyboard-head {
+  min-height: 48px;
+  margin-bottom: 14px;
+}
+
+.storyboard-head h2 {
+  margin: 5px 0 0;
+  font-size: 18px;
+  font-weight: 570;
+  letter-spacing: -0.035em;
+}
+
+.storyboard-replay {
+  display: inline-flex;
+  min-width: 78px;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #bdc9c5;
+  cursor: pointer;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  transition-duration: 160ms;
+  transition-property: border-color, background-color, color, transform;
+  transition-timing-function: var(--motion-smooth);
+}
+
+.storyboard-replay:not(:disabled):hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.storyboard-replay:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.storyboard-replay:disabled {
+  pointer-events: none;
+}
+
+.storyboard-stage {
+  position: relative;
+  height: 520px;
+}
+
+.story-terminal {
+  position: absolute;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 11px;
+  color: rgba(245, 250, 247, 0.88);
+  font-family: var(--font-geist-mono), monospace;
+  box-shadow:
+    0 18px 46px rgba(0, 0, 0, 0.34),
+    inset 0 0 56px rgba(0, 0, 0, 0.12);
+  transform-origin: top left;
+}
+
+.story-terminal[data-awake="true"] {
+  box-shadow:
+    0 20px 52px rgba(0, 0, 0, 0.44),
+    0 0 38px color-mix(in srgb, var(--story-accent) 13%, transparent),
+    inset 0 0 56px rgba(0, 0, 0, 0.12);
+}
+
+.story-terminal-bar {
+  display: grid;
+  height: 31px;
+  padding: 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  align-items: center;
+  background: rgba(8, 11, 12, 0.86);
+  color: rgba(227, 237, 233, 0.52);
+  font-size: 7px;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.story-window-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.story-window-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #59615f;
+}
+
+.story-window-dots span:first-child { background: #e26859; }
+.story-window-dots span:nth-child(2) { background: #d5a945; }
+.story-window-dots span:nth-child(3) { background: #4da56e; }
+
+.story-terminal-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.story-terminal-state {
+  display: flex;
+  justify-self: end;
+  align-items: center;
+  gap: 5px;
+  color: var(--story-accent);
+  font-weight: 650;
+}
+
+.story-terminal-state i,
+.storyboard-legend i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--story-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--story-accent) 60%, transparent);
+}
+
+.story-terminal-body {
+  height: calc(100% - 55px);
+  padding: 16px 17px;
+  font-size: 8px;
+  line-height: 1.65;
+}
+
+.story-terminal-body p {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.story-command {
+  margin-bottom: 12px !important;
+  color: rgba(242, 247, 245, 0.52);
+}
+
+.story-command span,
+.story-prompt span {
+  margin-right: 7px;
+  color: var(--story-accent);
+}
+
+.story-tree {
+  display: inline-block;
+  width: 20px;
+  color: rgba(255, 255, 255, 0.24);
+}
+
+.story-active {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.story-prompt {
+  display: flex;
+  margin-top: 11px !important;
+  align-items: center;
+}
+
+.story-prompt i {
+  width: 5px;
+  height: 11px;
+  background: rgba(255, 255, 255, 0.72);
+  animation: cursor-blink 1.15s steps(1) infinite;
+}
+
+.story-tmux-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  height: 24px;
+  align-items: center;
+  background: rgba(5, 8, 9, 0.9);
+  color: rgba(225, 234, 231, 0.48);
+  font-size: 7px;
+}
+
+.story-tmux-bar strong {
+  height: 100%;
+  padding: 7px 9px 0;
+  background: var(--story-accent);
+  color: #07100e;
+  font-weight: 760;
+}
+
+.story-tmux-bar span {
+  padding-left: 9px;
+  color: var(--story-accent);
+}
+
+.story-tmux-bar em {
+  margin-left: auto;
+  padding-right: 9px;
+  font-style: normal;
+}
+
+.storyboard-legend {
+  min-height: 43px;
+  color: #77827f;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 8px;
+  gap: 12px;
+}
+
+.storyboard-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.storyboard-legend strong {
+  margin-left: auto;
+  color: #aeb9b5;
+  font-weight: 540;
+}
+
+.playground-section {
+  display: grid;
+  padding-block: 130px;
+  align-items: center;
+  gap: clamp(56px, 8vw, 112px);
+  grid-template-columns: minmax(0, 0.72fr) minmax(520px, 1.28fr);
+}
+
+.playground-section-copy {
+  margin-bottom: 0;
+}
+
+.playground-section-demo {
   min-width: 0;
 }
 
@@ -1462,7 +1737,19 @@ a {
     max-width: 760px;
   }
 
-  .hero-playground {
+  .hero-storyboard {
+    width: min(820px, 100%);
+  }
+
+  .playground-section {
+    grid-template-columns: 1fr;
+  }
+
+  .playground-section-copy {
+    max-width: 660px;
+  }
+
+  .playground-section-demo {
     width: min(720px, 100%);
   }
 
@@ -1500,6 +1787,30 @@ a {
     min-height: auto;
     padding-block: 72px 64px;
     gap: 52px;
+  }
+
+  .terminal-storyboard {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .storyboard-stage {
+    height: 460px;
+  }
+
+  .storyboard-legend {
+    display: grid;
+    padding-top: 8px;
+    grid-template-columns: repeat(4, auto);
+  }
+
+  .storyboard-legend strong {
+    margin-left: 0;
+    grid-column: 1 / -1;
+  }
+
+  .playground-section {
+    padding-block: 100px;
   }
 
   .hero h1 {
@@ -1644,6 +1955,42 @@ a {
     grid-template-columns: 1fr 1fr;
   }
 
+  .storyboard-head h2 {
+    max-width: 230px;
+    font-size: 15px;
+  }
+
+  .storyboard-stage {
+    height: 390px;
+  }
+
+  .story-terminal-bar {
+    padding-inline: 7px;
+    grid-template-columns: 1fr auto;
+  }
+
+  .story-terminal-title {
+    display: none;
+  }
+
+  .story-terminal-body {
+    padding: 12px 10px;
+    font-size: 7px;
+  }
+
+  .story-command {
+    margin-bottom: 8px !important;
+  }
+
+  .story-tmux-bar em {
+    display: none;
+  }
+
+  .storyboard-legend {
+    gap: 8px;
+    font-size: 7px;
+  }
+
   .phase-controls button {
     padding-inline: 2px;
     font-size: 8px;
@@ -1710,6 +2057,7 @@ a {
   .hero-enter,
   .playground::before,
   .terminal-demo::after,
+  .story-prompt i,
   .boundary-ring,
   .boundary-core {
     animation: none !important;

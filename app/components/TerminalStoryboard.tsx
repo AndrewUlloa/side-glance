@@ -1,0 +1,282 @@
+"use client";
+
+import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useState, type CSSProperties } from "react";
+
+/* ─────────────────────────────────────────────────────────
+ * ANIMATION STORYBOARD
+ *
+ * Read top-to-bottom. Each `at` value is ms after mount/replay.
+ *
+ *    0ms   four quiet sessions hold in a 2×2 workspace
+ *  420ms   Working wakes in cyan
+ *  860ms   Ready wakes in green
+ * 1300ms   Waiting wakes in amber
+ * 1740ms   Failed wakes in red
+ * 2460ms   grid → cool-to-urgent layered stack
+ * 3500ms   replay control appears after the stack settles
+ * ───────────────────────────────────────────────────────── */
+
+const TIMING = {
+  gridStart: 0,      // reset to the quiet four-window grid
+  workingWake: 420,  // Working wakes in cyan
+  readyWake: 860,    // Ready wakes in green
+  waitingWake: 1300, // Waiting wakes in amber
+  failedWake: 1740,  // Failed wakes in red
+  stackResolve: 2460,// four windows converge into one stack
+  replayReady: 3500, // replay becomes available after settling
+} as const;
+
+const STAGE = {
+  grid: 0,
+  working: 1,
+  ready: 2,
+  waiting: 3,
+  failed: 4,
+  stack: 5,
+  complete: 6,
+} as const;
+
+type StoryboardStage = (typeof STAGE)[keyof typeof STAGE];
+
+const TERMINALS = [
+  {
+    id: "working",
+    phase: "working",
+    title: "controller — claude",
+    state: "Working",
+    accent: "#35d7f1",
+    wash: "#102f3a",
+    border: "rgba(53, 215, 241, 0.52)",
+    wakeStage: STAGE.working,
+    command: "signal run -- claude",
+    activity: "reconciling lease generation",
+    detail: "streaming · 18s",
+  },
+  {
+    id: "ready",
+    phase: "completed",
+    title: "release — codex",
+    state: "Ready",
+    accent: "#78dda0",
+    wash: "#173428",
+    border: "rgba(120, 221, 160, 0.5)",
+    wakeStage: STAGE.ready,
+    command: "signal run -- codex",
+    activity: "turn complete — review ready",
+    detail: "finished · 4s",
+  },
+  {
+    id: "waiting",
+    phase: "waiting",
+    title: "docs — gemini",
+    state: "Waiting",
+    accent: "#f2b632",
+    wash: "#3a2b12",
+    border: "rgba(242, 182, 50, 0.54)",
+    wakeStage: STAGE.waiting,
+    command: "signal run -- gemini",
+    activity: "permission required",
+    detail: "waiting · 42s",
+  },
+  {
+    id: "failed",
+    phase: "failed",
+    title: "deploy — aider",
+    state: "Failed",
+    accent: "#ff6b5f",
+    wash: "#491d19",
+    border: "rgba(255, 107, 95, 0.58)",
+    wakeStage: STAGE.failed,
+    command: "signal run -- aider",
+    activity: "process exited with code 1",
+    detail: "failed · now",
+  },
+] as const;
+
+const GRID = {
+  positions: [
+    { left: "0%", top: "0%" },
+    { left: "51%", top: "0%" },
+    { left: "0%", top: "52%" },
+    { left: "51%", top: "52%" },
+  ],
+  width: "49%",
+  height: "48%",
+} as const;
+
+const STACK = {
+  positions: [
+    { left: "4%", top: "4%", scale: 0.94, zIndex: 1 },
+    { left: "7%", top: "11%", scale: 0.96, zIndex: 2 },
+    { left: "10%", top: "18%", scale: 0.98, zIndex: 3 },
+    { left: "13%", top: "25%", scale: 1, zIndex: 4 },
+  ],
+  width: "82%",
+  height: "68%",
+} as const;
+
+const WINDOW = {
+  sleepingWash: "#151b20",
+  sleepingBorder: "rgba(255, 255, 255, 0.12)",
+  sleepingOpacity: 0.68,
+  awakeOpacity: 1,
+  sleepingFilter: "saturate(0.28) brightness(0.72)",
+  awakeFilter: "saturate(1) brightness(1)",
+  spring: {
+    type: "spring" as const,
+    stiffness: 180,
+    damping: 26,
+    mass: 0.9,
+  },
+  instant: { duration: 0 },
+} as const;
+
+const REPLAY = {
+  hiddenOpacity: 0,
+  visibleOpacity: 1,
+  hiddenY: 8,
+  visibleY: 0,
+  spring: {
+    type: "spring" as const,
+    stiffness: 420,
+    damping: 28,
+  },
+} as const;
+
+export function TerminalStoryboard() {
+  const shouldReduceMotion = useReducedMotion();
+  const [stage, setStage] = useState<StoryboardStage>(STAGE.grid);
+  const [replayTrigger, setReplayTrigger] = useState(0);
+  const visibleStage = shouldReduceMotion ? STAGE.complete : stage;
+  const isStacked = visibleStage >= STAGE.stack;
+  const isComplete = visibleStage >= STAGE.complete;
+
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      return;
+    }
+
+    const timers: Array<ReturnType<typeof setTimeout>> = [];
+    const schedule = (nextStage: StoryboardStage, at: number) => {
+      timers.push(setTimeout(() => setStage(nextStage), at));
+    };
+
+    schedule(STAGE.grid, TIMING.gridStart);
+    schedule(STAGE.working, TIMING.workingWake);
+    schedule(STAGE.ready, TIMING.readyWake);
+    schedule(STAGE.waiting, TIMING.waitingWake);
+    schedule(STAGE.failed, TIMING.failedWake);
+    schedule(STAGE.stack, TIMING.stackResolve);
+    schedule(STAGE.complete, TIMING.replayReady);
+
+    return () => timers.forEach(clearTimeout);
+  }, [replayTrigger, shouldReduceMotion]);
+
+  const replay = () => {
+    setStage(STAGE.grid);
+    setReplayTrigger((value) => value + 1);
+  };
+
+  return (
+    <section
+      className="terminal-storyboard"
+      data-layout={isStacked ? "stack" : "grid"}
+      aria-labelledby="terminal-story-title"
+    >
+      <div className="storyboard-head">
+        <div>
+          <span className="playground-kicker">Four sessions · one signal</span>
+          <h2 id="terminal-story-title">Know which terminal needs you.</h2>
+        </div>
+        <motion.button
+          className="storyboard-replay"
+          type="button"
+          onClick={replay}
+          disabled={!isComplete || shouldReduceMotion === true}
+          tabIndex={isComplete && !shouldReduceMotion ? 0 : -1}
+          aria-label="Replay the four-terminal sequence"
+          initial={false}
+          animate={{
+            opacity:
+              isComplete && !shouldReduceMotion
+                ? REPLAY.visibleOpacity
+                : REPLAY.hiddenOpacity,
+            y: isComplete ? REPLAY.visibleY : REPLAY.hiddenY,
+          }}
+          transition={shouldReduceMotion ? WINDOW.instant : REPLAY.spring}
+        >
+          <span aria-hidden="true">↻</span> Replay
+        </motion.button>
+      </div>
+
+      <div className="storyboard-stage" aria-live="polite">
+        {TERMINALS.map((terminal, index) => {
+          const gridPosition = GRID.positions[index];
+          const stackPosition = STACK.positions[index];
+          const isAwake = visibleStage >= terminal.wakeStage;
+          const style = {
+            "--story-accent": terminal.accent,
+          } as CSSProperties;
+
+          return (
+            <motion.article
+              className="story-terminal"
+              data-phase={terminal.phase}
+              data-awake={isAwake}
+              key={terminal.id}
+              initial={false}
+              animate={{
+                left: isStacked ? stackPosition.left : gridPosition.left,
+                top: isStacked ? stackPosition.top : gridPosition.top,
+                width: isStacked ? STACK.width : GRID.width,
+                height: isStacked ? STACK.height : GRID.height,
+                scale: isStacked ? stackPosition.scale : 1,
+                zIndex: isStacked ? stackPosition.zIndex : 1,
+                opacity: isAwake ? WINDOW.awakeOpacity : WINDOW.sleepingOpacity,
+                filter: isAwake ? WINDOW.awakeFilter : WINDOW.sleepingFilter,
+                backgroundColor: isAwake ? terminal.wash : WINDOW.sleepingWash,
+                borderColor: isAwake ? terminal.border : WINDOW.sleepingBorder,
+              }}
+              transition={shouldReduceMotion ? WINDOW.instant : WINDOW.spring}
+              style={style}
+            >
+              <div className="story-terminal-bar">
+                <div className="story-window-dots" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <span className="story-terminal-title">{terminal.title}</span>
+                <span className="story-terminal-state">
+                  <i aria-hidden="true" /> {terminal.state}
+                </span>
+              </div>
+              <div className="story-terminal-body">
+                <p className="story-command"><span>❯</span> {terminal.command}</p>
+                <p><span className="story-tree">├─</span> lifecycle event normalized</p>
+                <p className="story-active"><span className="story-tree">└─</span> {terminal.activity}</p>
+                <p className="story-prompt"><span>❯</span><i aria-hidden="true" /></p>
+              </div>
+              <div className="story-tmux-bar">
+                <strong>signal</strong>
+                <span>{terminal.id}:agent</span>
+                <em>{terminal.detail}</em>
+              </div>
+            </motion.article>
+          );
+        })}
+      </div>
+
+      <div className="storyboard-legend" aria-label="Lifecycle color order">
+        {TERMINALS.map((terminal) => (
+          <span key={terminal.id}>
+            <i style={{ backgroundColor: terminal.accent }} aria-hidden="true" />
+            {terminal.state}
+          </span>
+        ))}
+        <strong>{isStacked ? "ordered by attention" : "four sessions active"}</strong>
+      </div>
+    </section>
+  );
+}

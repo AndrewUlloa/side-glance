@@ -155,7 +155,7 @@ The requester chose the current Linear homepage as the motion-quality reference.
 - below-the-fold headings, product surfaces, rows, and calls to action reveal once as they enter the viewport;
 - slow ambient motion is confined to terminal, status, and recovery visuals so reading remains calm;
 - hover, press, and selected-state feedback uses interruptible transitions over explicit properties, never `transition: all`;
-- animations use compositor-friendly opacity, transform, and filter properties without adding a motion dependency;
+- simple entrances and ambient effects use compositor-friendly CSS opacity, transform, and filter properties; staged spatial choreography may use the pinned Motion dependency where interruptible spring geometry materially improves the result;
 - controls remain operable during animation and keep at least 40px hit targets;
 - `prefers-reduced-motion: reduce` removes entrances, ambient loops, smooth scrolling, and meaningful transition delay while leaving every element visible; and
 - desktop and 390×844 mobile browser checks show no overflow, runtime errors, console errors, or failed resources.

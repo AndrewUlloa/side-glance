@@ -1,5 +1,6 @@
 import { MotionOrchestrator } from "./components/MotionOrchestrator";
 import { SignalPlayground } from "./components/SignalPlayground";
+import { TerminalStoryboard } from "./components/TerminalStoryboard";
 
 const providers = [
   {
@@ -129,10 +130,25 @@ export default function Home() {
             </dl>
           </div>
 
-          <div
-            id="playground"
-            className="hero-playground hero-enter hero-enter-visual"
-          >
+          <div className="hero-storyboard hero-enter hero-enter-visual">
+            <TerminalStoryboard />
+          </div>
+        </section>
+
+        <section
+          id="playground"
+          className="playground-section section-wrap"
+          aria-labelledby="playground-section-title"
+        >
+          <div className="section-heading playground-section-copy" data-reveal>
+            <p className="section-kicker">Tune the signal</p>
+            <h2 id="playground-section-title">See every lifecycle state.</h2>
+            <p>
+              Move between working, waiting, ready, failed, and inactive. The
+              same state model drives every terminal in the opening workspace.
+            </p>
+          </div>
+          <div className="playground-section-demo" data-reveal data-reveal-order="02">
             <SignalPlayground />
           </div>
         </section>

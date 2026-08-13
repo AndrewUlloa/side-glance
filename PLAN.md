@@ -243,7 +243,7 @@ protocol + reducer
 ### Phase 8: Linear-inspired motion system
 
 - [x] **Task 23: Add a test-covered motion contract**
-  - **Acceptance:** The site defines semantic hero entrances, viewport reveal hooks, ambient visual motion, explicit-property transitions, and a reduced-motion escape hatch without adding a motion dependency.
+  - **Acceptance:** The site defines semantic hero entrances, viewport reveal hooks, ambient visual motion, explicit-property transitions, and a reduced-motion escape hatch; simple effects remain dependency-free CSS.
   - **Verify:** focused RED/GREEN source contract plus rendered HTML test.
   - **Depends on:** Task 22
   - **Files:** `SPEC.md`, `PLAN.md`, `tests/site/motion-contract.test.ts`
