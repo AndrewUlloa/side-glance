@@ -1,48 +1,46 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const repository = fileURLToPath(new URL("../..", import.meta.url));
-const npmExecutable = path.join(
-  path.dirname(process.execPath),
-  process.platform === "win32" ? "npm.cmd" : "npm",
-);
+const builder = path.join(repository, "scripts/release/build-standalone.mjs");
 
-test("builds a versioned standalone archive that runs without Node on PATH", async () => {
-  await command(npmExecutable, ["run", "build:standalone"], {
+test("builds and smokes the exact versioned standalone archive without Node on PATH", async (context) => {
+  const target = platformTarget();
+  await command(process.execPath, [builder], {
     cwd: repository,
     env: {
       ...process.env,
       NPM_CONFIG_CACHE: path.join(repository, "work/npm-cache"),
       PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+      SIGNAL_RELEASE_TARGET: target,
     },
   });
 
-  const target = platformTarget();
-  const version = "0.1.0-beta.1";
-  const executable = path.join(repository, "work/release/signal");
-  const strippedEnvironment = {
-    ...process.env,
-    PATH: "/usr/bin:/bin",
-    SIGNAL_STATE_DIR: path.join(repository, "work/standalone-state"),
-  };
-  const versionResult = await command(executable, ["--version"], {
-    cwd: repository,
-    env: strippedEnvironment,
-  });
-  assert.equal(versionResult.stdout.trim(), version);
-  const preview = await command(
-    executable,
-    ["preview", "--phase", "waiting", "--elapsed", "60", "--json"],
-    { cwd: repository, env: strippedEnvironment },
+  const { version } = JSON.parse(
+    await readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
   );
-  assert.equal(JSON.parse(preview.stdout).urgency, 500);
-
   const archiveName = `terminal-signal-v${version}-${target}.tar.gz`;
   const archive = path.join(repository, "outputs", archiveName);
+  const archiveBytes = await readFile(archive);
+  const digest = createHash("sha256").update(archiveBytes).digest("hex");
+  const metadata = JSON.parse(
+    await readFile(path.join(repository, "outputs", `${archiveName}.artifact.json`), "utf8"),
+  );
+  assert.deepEqual(metadata, {
+    schemaVersion: 1,
+    version,
+    target,
+    filename: archiveName,
+    sha256: digest,
+    size: archiveBytes.byteLength,
+  });
+
   const listing = await command("/usr/bin/tar", ["-tzf", archive], {
     cwd: repository,
     env: process.env,
@@ -54,7 +52,46 @@ test("builds a versioned standalone archive that runs without Node on PATH", asy
     "VERSION",
     "signal",
   ]);
-  assert.equal((await readFile(path.join(repository, "outputs/SHA256SUMS"), "utf8")).trim().split(/\s+/u).at(-1), archiveName);
+
+  const extracted = await mkdtemp(path.join(tmpdir(), "signal-standalone-extracted-"));
+  context.after(() => rm(extracted, { recursive: true, force: true }));
+  await command("/usr/bin/tar", ["-xzf", archive, "-C", extracted], {
+    cwd: repository,
+    env: process.env,
+  });
+  const executable = path.join(extracted, "signal");
+  const strippedEnvironment = {
+    ...process.env,
+    PATH: "/usr/bin:/bin",
+    SIGNAL_STATE_DIR: path.join(extracted, "state"),
+  };
+  const versionResult = await command(executable, ["--version"], {
+    cwd: extracted,
+    env: strippedEnvironment,
+  });
+  assert.equal(versionResult.stdout.trim(), version);
+  const preview = await command(
+    executable,
+    ["preview", "--phase", "waiting", "--elapsed", "60", "--json"],
+    { cwd: extracted, env: strippedEnvironment },
+  );
+  assert.equal(JSON.parse(preview.stdout).urgency, 500);
+});
+
+test("refuses to label a native build as a different release target", async () => {
+  const wrongTarget = process.platform === "darwin" ? "linux-x64-gnu" : "darwin-arm64";
+  await assert.rejects(
+    () => command(process.execPath, [builder], {
+      cwd: repository,
+      env: {
+        ...process.env,
+        NPM_CONFIG_CACHE: path.join(repository, "work/npm-cache"),
+        PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+        SIGNAL_RELEASE_TARGET: wrongTarget,
+      },
+    }),
+    /does not match native runtime/iu,
+  );
 });
 
 function platformTarget() {
@@ -76,16 +113,12 @@ function command(executable, args, options) {
     let stderr = "";
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
     child.once("error", reject);
     child.once("close", (code, signal) => {
       if (code === 0) return resolve({ stdout, stderr });
-      reject(new Error(`${executable} failed (${signal ?? code}):\n${stderr || stdout}`));
+      reject(new Error(`${executable} failed (${signal ?? code}):\n${stderr}${stdout}`));
     });
   });
 }

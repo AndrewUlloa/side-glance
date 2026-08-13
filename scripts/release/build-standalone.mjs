@@ -18,6 +18,10 @@ const manifest = JSON.parse(
   await readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
 );
 const target = platformTarget();
+const expectedTarget = process.env.SIGNAL_RELEASE_TARGET;
+if (expectedTarget && expectedTarget !== target) {
+  throw new Error(`Requested release target ${expectedTarget} does not match native runtime ${target}`);
+}
 const workDirectory = path.join(repository, "work/release");
 const archiveDirectory = path.join(workDirectory, "archive");
 const outputDirectory = path.join(repository, "outputs");
@@ -95,10 +99,9 @@ await copyFile(executable, path.join(archiveDirectory, "signal"));
 await chmod(path.join(archiveDirectory, "signal"), 0o755);
 await copyFile(path.join(repository, "README.md"), path.join(archiveDirectory, "README.md"));
 await copyFile(path.join(repository, "LICENSE"), path.join(archiveDirectory, "LICENSE"));
-await copyFile(
-  path.resolve(path.dirname(process.execPath), "../LICENSE"),
-  path.join(archiveDirectory, "LICENSES/node.txt"),
-);
+const nodeLicense = process.env.SIGNAL_NODE_LICENSE
+  ?? path.resolve(path.dirname(process.execPath), "../LICENSE");
+await copyFile(nodeLicense, path.join(archiveDirectory, "LICENSES/node.txt"));
 await writeFile(path.join(archiveDirectory, "VERSION"), `${manifest.version}\n`, "utf8");
 
 await rm(archivePath, { force: true });
@@ -117,8 +120,15 @@ const digest = createHash("sha256")
   .update(await readFile(archivePath))
   .digest("hex");
 await writeFile(
-  path.join(outputDirectory, "SHA256SUMS"),
-  `${digest}  ${archiveName}\n`,
+  path.join(outputDirectory, `${archiveName}.artifact.json`),
+  `${JSON.stringify({
+    schemaVersion: 1,
+    version: manifest.version,
+    target,
+    filename: archiveName,
+    sha256: digest,
+    size: (await readFile(archivePath)).byteLength,
+  }, null, 2)}\n`,
   "utf8",
 );
 

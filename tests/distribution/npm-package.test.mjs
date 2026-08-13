@@ -8,17 +8,20 @@ import { fileURLToPath } from "node:url";
 
 const repository = fileURLToPath(new URL("../..", import.meta.url));
 const npmExecutable = process.platform === "win32" ? "npm.cmd" : "npm";
+const packageVersion = JSON.parse(
+  await readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
+).version;
 
 test("packs a minimal CLI and executes it from an isolated global prefix", async (context) => {
   const temporary = await mkdtemp(path.join(tmpdir(), "signal-npm-package-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const npmCache = path.join(temporary, "npm-cache");
-  const npmEnvironment = { NPM_CONFIG_CACHE: npmCache };
+  const npmEnvironment = {
+    NPM_CONFIG_CACHE: npmCache,
+    PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+  };
 
-  await command(npmExecutable, ["run", "build:cli"], {
-    cwd: repository,
-    env: npmEnvironment,
-  });
+  await rm(path.join(repository, "packages/cli/dist"), { recursive: true, force: true });
   const packed = await command(
     npmExecutable,
     [
@@ -128,7 +131,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
     cwd: temporary,
     env: { PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}` },
   });
-  assert.equal(version.stdout.trim(), "0.1.0-beta.1");
+  assert.equal(version.stdout.trim(), packageVersion);
   const help = await command(executable, ["--help"], {
     cwd: temporary,
     env: { PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}` },
@@ -139,6 +142,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
     await readFile(path.join(prefix, "lib/node_modules/terminal-signal/package.json"), "utf8"),
   );
   assert.deepEqual(manifest.dependencies ?? {}, {});
+  assert.equal(manifest.publishConfig.tag, "beta");
   assert.equal(manifest.private, undefined);
   assert.deepEqual(manifest.bin, {
     signal: "dist/signal.mjs",
@@ -165,7 +169,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
       },
     },
   );
-  assert.equal(npxVersion.stdout.trim(), "0.1.0-beta.1");
+  assert.equal(npxVersion.stdout.trim(), packageVersion);
 
   const npxHome = path.join(temporary, "npx-home");
   await assert.rejects(
