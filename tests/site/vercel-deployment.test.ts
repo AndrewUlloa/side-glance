@@ -62,6 +62,8 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   assert.doesNotMatch(layout, /terminal-signal\.pages\.dev/u);
   assert.match(layout, /https:\/\/side-glance\.vercel\.app/u);
   assert.doesNotMatch(readme, /https:\/\/terminal-signal\.vercel\.app/u);
-  assert.match(launch, /No Side Glance deployment has been created or promoted/u);
-  assert.match(launch, /Deployment rollback is intentionally unset/u);
+  assert.match(launch, /https:\/\/side-glance\.vercel\.app/u);
+  assert.match(launch, /dpl_877rCZQP8w1VVbcRTPNqVMjqT9xM/u);
+  assert.match(launch, /dpl_12hgQd7peRczGnDuY4diahzdsbWE/u);
+  assert.doesNotMatch(launch, /No Side Glance deployment has been created/u);
 });

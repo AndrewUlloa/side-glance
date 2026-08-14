@@ -2,7 +2,9 @@
 
 ## Observations
 
-- Environment: macOS arm64, Vercel CLI 54.18.0, linked to the pre-rename Vercel project. No Side Glance Vercel project has been linked yet.
+- Historical environment at the time of failure: macOS arm64, Vercel CLI 54.18.0,
+  linked to the pre-rename Vercel project. The same project ID was later renamed and
+  relinked as `andrew-243s-projects/side-glance`.
 - The first preview upload attempted 267.8 MB, reached 67 MB, then failed before deployment creation with an OpenSSL `bad record mac` TLS error.
 - `vercel deploy --dry` selected 222 files totaling 281,535,211 bytes.
 - `work/` contributed 240,771,924 bytes and `outputs/` contributed 38,280,624 bytes.

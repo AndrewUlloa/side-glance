@@ -15,12 +15,12 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 
 ## Installation status
 
-Side Glance is a release candidate. The interactive landing-page source is ready,
-but the renamed site and commands below become public only after a verified
-deployment and beta publication. This source rename does not publish either one.
+Side Glance is available as a beta package and at
+[side-glance.vercel.app](https://side-glance.vercel.app). The CLI prerelease is
+published on npm's `beta` channel.
 
 ```bash
-# Durable Node installation after publication
+# Durable Node installation
 npm install --global side-glance@beta
 
 # Ephemeral diagnostics or preview only
@@ -86,10 +86,11 @@ See [SPEC.md](./SPEC.md), [PLAN.md](./PLAN.md), [architecture](./docs/architectu
 
 ## Status
 
-Release candidate. Local package and native artifact rehearsals are implemented.
-Renaming the remote repository and Vercel project, deploying the renamed site,
-public visibility, environment reviewers, first npm ownership, the Homebrew tap,
-and live provider migration remain explicit owner-approval gates.
+Beta. The GitHub repository, Vercel project and production domain, npm package,
+CLI, site, documentation, and local workspace identity use Side Glance. Public
+GitHub visibility, environment reviewers, npm trusted publishing, immutable native
+release assets, the Homebrew tap, and live provider migration remain explicit
+release or owner-approval gates.
 
 ## License
 

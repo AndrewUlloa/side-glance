@@ -239,10 +239,10 @@ export default function Home() {
           >
             <div className="command-panel-head">
               <span>terminal</span>
-              <span className="command-beta">release candidate · v0.1</span>
+              <span className="command-beta">public beta · v0.1</span>
             </div>
             <div className="command-block">
-              <span className="command-comment"># available after the first verified beta release</span>
+              <span className="command-comment"># install the public beta from npm</span>
               <code><span>$</span> npm install -g side-glance@beta</code>
             </div>
             <div className="command-block">

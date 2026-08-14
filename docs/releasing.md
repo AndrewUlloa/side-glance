@@ -9,8 +9,9 @@ The repository already has protected `main` and `v*` refs, tag-restricted `githu
 1. Make `AndrewUlloa/side-glance` public.
 2. Enable private vulnerability reporting and immutable releases after the repository is public.
 3. Add required reviewers to the existing `github-release` and `npm-release` environments after the repository plan makes that control available.
-4. Reserve `side-glance` on npm. If npm requires a bootstrap publish before trusted publishing can be configured, use a one-time short-lived granular token in the protected environment and revoke it immediately.
-5. Configure npm trusted publishing for owner `AndrewUlloa`, repository `side-glance`, workflow `release.yml`, and environment `npm-release`; then disallow legacy automation tokens.
+4. Initial npm ownership is established by the published
+   `side-glance@0.1.0-beta.1` package.
+5. Configure npm trusted publishing for owner `AndrewUlloa`, repository `side-glance`, workflow `release.yml`, and environment `npm-release`; then disallow legacy automation tokens before the next release.
 6. Create `AndrewUlloa/homebrew-tap` only after the first immutable release exists, and update it through a narrowly scoped pull request rather than this repository's release token.
 
 ## Release pull request

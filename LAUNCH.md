@@ -1,20 +1,33 @@
 # Launch and rollback
 
-Side Glance is a release candidate. This change renames source and local release
-contracts only; it does not rename a remote repository or Vercel project, promote a
-deployment, publish a package, create a tag, update a Homebrew tap, or migrate live
-provider configuration.
+Side Glance is a beta. The source, GitHub repository, Vercel project and production
+domain, npm package, and local release contracts have been renamed. This work did
+not create a version tag or GitHub Release, update a Homebrew tap, change repository
+visibility, or migrate live provider configuration.
 
-## Renamed deployment status
+## Production deployment status
 
-- No Side Glance deployment has been created or promoted by this change.
-- The application keeps the standard Next.js/Vercel build contract.
-- After the external project is renamed or recreated, deploy an unaliased candidate,
-  run the browser matrix, and promote that exact verified candidate.
-- Record the new public URL, deployment identity, source commit, and known-good
-  rollback identity here only after those actions succeed.
+- Public URL: <https://side-glance.vercel.app>
+- Vercel project: `andrew-243s-projects/side-glance`
+- Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
+- Production deployment: `dpl_877rCZQP8w1VVbcRTPNqVMjqT9xM`
+- Immutable deployment URL: <https://side-glance-llhw4t004-andrew-243s-projects.vercel.app>
+- Source commit: `53cf9429a6af669063d9611b9a4b791358d066c3`
+- The canonical Vercel `npm run build` path passed on Node 24 and the public URL
+  returned HTTP 200 with Side Glance metadata and rendered copy.
+- The obsolete public project domain was removed after the new domain passed.
 
-Deployment rollback is intentionally unset until a renamed candidate exists.
+The prior known-good production deployment is
+`dpl_12hgQd7peRczGnDuY4diahzdsbWE`. It remains Vercel rollback evidence; immutable
+historical deployment identifiers are not rewritten during a product rename.
+
+## npm beta status
+
+- Package: `side-glance@0.1.0-beta.1`
+- Channel: `beta`
+- Integrity: `sha512-xW2t4IJEwDHRgh3uMi4FhXP9zhYCEdcvefCHVrXesWMfaOlMzx+QEgLfkaaHJkGvR0boC5bZnZq0dEwDax9szw==`
+- The published tarball contains only `LICENSE`, `README.md`,
+  `dist/side-glance.mjs`, and `package.json`.
 
 ## Local rename verification
 
@@ -48,11 +61,12 @@ the toolbar must remain unpromoted; discarding that preview is its rollback path
 
 ## External publication gates
 
-Follow [docs/releasing.md](./docs/releasing.md). Publication remains blocked until the repository owner explicitly approves and completes:
+Follow [docs/releasing.md](./docs/releasing.md). A complete tagged native release
+remains blocked until the repository owner explicitly approves and completes:
 
 - public repository visibility plus private vulnerability reporting;
 - required reviewers on the existing `github-release` and `npm-release` environments;
-- first npm package ownership and trusted-publisher binding;
+- npm trusted-publisher binding for future releases;
 - an immutable GitHub prerelease from the exact tested artifacts;
 - a separate Homebrew tap pull request after those artifact URLs exist.
 

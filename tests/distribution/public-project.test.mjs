@@ -37,12 +37,13 @@ test("contains the public project's security, contribution, support, and governa
   assert.match(await text(".github/CODEOWNERS"), /@AndrewUlloa/u);
 });
 
-test("documents only durable installation and truthful pre-release availability", async () => {
+test("documents only durable installation and truthful beta availability", async () => {
   const readme = await text("README.md");
   assert.doesNotMatch(readme, /npm link/u);
   assert.match(readme, /npm install --global side-glance@beta/u);
   assert.match(readme, /npm install --global \.\/packages\/cli/u);
-  assert.match(readme, /release candidate/iu);
+  assert.match(readme, /available as a beta package/iu);
+  assert.match(readme, /https:\/\/side-glance\.vercel\.app/u);
 
   const packageReadme = await text("packages/cli/README.md");
   assert.match(packageReadme, /Node\.js 22 or newer/u);
@@ -50,12 +51,12 @@ test("documents only durable installation and truthful pre-release availability"
   assert.match(packageReadme, /Windows and musl\/Alpine are not supported/u);
 
   const page = await text("app/page.tsx");
-  assert.match(page, /release candidate · v0\.1/u);
-  assert.match(page, /available after the first verified beta release/u);
-  assert.doesNotMatch(page, /public beta/u);
+  assert.match(page, /public beta · v0\.1/u);
+  assert.match(page, /install the public beta from npm/u);
+  assert.doesNotMatch(page, /available after the first verified beta release/u);
 
   const releaseGuide = await text("docs/releasing.md");
-  assert.match(releaseGuide, /one-time short-lived granular token/u);
+  assert.match(releaseGuide, /Initial npm ownership is established/u);
   assert.match(releaseGuide, /trusted publishing/u);
   assert.match(releaseGuide, /ad-hoc signed/u);
 });

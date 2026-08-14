@@ -8,7 +8,7 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 - Public release rehearsal with exact npm packaging, standalone artifacts, centralized checksums, release metadata, Homebrew formula generation, and protected-tag automation.
 
-## [0.1.0-beta.1] — pending
+## [0.1.0-beta.1] — 2026-08-14
 
 ### Added
 
@@ -20,4 +20,4 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 - Interactive product site using the real phase and urgency model.
 
 [Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.1...HEAD
-[0.1.0-beta.1]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.1
+[0.1.0-beta.1]: https://www.npmjs.com/package/side-glance/v/0.1.0-beta.1
