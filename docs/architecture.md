@@ -1,4 +1,4 @@
-# Signal architecture
+# Side Glance architecture
 
 ## Data flow
 
@@ -29,8 +29,8 @@ Every active session is a candidate lease for its `surfaceId`. Priority is `fail
 ## Rendering channels
 
 - A verified non-tmux TTY can receive an OSC 11 background wash. OSC 111 resets it to the configured default.
-- A tmux pane receives window status styling. Signal snapshots local and inherited values and restores them precisely.
-- Signal does not apply a whole-client OSC background while in tmux because separate panes cannot safely own different client-wide backgrounds.
+- A tmux pane receives window status styling. Side Glance snapshots local and inherited values and restores them precisely.
+- Side Glance does not apply a whole-client OSC background while in tmux because separate panes cannot safely own different client-wide backgrounds.
 - Logical surfaces remain useful for tests and integrations but perform no terminal write.
 
 ## Persistence and recovery
@@ -39,7 +39,7 @@ State lives in a mode-0700 directory and a mode-0600 JSON file. Writers serializ
 
 The newest 4,096 replay IDs, 512 inactive sessions, and 256 inactive surfaces are retained. Active sessions are never removed by compaction.
 
-Normal hooks and the supervised wrapper release their own sessions. `signal reset --all --json` is the operator recovery path when normal teardown could not run. A TTY or tmux pane that disappeared before reset is treated as already unreachable, so its lease can still be revoked. `SIGKILL`, power loss, and terminal-emulator death cannot provide a reliable synchronous cleanup callback; Signal documents that boundary instead of claiming otherwise.
+Normal hooks and the supervised wrapper release their own sessions. `side-glance reset --all --json` is the operator recovery path when normal teardown could not run. A TTY or tmux pane that disappeared before reset is treated as already unreachable, so its lease can still be revoked. `SIGKILL`, power loss, and terminal-emulator death cannot provide a reliable synchronous cleanup callback; Side Glance documents that boundary instead of claiming otherwise.
 
 ## Trust boundaries
 

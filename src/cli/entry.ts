@@ -8,7 +8,7 @@ main()
   })
   .catch((error: unknown) => {
     process.stderr.write(
-      `signal: ${error instanceof Error ? error.message : String(error)}\n`,
+      `side-glance: ${error instanceof Error ? error.message : String(error)}\n`,
     );
     process.exitCode = 1;
   });

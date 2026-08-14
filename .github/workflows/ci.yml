@@ -55,4 +55,4 @@ jobs:
       - run: npm ci
       - run: node --test tests/distribution/standalone.test.mjs
         env:
-          SIGNAL_RELEASE_TARGET: darwin-arm64
+          SIDE_GLANCE_RELEASE_TARGET: darwin-arm64

@@ -1,8 +1,8 @@
 import type {
-  SignalSessionState,
-  SignalSurfaceState,
-  SignalTarget,
-  SignalTmuxSnapshot,
+  SideGlanceSessionState,
+  SideGlanceSurfaceState,
+  SideGlanceTarget,
+  SideGlanceTmuxSnapshot,
 } from "../core/protocol.ts";
 import type {
   SurfaceRenderer,
@@ -21,10 +21,10 @@ import {
 export function createDefaultSurfaceRenderer(): SurfaceRenderer {
   return {
     async paint(
-      target: SignalTarget,
-      _session: SignalSessionState,
+      target: SideGlanceTarget,
+      _session: SideGlanceSessionState,
       visual: SurfaceVisual,
-      previous?: SignalSurfaceState,
+      previous?: SideGlanceSurfaceState,
     ): Promise<SurfaceRenderResult> {
       if (visual.suppressed) {
         if (previous) await resetSurface(target, previous);
@@ -54,7 +54,7 @@ export function createDefaultSurfaceRenderer(): SurfaceRenderer {
   };
 }
 
-export function surfaceChannels(target: SignalTarget): {
+export function surfaceChannels(target: SideGlanceTarget): {
   terminal: boolean;
   tmux: boolean;
 } {
@@ -66,8 +66,8 @@ export function surfaceChannels(target: SignalTarget): {
 }
 
 async function resetSurface(
-  target: SignalTarget,
-  previous: SignalSurfaceState,
+  target: SideGlanceTarget,
+  previous: SideGlanceSurfaceState,
 ): Promise<void> {
   if (target.tty && previous.terminalPainted) {
     try {
@@ -105,6 +105,6 @@ function isGoneSurfaceError(error: unknown): boolean {
   );
 }
 
-function asTmuxSnapshot(snapshot: SignalTmuxSnapshot): TmuxSnapshot {
+function asTmuxSnapshot(snapshot: SideGlanceTmuxSnapshot): TmuxSnapshot {
   return snapshot;
 }

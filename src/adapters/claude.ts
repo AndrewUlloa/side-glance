@@ -1,4 +1,4 @@
-import type { SignalEventKind } from "../core/protocol.ts";
+import type { SideGlanceEventKind } from "../core/protocol.ts";
 import {
   adapterRecord,
   buildAdapterEvent,
@@ -7,7 +7,7 @@ import {
 } from "./shared.ts";
 import type { AdapterContext, AdapterResult } from "./types.ts";
 
-const CLAUDE_EVENTS: Readonly<Record<string, SignalEventKind>> = {
+const CLAUDE_EVENTS: Readonly<Record<string, SideGlanceEventKind>> = {
   SessionStart: "session.started",
   UserPromptSubmit: "turn.started",
   PermissionRequest: "attention.waiting",

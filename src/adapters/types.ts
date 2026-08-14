@@ -1,11 +1,11 @@
-import type { SignalEvent, SignalTarget } from "../core/protocol.ts";
+import type { SideGlanceEvent, SideGlanceTarget } from "../core/protocol.ts";
 
 export interface AdapterContext {
   eventId: string;
   occurredAt: number;
   generation?: number;
-  target?: SignalTarget;
+  target?: SideGlanceTarget;
   fallbackSessionId?: string;
 }
 
-export type AdapterResult = SignalEvent | undefined;
+export type AdapterResult = SideGlanceEvent | undefined;

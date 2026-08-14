@@ -19,16 +19,18 @@ function renderedText(html) {
     .trim();
 }
 
-test("server-renders Signal's real product and live playground", async () => {
+test("server-renders Side Glance's real product and live playground", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   const text = renderedText(html);
-  assert.match(html, /<title>Signal — attention for coding agents<\/title>/i);
+  assert.match(html, /<title>Side Glance — attention for coding agents<\/title>/i);
   assert.match(text, /Your terminal knows when it needs you\./);
-  assert.match(html, /Try the signal/);
+  assert.match(html, /Try Side Glance/);
+  assert.match(text, /npm install -g side-glance@beta/);
+  assert.match(text, /side-glance run -- claude/);
   assert.match(html, /Working/);
   assert.match(html, /Waiting/);
   assert.match(html, /Ready/);
@@ -41,6 +43,7 @@ test("server-renders Signal's real product and live playground", async () => {
   assert.match(html, /Aider/);
   assert.match(html, /Recovery, not magic/);
   assert.match(html, /Frequently asked questions/);
+  assert.doesNotMatch(text, /\bSignal\b|terminal-signal/);
   assert.doesNotMatch(html, /Your site is taking shape|react-loading-skeleton/);
   assert.doesNotMatch(html, /codex-preview/);
   assert.doesNotMatch(html, /Manage MCP & Webhooks/);
@@ -70,18 +73,18 @@ test("server-renders Signal's real product and live playground", async () => {
 test("keeps the site wired to shared phase data and accessible controls", async () => {
   const [page, playground, model, css, layout] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/components/SignalPlayground.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/SideGlancePlayground.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/playground-model.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /<SignalPlayground/);
+  assert.match(page, /<SideGlancePlayground/);
   assert.match(playground, /aria-pressed/);
   assert.match(playground, /aria-live="polite"/);
   assert.match(playground, /navigator\.clipboard/);
   assert.match(playground, /type="range"/);
-  assert.match(model, /DEFAULT_SIGNAL_THEME/);
+  assert.match(model, /DEFAULT_SIDE_GLANCE_THEME/);
   assert.match(model, /urgencyFromElapsed/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /:focus-visible/);

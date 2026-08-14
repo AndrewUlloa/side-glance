@@ -1,17 +1,17 @@
 import { resolveSurface } from "./leases.ts";
-import { compactSignalState } from "./compact.ts";
+import { compactSideGlanceState } from "./compact.ts";
 import { urgencyFromElapsed } from "./policy.ts";
 import type {
-  SignalEvent,
-  SignalSessionState,
-  SignalState,
-  SignalSurfaceState,
-  SignalTarget,
-  SignalTmuxSnapshot,
+  SideGlanceEvent,
+  SideGlanceSessionState,
+  SideGlanceState,
+  SideGlanceSurfaceState,
+  SideGlanceTarget,
+  SideGlanceTmuxSnapshot,
 } from "./protocol.ts";
-import { reduceSignalEvent } from "./reducer.ts";
-import type { FileSignalStore } from "./store.ts";
-import { DEFAULT_SIGNAL_THEME } from "./theme.ts";
+import { reduceSideGlanceEvent } from "./reducer.ts";
+import type { FileSideGlanceStore } from "./store.ts";
+import { DEFAULT_SIDE_GLANCE_THEME } from "./theme.ts";
 import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
 
 export interface SurfaceVisual {
@@ -23,34 +23,34 @@ export interface SurfaceVisual {
 
 export interface SurfaceRenderResult {
   terminalPainted: boolean;
-  tmuxSnapshot?: SignalTmuxSnapshot;
+  tmuxSnapshot?: SideGlanceTmuxSnapshot;
 }
 
 export interface SurfaceRenderer {
   paint(
-    target: SignalTarget,
-    session: SignalSessionState,
+    target: SideGlanceTarget,
+    session: SideGlanceSessionState,
     visual: SurfaceVisual,
-    previous?: SignalSurfaceState,
+    previous?: SideGlanceSurfaceState,
   ): Promise<SurfaceRenderResult>;
-  reset(target: SignalTarget, previous: SignalSurfaceState): Promise<void>;
+  reset(target: SideGlanceTarget, previous: SideGlanceSurfaceState): Promise<void>;
 }
 
-export class SignalController {
-  private readonly store: FileSignalStore;
+export class SideGlanceController {
+  private readonly store: FileSideGlanceStore;
   private readonly renderer: SurfaceRenderer;
 
   constructor(
-    store: FileSignalStore,
+    store: FileSideGlanceStore,
     renderer: SurfaceRenderer = createDefaultSurfaceRenderer(),
   ) {
     this.store = store;
     this.renderer = renderer;
   }
 
-  async submit(event: SignalEvent): Promise<SignalState> {
+  async submit(event: SideGlanceEvent): Promise<SideGlanceState> {
     return this.store.update(async (state) => {
-      const next = reduceSignalEvent(state, event);
+      const next = reduceSideGlanceEvent(state, event);
       if (next === state || !event.target) return next;
 
       const { surfaceId } = event.target;
@@ -59,7 +59,7 @@ export class SignalController {
       if (!resolution) {
         if (!previous) return next;
         await this.renderer.reset(previous.target, previous);
-        return compactSignalState({
+        return compactSideGlanceState({
           ...next,
           surfaces: {
             ...next.surfaces,
@@ -83,7 +83,7 @@ export class SignalController {
         visualForSession(resolution.session),
         previous,
       );
-      return compactSignalState({
+      return compactSideGlanceState({
         ...next,
         surfaces: {
           ...next.surfaces,
@@ -105,19 +105,19 @@ export class SignalController {
   }
 }
 
-function visualForSession(session: SignalSessionState): SurfaceVisual {
+function visualForSession(session: SideGlanceSessionState): SurfaceVisual {
   switch (session.phase) {
     case "working":
       return {
-        wash: DEFAULT_SIGNAL_THEME.workingWash,
-        accent: DEFAULT_SIGNAL_THEME.workingAccent,
+        wash: DEFAULT_SIDE_GLANCE_THEME.workingWash,
+        accent: DEFAULT_SIDE_GLANCE_THEME.workingAccent,
         urgency: 0,
         suppressed: false,
       };
     case "waiting":
       return {
-        wash: DEFAULT_SIGNAL_THEME.waitingWash,
-        accent: DEFAULT_SIGNAL_THEME.waitingAccent,
+        wash: DEFAULT_SIDE_GLANCE_THEME.waitingWash,
+        accent: DEFAULT_SIDE_GLANCE_THEME.waitingAccent,
         urgency: 0,
         suppressed: false,
       };
@@ -130,8 +130,8 @@ function visualForSession(session: SignalSessionState): SurfaceVisual {
     }
     case "failed":
       return {
-        wash: DEFAULT_SIGNAL_THEME.washStops.at(-1) ?? "732018",
-        accent: DEFAULT_SIGNAL_THEME.tmuxStops.at(-1) ?? "f33533",
+        wash: DEFAULT_SIDE_GLANCE_THEME.washStops.at(-1) ?? "732018",
+        accent: DEFAULT_SIDE_GLANCE_THEME.tmuxStops.at(-1) ?? "f33533",
         urgency: 1_000,
         suppressed: false,
       };

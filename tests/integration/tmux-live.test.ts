@@ -13,29 +13,29 @@ import {
 } from "../../src/renderers/tmux.ts";
 
 const execFileAsync = promisify(execFile);
-const runLive = process.env.SIGNAL_TEST_TMUX_LIVE === "1";
+const runLive = process.env.SIDE_GLANCE_TEST_TMUX_LIVE === "1";
 
 test(
   "round-trips real tmux local and inherited window options",
   { skip: !runLive },
   async (context) => {
-    const executable = process.env.SIGNAL_TEST_TMUX_BIN ?? "tmux";
+    const executable = process.env.SIDE_GLANCE_TEST_TMUX_BIN ?? "tmux";
     const socketPath = path.join(
       tmpdir(),
-      `signal-tmux-test-${process.pid}-${Date.now()}.sock`,
+      `side-glance-tmux-test-${process.pid}-${Date.now()}.sock`,
     );
     const tmux = (...args: string[]) =>
       execFileAsync(executable, ["-S", socketPath, ...args], {
         encoding: "utf8",
       });
 
-    await tmux("-f", "/dev/null", "new-session", "-d", "-s", "signal", "-n", "editor");
+    await tmux("-f", "/dev/null", "new-session", "-d", "-s", "side-glance", "-n", "editor");
     context.after(() => tmux("kill-server").catch(() => undefined));
     await tmux(
       "set-option",
       "-w",
       "-t",
-      "signal:editor",
+      "side-glance:editor",
       "window-status-style",
       "fg=#123456,bold",
     );
@@ -43,7 +43,7 @@ test(
       "set-option",
       "-w",
       "-t",
-      "signal:editor",
+      "side-glance:editor",
       "window-status-format",
       '#{?window_active,"yes","no"} #I:#W',
     );
@@ -52,7 +52,7 @@ test(
       "display-message",
       "-p",
       "-t",
-      "signal:editor",
+      "side-glance:editor",
       "#{pane_id}",
     );
     const runner = createTmuxRunner({ executable, socketPath });

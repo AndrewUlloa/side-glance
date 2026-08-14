@@ -1,4 +1,4 @@
-# Plan: Signal
+# Plan: Side Glance
 
 > Derived from: `SPEC.md`
 > Status: in progress
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Build Signal in vertical red-green slices: first make one normalized event deterministically resolve to one surface state; then harden persistence and rendering; then expose that behavior through the CLI and provider adapters; finally make the landing page an interactive view of the same model and publish only after the full local and browser gates pass.
+Build Side Glance in vertical red-green slices: first make one normalized event deterministically resolve to one surface state; then harden persistence and rendering; then expose that behavior through the CLI and provider adapters; finally make the landing page an interactive view of the same model and publish only after the full local and browser gates pass.
 
 The publication-readiness extension keeps the repository private while it proves the exact artifacts that will later be released: a minimal npm workspace package, standalone macOS/Linux executables, checksums and attestations, and a Homebrew formula derived from immutable release metadata.
 
@@ -85,7 +85,7 @@ protocol + reducer
   - **Files:** `tests/integration/terminal-renderer.test.ts`, `src/renderers/terminal.ts`, `src/core/sanitize.ts`
   - **Size:** M
 
-- [x] **Task 6: Preserve exact Signal-owned tmux options**
+- [x] **Task 6: Preserve exact Side Glance-owned tmux options**
   - **Acceptance:** Existing local styles/formats are snapshotted and restored; inherited values remain inherited; shared panes do not blindly clear each other.
   - **Verify:** isolated tmux RED/GREEN tests.
   - **Depends on:** Tasks 2, 4
@@ -115,7 +115,7 @@ protocol + reducer
   - **Size:** M
 
 - [x] **Task 9: Install and uninstall without clobbering configuration**
-  - **Acceptance:** Temp-home installs are idempotent; existing hooks and Codex notify survive; uninstall removes only Signal-owned entries; generated commands use absolute executable paths.
+  - **Acceptance:** Temp-home installs are idempotent; existing hooks and Codex notify survive; uninstall removes only Side Glance-owned entries; generated commands use absolute executable paths.
   - **Verify:** installer RED/GREEN integration suite.
   - **Depends on:** Task 8
   - **Files:** `tests/integration/installers.test.ts`, `src/adapters/installers.ts`, `src/cli/install.ts`
@@ -159,7 +159,7 @@ protocol + reducer
 ### Phase 5: Public distribution readiness
 
 - [x] **Task 13: Isolate the npm CLI package**
-  - **Acceptance:** Root stays private; `packages/cli` owns `terminal-signal`; the packed allowlist contains a compiled executable and package docs only; no site runtime dependency is installed.
+  - **Acceptance:** Root stays private; `packages/cli` owns `side-glance`; the packed allowlist contains a compiled executable and package docs only; no site runtime dependency is installed.
   - **Verify:** focused pack-manifest RED/GREEN test; isolated `npm install --prefix` smoke test on the minimum supported Node.
   - **Depends on:** Task 12
   - **Files:** `package.json`, `packages/cli/package.json`, `scripts/build-cli.mjs`, `tests/distribution/npm-package.test.mjs`
@@ -180,7 +180,7 @@ protocol + reducer
   - **Size:** M
 
 - [ ] **Task 16: Generate and verify Homebrew packaging**
-  - **Acceptance:** A formula is generated from versioned artifact URLs and SHA-256 values; it installs only `signal`; local syntax and Homebrew style tests pass; tap readall, audit, install, and upgrade tests run after immutable URLs exist.
+  - **Acceptance:** A formula is generated from versioned artifact URLs and SHA-256 values; it installs only `side-glance`; local syntax and Homebrew style tests pass; tap readall, audit, install, and upgrade tests run after immutable URLs exist.
   - **Verify:** formula schema RED/GREEN test and local style check; isolated tap install/upgrade smoke test after release.
   - **Depends on:** Task 15
   - **Files:** `packaging/homebrew/*`, release scripts/workflow, distribution tests
@@ -250,10 +250,10 @@ protocol + reducer
   - **Size:** S
 
 - [x] **Task 24: Implement and ship the motion system**
-  - **Acceptance:** Motion matches the reference principles while preserving Signal’s visual identity; desktop, mobile, keyboard, and reduced-motion paths remain usable; an exact verified Vercel candidate is promoted with rollback recorded.
+  - **Acceptance:** Motion matches the reference principles while preserving Side Glance’s visual identity; desktop, mobile, keyboard, and reduced-motion paths remain usable; an exact verified Vercel candidate is promoted with rollback recorded.
   - **Verify:** lint, typecheck, build, full tests, coverage, production audit, real-browser desktop/mobile/reduced-motion checks, Vercel candidate inspection, and public smoke test.
   - **Depends on:** Task 23
-  - **Files:** `app/page.tsx`, `app/components/MotionOrchestrator.tsx`, `app/components/SignalPlayground.tsx`, `app/globals.css`, review/launch notes
+  - **Files:** `app/page.tsx`, `app/components/MotionOrchestrator.tsx`, `app/components/SideGlancePlayground.tsx`, `app/globals.css`, review/launch notes
   - **Size:** M
 
 ### Phase 9: Four-terminal origin storyboard
@@ -307,7 +307,7 @@ protocol + reducer
 ### Phase 12: Measured Linear homepage parity
 
 - [x] **Task 31: Capture the current Linear token and motion contract**
-  - **Description:** Record the first-party font, CSS-token, component-style, and motion-bundle values served by Linear's homepage, including asset URLs and hashes, then translate the requested 1:1 direction into executable Signal contracts.
+  - **Description:** Record the first-party font, CSS-token, component-style, and motion-bundle values served by Linear's homepage, including asset URLs and hashes, then translate the requested 1:1 direction into executable Side Glance contracts.
   - **Acceptance:** evidence separates source facts from mapping decisions; exact tests cover font, visual tokens, timing, and reduced motion; Berkeley Mono is neither copied nor hotlinked.
   - **Verify:** `npm run test:site -- --test-name-pattern="Linear homepage token parity"` must fail for observable value mismatches before production edits.
   - **Depends on:** Task 30
@@ -315,7 +315,7 @@ protocol + reducer
   - **Size:** M
 
 - [x] **Task 32: Implement and preview the measured parity system**
-  - **Description:** Replace hand-tuned Geist and motion values with measured Inter/type, neutral design, interaction, and animation tokens; keep Signal's lifecycle palette and terminal story; remove reveal-delay leakage; deploy a Vercel Preview without touching production.
+  - **Description:** Replace hand-tuned Geist and motion values with measured Inter/type, neutral design, interaction, and animation tokens; keep Side Glance's lifecycle palette and terminal story; remove reveal-delay leakage; deploy a Vercel Preview without touching production.
   - **Acceptance:** computed styles match the contract; fresh-load, replay, and reduced-motion paths work; Agentation is visible on Preview and absent from unchanged production.
   - **Verify:** focused GREEN tests, all `CLAUDE.md` gates, browser comparisons at three viewports, and Vercel Preview checks.
   - **Depends on:** Task 31
@@ -323,6 +323,44 @@ protocol + reducer
   - **Size:** L
 
 ## Risks and Mitigations
+
+### Phase 13: Side Glance identity migration
+
+- [x] **Task 33: Lock the public identity with failing tests**
+  - **Acceptance:** focused tests require package `side-glance`, executable
+    `side-glance`, matching packed files/help text, and Side Glance site metadata.
+  - **Verify:** run the focused package and rendered-site tests and capture the
+    expected assertion failures before production edits.
+  - **Depends on:** Task 32
+  - **Files:** distribution and rendered-site tests
+  - **Size:** S
+
+- [x] **Task 34: Rename the package, CLI, runtime identity, and release pipeline**
+  - **Acceptance:** source identifiers, environment variables, state names,
+    installer markers, build outputs, archives, Homebrew formula, manifests, and CI
+    use the new identity; migration-only cleanup recognizes owned legacy hooks.
+  - **Verify:** focused unit, integration, and distribution tests plus typecheck.
+  - **Depends on:** Task 33
+  - **Files:** package/build/release configuration and CLI/core sources in bounded slices
+  - **Size:** L
+
+- [x] **Task 35: Rename the website, documentation, and repository policy surfaces**
+  - **Acceptance:** all visible copy, components, CSS tokens, metadata, install
+    examples, links, policy docs, and contributor guidance use Side Glance.
+  - **Verify:** site tests, rendered HTML, build, browser checks, and residue scan.
+  - **Depends on:** Task 34
+  - **Files:** app, docs, root policy files, tests, and component filename
+  - **Size:** L
+
+- [x] **Task 36: Run the complete verification and review gates**
+  - **Acceptance:** every required repository gate passes; desktop/mobile,
+    keyboard, reduced-motion, console, and network checks pass; five-axis review
+    has no unresolved required findings.
+  - **Verify:** run every command in `CLAUDE.md`, inspect the final diff, and repeat
+    the full case-sensitive residue scan.
+  - **Depends on:** Task 35
+  - **Files:** final review and launch notes
+  - **Size:** M
 
 | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|

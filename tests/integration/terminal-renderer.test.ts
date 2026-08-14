@@ -21,11 +21,11 @@ test("encodes only the expected OSC background, title, and reset bytes", () => {
     decoder.decode(
       encodeTerminalPaint({
         wash: "4d3510",
-        title: "Signal · waiting",
+        title: "Side Glance · waiting",
         allowTitle: true,
       }),
     ),
-    "\u001b]11;#4d3510\u001b\\\u001b]0;Signal · waiting\u001b\\",
+    "\u001b]11;#4d3510\u001b\\\u001b]0;Side Glance · waiting\u001b\\",
   );
   assert.equal(decoder.decode(encodeTerminalReset()), "\u001b]111\u001b\\");
 });
@@ -52,7 +52,7 @@ test("rejects color and title injection before any terminal write", () => {
 });
 
 test("rejects regular files, symlinks, missing paths, and unowned devices", async (context) => {
-  const directory = await mkdtemp(path.join(tmpdir(), "signal-terminal-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "side-glance-terminal-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const regularPath = path.join(directory, "regular-output");
   const symlinkPath = path.join(directory, "linked-output");

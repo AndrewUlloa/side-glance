@@ -40,7 +40,7 @@ test("contains the public project's security, contribution, support, and governa
 test("documents only durable installation and truthful pre-release availability", async () => {
   const readme = await text("README.md");
   assert.doesNotMatch(readme, /npm link/u);
-  assert.match(readme, /npm install --global terminal-signal@beta/u);
+  assert.match(readme, /npm install --global side-glance@beta/u);
   assert.match(readme, /npm install --global \.\/packages\/cli/u);
   assert.match(readme, /release candidate/iu);
 

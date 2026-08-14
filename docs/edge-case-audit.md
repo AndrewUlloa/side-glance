@@ -1,8 +1,8 @@
 # Edge-case audit
 
-This audit records the failure modes found in the original personal `stoplight.sh` and the corresponding Signal behavior.
+This audit records the failure modes found in the original personal `stoplight.sh` and the corresponding Side Glance behavior.
 
-| Original failure mode | Signal control | Evidence |
+| Original failure mode | Side Glance control | Evidence |
 |---|---|---|
 | Async completion repaints after a newer prompt | Generation, timestamp, turn-ID, and event-ID rejection | Reducer and controller rendering tests |
 | Concurrent hooks truncate or lose shell state | Locked typed JSON plus atomic rename | Concurrent-process store test |
@@ -22,8 +22,8 @@ This audit records the failure modes found in the original personal `stoplight.s
 
 ## Honest cleanup boundary
 
-Lifecycle cleanup is deterministic when the provider hook, wrapper, or controller can execute. It is not possible to guarantee an exit callback after `SIGKILL`, power loss, kernel failure, or terminal-emulator death. Signal provides recovery and bounded stale state instead: the next valid event re-resolves ownership, stale store locks require proof of owner death before reclamation, and `signal reset --all --json` releases every tracked session.
+Lifecycle cleanup is deterministic when the provider hook, wrapper, or controller can execute. It is not possible to guarantee an exit callback after `SIGKILL`, power loss, kernel failure, or terminal-emulator death. Side Glance provides recovery and bounded stale state instead: the next valid event re-resolves ownership, stale store locks require proof of owner death before reclamation, and `side-glance reset --all --json` releases every tracked session.
 
 ## Portability boundary
 
-OSC background support varies across terminal emulators, SSH/container layers, tmux passthrough settings, and Windows ConPTY. Signal safely degrades when no verified render channel exists. Gemini, OpenCode, and Aider contracts are fixture verified in this development environment; their binaries were not available for live provider execution.
+OSC background support varies across terminal emulators, SSH/container layers, tmux passthrough settings, and Windows ConPTY. Side Glance safely degrades when no verified render channel exists. Gemini, OpenCode, and Aider contracts are fixture verified in this development environment; their binaries were not available for live provider execution.

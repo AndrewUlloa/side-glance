@@ -155,7 +155,7 @@ export async function restoreTmuxSnapshot(
 function validateSnapshot(snapshot: TmuxSnapshot): void {
   assertWindowId(snapshot.windowId);
   if (snapshot.options.length !== TMUX_OPTIONS.length) {
-    throw new Error("tmux snapshot does not contain every Signal-owned option.");
+    throw new Error("tmux snapshot does not contain every Side Glance-owned option.");
   }
 
   const names = new Set<string>();

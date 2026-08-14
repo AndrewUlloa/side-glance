@@ -3,7 +3,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const REPOSITORY = "AndrewUlloa/terminal-signal";
+const REPOSITORY = "AndrewUlloa/side-glance";
 const SUPPORTED_TARGETS = ["darwin-arm64", "linux-x64-gnu", "linux-arm64-gnu"];
 const EXPERIMENTAL_TARGETS = ["darwin-x64.experimental"];
 const REQUIRED_TARGETS = [...SUPPORTED_TARGETS, ...EXPERIMENTAL_TARGETS];
@@ -75,13 +75,13 @@ function validateManifest(value) {
       fail(`${artifact.target} must be marked ${expectedSupport}`);
     }
 
-    const expectedFilename = `terminal-signal-v${value.version}-${artifact.target}.tar.gz`;
+    const expectedFilename = `side-glance-v${value.version}-${artifact.target}.tar.gz`;
     if (artifact.filename !== expectedFilename) {
       fail(`${artifact.target} has an invalid artifact filename`);
     }
     const expectedUrl = `https://github.com/${REPOSITORY}/releases/download/${value.tag}/${expectedFilename}`;
     if (artifact.url !== expectedUrl) {
-      fail(`${artifact.target} must use its immutable Signal release URL`);
+      fail(`${artifact.target} must use its immutable Side Glance release URL`);
     }
     if (typeof artifact.sha256 !== "string" || !SHA256.test(artifact.sha256)) {
       fail(`${artifact.target} must have a lowercase SHA-256 digest`);
@@ -106,9 +106,9 @@ function renderFormula(version, artifacts) {
   return `# typed: strict
 # frozen_string_literal: true
 
-# TerminalSignal installs the Signal coding-agent attention CLI.
-class TerminalSignal < Formula
-  desc "Local-first attention signals for coding-agent terminal sessions"
+# Side Glance installs the Side Glance coding-agent attention CLI.
+class SideGlance < Formula
+  desc "Local-first attention cues for coding-agent terminal sessions"
   homepage "https://github.com/${REPOSITORY}"
   version "${version}"
   license "MIT"
@@ -139,12 +139,12 @@ class TerminalSignal < Formula
   end
 
   def install
-    bin.install "signal"
+    bin.install "side-glance"
   end
 
   test do
-    assert_equal version.to_s, shell_output("#{bin}/signal --version").strip
-    output = shell_output("#{bin}/signal preview --phase waiting --elapsed 60 --json")
+    assert_equal version.to_s, shell_output("#{bin}/side-glance --version").strip
+    output = shell_output("#{bin}/side-glance preview --phase waiting --elapsed 60 --json")
     assert_match '"urgency":500', output
   end
 end

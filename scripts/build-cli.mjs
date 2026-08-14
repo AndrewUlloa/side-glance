@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const repository = fileURLToPath(new URL("..", import.meta.url));
-const output = path.join(repository, "packages/cli/dist/signal.mjs");
+const output = path.join(repository, "packages/cli/dist/side-glance.mjs");
 const manifest = JSON.parse(
   await readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
 );
@@ -18,7 +18,7 @@ await build({
   platform: "node",
   format: "esm",
   target: "node22",
-  define: { SIGNAL_BUILD_VERSION: JSON.stringify(manifest.version) },
+  define: { SIDE_GLANCE_BUILD_VERSION: JSON.stringify(manifest.version) },
   packages: "bundle",
   legalComments: "none",
   sourcemap: false,

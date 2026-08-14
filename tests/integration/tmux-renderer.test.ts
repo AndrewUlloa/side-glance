@@ -8,7 +8,7 @@ import {
   type TmuxRunner,
 } from "../../src/renderers/tmux.ts";
 
-const SIGNAL_OPTIONS = [
+const SIDE_GLANCE_OPTIONS = [
   "window-status-style",
   "window-status-current-style",
   "window-status-format",
@@ -41,7 +41,7 @@ class FakeTmuxRunner implements TmuxRunner {
     if (args[0] === "set-option") {
       const unset = args.includes("-u");
       const optionIndex = args.findIndex((value) =>
-        SIGNAL_OPTIONS.includes(value as (typeof SIGNAL_OPTIONS)[number]),
+        SIDE_GLANCE_OPTIONS.includes(value as (typeof SIDE_GLANCE_OPTIONS)[number]),
       );
       const option = args[optionIndex];
       if (unset) this.local.delete(option);

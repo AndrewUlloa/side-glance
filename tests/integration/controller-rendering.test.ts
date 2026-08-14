@@ -5,20 +5,20 @@ import path from "node:path";
 import test from "node:test";
 
 import {
-  SignalController,
+  SideGlanceController,
   type SurfaceRenderer,
   type SurfaceRenderResult,
 } from "../../src/core/controller.ts";
 import type {
-  SignalEvent,
-  SignalSessionState,
-  SignalTarget,
+  SideGlanceEvent,
+  SideGlanceSessionState,
+  SideGlanceTarget,
 } from "../../src/core/protocol.ts";
-import { FileSignalStore } from "../../src/core/store.ts";
+import { FileSideGlanceStore } from "../../src/core/store.ts";
 
 interface PaintRecord {
-  target: SignalTarget;
-  session: SignalSessionState;
+  target: SideGlanceTarget;
+  session: SideGlanceSessionState;
   wash: string;
   accent: string;
   urgency: number;
@@ -26,11 +26,11 @@ interface PaintRecord {
 
 class RecordingRenderer implements SurfaceRenderer {
   readonly paints: PaintRecord[] = [];
-  readonly resets: SignalTarget[] = [];
+  readonly resets: SideGlanceTarget[] = [];
 
   async paint(
-    target: SignalTarget,
-    session: SignalSessionState,
+    target: SideGlanceTarget,
+    session: SideGlanceSessionState,
     visual: { wash: string; accent: string; urgency: number },
   ): Promise<SurfaceRenderResult> {
     this.paints.push({ target, session, ...visual });
@@ -50,17 +50,17 @@ class RecordingRenderer implements SurfaceRenderer {
     };
   }
 
-  async reset(target: SignalTarget) {
+  async reset(target: SideGlanceTarget) {
     this.resets.push(target);
   }
 }
 
 async function controllerFixture(context: test.TestContext) {
-  const directory = await mkdtemp(path.join(tmpdir(), "signal-controller-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "side-glance-controller-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const renderer = new RecordingRenderer();
-  const controller = new SignalController(
-    new FileSignalStore({ directory }),
+  const controller = new SideGlanceController(
+    new FileSideGlanceStore({ directory }),
     renderer,
   );
   return { controller, renderer };
@@ -70,10 +70,10 @@ function event(
   source: "claude" | "codex",
   sessionId: string,
   eventId: string,
-  kind: SignalEvent["kind"],
+  kind: SideGlanceEvent["kind"],
   occurredAt: number,
-  overrides: Partial<SignalEvent> = {},
-): SignalEvent {
+  overrides: Partial<SideGlanceEvent> = {},
+): SideGlanceEvent {
   return {
     v: 1,
     source,

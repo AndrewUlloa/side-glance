@@ -1,28 +1,30 @@
-# Signal
+# Side Glance
 
-Signal is a local-first attention layer for coding-agent CLIs. It turns working, waiting, ready, failed, and inactive lifecycle events into a calm terminal or tmux signal without allowing stale hooks or one session's cleanup to overwrite another.
+Side Glance is a local-first attention layer for coding-agent CLIs. It turns working, waiting, ready, failed, and inactive lifecycle events into a calm terminal or tmux status layer without allowing stale hooks or one session's cleanup to overwrite another.
 
 It is the tested successor to a personal `stoplight.sh`: one typed controller, one private state store, thin provider adapters, and a universal supervised wrapper.
 
 ## What is proven
 
 - Claude Code, Codex, and Gemini hook installers merge configuration transactionally and preserve unrelated handlers. Codex's existing `notify` configuration is separate and untouched.
-- OpenCode and Aider have normalized adapter contracts; every executable can use `signal run -- <command>` as the baseline.
+- OpenCode and Aider have normalized adapter contracts; every executable can use `side-glance run -- <command>` as the baseline.
 - Delayed generations, older timestamps, mismatched turn IDs, and duplicate event IDs cannot repaint newer state.
-- Shared surfaces have one deterministic owner. Releasing one session reveals the next owner; final release resets only Signal-owned state.
+- Shared surfaces have one deterministic owner. Releasing one session reveals the next owner; final release resets only Side Glance-owned state.
 - TTY targets must be owned character devices. tmux options are captured and restored exactly; pane sessions use tmux status instead of a whole-client background wash.
 - Prompt, response, and transcript content are not part of the protocol or persisted state.
 
 ## Installation status
 
-Signal is a release candidate. The [interactive landing page](https://terminal-signal.vercel.app) is live, but the commands below become public only after the verified beta is published. The deployed copy labels that boundary explicitly.
+Side Glance is a release candidate. The interactive landing-page source is ready,
+but the renamed site and commands below become public only after a verified
+deployment and beta publication. This source rename does not publish either one.
 
 ```bash
 # Durable Node installation after publication
-npm install --global terminal-signal@beta
+npm install --global side-glance@beta
 
 # Ephemeral diagnostics or preview only
-npx terminal-signal@beta doctor --json
+npx side-glance@beta doctor --json
 ```
 
 Standalone macOS and Linux archives will be attached to each GitHub Release. Homebrew is the preferred macOS path after the generated formula is accepted into the project tap.
@@ -34,8 +36,8 @@ Repository development uses Node.js 24.18.0.
 ```bash
 npm ci
 npm run build:cli
-node packages/cli/dist/signal.mjs doctor --json
-node packages/cli/dist/signal.mjs run -- claude
+node packages/cli/dist/side-glance.mjs doctor --json
+node packages/cli/dist/side-glance.mjs run -- claude
 ```
 
 For a durable installation from a checkout, use `npm install --global ./packages/cli` after building. Provider hooks must never point at `npx` or an npm cache path.
@@ -43,25 +45,25 @@ For a durable installation from a checkout, use `npm install --global ./packages
 The wrapper automatically discovers the controlling TTY and passes a stable surface identity to native hooks. Explicit targets remain available for automation:
 
 ```bash
-signal run --surface test:demo -- your-command
+side-glance run --surface test:demo -- your-command
 ```
 
 Native setup is intentionally a separate action because it edits provider configuration:
 
 ```bash
-signal install claude --json
-signal install codex --json
-signal uninstall claude --json
+side-glance install claude --json
+side-glance install codex --json
+side-glance uninstall claude --json
 ```
 
-Do not install over the existing `stoplight.sh` setup until you have reviewed `signal doctor --json` and chosen a migration window.
+Do not install over the existing `stoplight.sh` setup until you have reviewed `side-glance doctor --json` and chosen a migration window.
 
 ## Recovery contract
 
-Normal `SessionEnd`, child exit, `SIGINT`, `SIGTERM`, `SIGHUP`, and manual reset paths release through the serialized controller. No software can synchronously clean up after every component receives `SIGKILL`, after power loss, or after the terminal emulator disappears. Signal bounds those cases with ownership reconciliation on the next affected event and explicit recovery:
+Normal `SessionEnd`, child exit, `SIGINT`, `SIGTERM`, `SIGHUP`, and manual reset paths release through the serialized controller. No software can synchronously clean up after every component receives `SIGKILL`, after power loss, or after the terminal emulator disappears. Side Glance bounds those cases with ownership reconciliation on the next affected event and explicit recovery:
 
 ```bash
-signal reset --all --json
+side-glance reset --all --json
 ```
 
 OSC 111 restores the terminal's configured default background; terminals do not expose a portable way to recover an arbitrary dynamic OSC 11 value. Title mutation remains opt-in.
@@ -84,7 +86,10 @@ See [SPEC.md](./SPEC.md), [PLAN.md](./PLAN.md), [architecture](./docs/architectu
 
 ## Status
 
-Release candidate. The landing page is deployed on Vercel; local package and native artifact rehearsals are implemented; and the repository has protected `main`/version tags plus tag-restricted release environments. Public visibility, environment reviewers, first npm ownership, the Homebrew tap, and live provider migration remain explicit owner-approval gates.
+Release candidate. Local package and native artifact rehearsals are implemented.
+Renaming the remote repository and Vercel project, deploying the renamed site,
+public visibility, environment reviewers, first npm ownership, the Homebrew tap,
+and live provider migration remain explicit owner-approval gates.
 
 ## License
 

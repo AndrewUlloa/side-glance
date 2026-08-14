@@ -13,7 +13,8 @@ import {
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-const MANAGED_MARKER = "SIGNAL_MANAGED_HOOK=1";
+const MANAGED_MARKER = "SIDE_GLANCE_MANAGED_HOOK=1";
+const LEGACY_MANAGED_MARKER = "SIGNAL_MANAGED_HOOK=1";
 const MAX_CONFIG_BYTES = 2 * 1_048_576;
 
 export type InstallableProvider = "claude" | "codex" | "gemini";
@@ -39,7 +40,7 @@ export interface ProviderInspection {
   valid: true;
   expectedEvents: number;
   existingHookGroups: number;
-  signalHooks: number;
+  sideGlanceHooks: number;
   notifyConfigured?: boolean;
 }
 
@@ -101,7 +102,7 @@ export async function inspectProviderHooks(options: {
     valid: true,
     expectedEvents: PROVIDER_EVENTS[options.provider].length,
     existingHookGroups: groups.length,
-    signalHooks: groups
+    sideGlanceHooks: groups
       .flatMap((group) => group.hooks)
       .filter((hook) => isManagedCommand(hook.command, options.provider)).length,
   };
@@ -122,14 +123,14 @@ export async function installProviderHooks(
 
   for (const eventName of PROVIDER_EVENTS[options.provider]) {
     const groups = hooks[eventName] ?? [];
-    const withoutOldSignalHandlers = removeManagedHandlers(
+    const withoutManagedHandlers = removeManagedHandlers(
       groups,
       options.provider,
     );
-    withoutOldSignalHandlers.push({
+    withoutManagedHandlers.push({
       hooks: [{ type: "command", command }],
     });
-    hooks[eventName] = withoutOldSignalHandlers;
+    hooks[eventName] = withoutManagedHandlers;
   }
   configuration.hooks = hooks;
 
@@ -229,16 +230,16 @@ async function validateOptions(
     throw new Error("Installer home directory must be absolute.");
   }
   if (!path.isAbsolute(options.executablePath)) {
-    throw new Error("Signal executable path must be absolute.");
+    throw new Error("Side Glance executable path must be absolute.");
   }
   const executablePath = path.resolve(options.executablePath);
   if (requireExecutable) {
     const executableMetadata = await stat(executablePath);
     if (!executableMetadata.isFile()) {
-      throw new Error("Signal executable must resolve to a regular file.");
+      throw new Error("Side Glance executable must resolve to a regular file.");
     }
     if ((executableMetadata.mode & 0o111) === 0) {
-      throw new Error("Signal executable must have an executable permission bit.");
+      throw new Error("Side Glance executable must have an executable permission bit.");
     }
   }
 
@@ -348,7 +349,9 @@ function isManagedCommand(
 ): boolean {
   return (
     typeof command === "string" &&
-    command.startsWith(`${MANAGED_MARKER} `) &&
+    [MANAGED_MARKER, LEGACY_MANAGED_MARKER].some((marker) =>
+      command.startsWith(`${marker} `),
+    ) &&
     command.includes(` hook --provider ${provider} --json`)
   );
 }
@@ -362,13 +365,13 @@ function managedCommand(
 
 function shellQuote(value: string): string {
   if ([...value].some((character) => (character.codePointAt(0) ?? 0) <= 0x1f)) {
-    throw new Error("Signal executable path may not contain control characters.");
+    throw new Error("Side Glance executable path may not contain control characters.");
   }
   return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
 async function backupConfiguration(configPath: string): Promise<string> {
-  const backupPath = `${configPath}.signal-backup-${Date.now()}-${randomUUID()}`;
+  const backupPath = `${configPath}.side-glance-backup-${Date.now()}-${randomUUID()}`;
   await copyFile(configPath, backupPath, constants.COPYFILE_EXCL);
   const metadata = await stat(configPath);
   await chmod(backupPath, metadata.mode & 0o777);

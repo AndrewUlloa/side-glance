@@ -1,13 +1,13 @@
 import {
-  SIGNAL_PROTOCOL_VERSION,
-  type SignalConfidence,
-  type SignalEvent,
-  type SignalEventKind,
-  type SignalSource,
-  type SignalTarget,
+  SIDE_GLANCE_PROTOCOL_VERSION,
+  type SideGlanceConfidence,
+  type SideGlanceEvent,
+  type SideGlanceEventKind,
+  type SideGlanceSource,
+  type SideGlanceTarget,
 } from "./protocol.ts";
 
-const SOURCES = new Set<SignalSource>([
+const SOURCES = new Set<SideGlanceSource>([
   "claude",
   "codex",
   "gemini",
@@ -15,7 +15,7 @@ const SOURCES = new Set<SignalSource>([
   "aider",
   "generic",
 ]);
-const EVENT_KINDS = new Set<SignalEventKind>([
+const EVENT_KINDS = new Set<SideGlanceEventKind>([
   "session.started",
   "turn.started",
   "attention.waiting",
@@ -25,7 +25,7 @@ const EVENT_KINDS = new Set<SignalEventKind>([
   "turn.cancelled",
   "session.ended",
 ]);
-const CONFIDENCES = new Set<SignalConfidence>([
+const CONFIDENCES = new Set<SideGlanceConfidence>([
   "native",
   "notification",
   "wrapper",
@@ -46,17 +46,17 @@ const EVENT_FIELDS = new Set([
 ]);
 const TARGET_FIELDS = new Set(["surfaceId", "tty", "tmuxPane"]);
 
-export function parseSignalEvent(value: unknown): SignalEvent {
-  const event = requireRecord(value, "Signal event");
-  rejectUnknownFields(event, EVENT_FIELDS, "Signal event");
+export function parseSideGlanceEvent(value: unknown): SideGlanceEvent {
+  const event = requireRecord(value, "Side Glance event");
+  rejectUnknownFields(event, EVENT_FIELDS, "Side Glance event");
 
-  if (event.v !== SIGNAL_PROTOCOL_VERSION) {
-    throw new Error(`Signal event v must be ${SIGNAL_PROTOCOL_VERSION}.`);
+  if (event.v !== SIDE_GLANCE_PROTOCOL_VERSION) {
+    throw new Error(`Side Glance event v must be ${SIDE_GLANCE_PROTOCOL_VERSION}.`);
   }
   const source = requireEnum(event.source, SOURCES, "source");
   const kind = requireEnum(event.kind, EVENT_KINDS, "kind");
-  const parsed: SignalEvent = {
-    v: SIGNAL_PROTOCOL_VERSION,
+  const parsed: SideGlanceEvent = {
+    v: SIDE_GLANCE_PROTOCOL_VERSION,
     eventId: requireText(event.eventId, "eventId", 160),
     source,
     sessionId: requireText(event.sessionId, "sessionId", 256),
@@ -66,7 +66,7 @@ export function parseSignalEvent(value: unknown): SignalEvent {
 
   if (event.generation !== undefined) {
     if (!Number.isSafeInteger(event.generation) || Number(event.generation) < 0) {
-      throw new Error("Signal event generation must be a non-negative safe integer.");
+      throw new Error("Side Glance event generation must be a non-negative safe integer.");
     }
     parsed.generation = Number(event.generation);
   }
@@ -90,13 +90,13 @@ export function parseSignalEvent(value: unknown): SignalEvent {
   return parsed;
 }
 
-export function parseSignalSource(value: string): SignalSource {
+export function parseSideGlanceSource(value: string): SideGlanceSource {
   return requireEnum(value, SOURCES, "source");
 }
 
-function parseTarget(value: unknown): SignalTarget {
-  const target = requireRecord(value, "Signal target");
-  rejectUnknownFields(target, TARGET_FIELDS, "Signal target");
+function parseTarget(value: unknown): SideGlanceTarget {
+  const target = requireRecord(value, "Side Glance target");
+  rejectUnknownFields(target, TARGET_FIELDS, "Side Glance target");
   return {
     surfaceId: requireText(target.surfaceId, "target.surfaceId", 512),
     ...(target.tty !== undefined

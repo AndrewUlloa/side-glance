@@ -70,14 +70,14 @@ jobs:
         with:
           node-version: 24.18.0
       - run: npm ci
-      - run: mkdir -p release && npm pack --workspace terminal-signal --pack-destination release
+      - run: mkdir -p release && npm pack --workspace side-glance --pack-destination release
       - run: npm publish release/*.tgz --access public --tag beta --dry-run
       - uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
         with:
           subject-path: release/*.tgz
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: signal-npm-${{ needs.validate.outputs.source_sha }}
+          name: side-glance-npm-${{ needs.validate.outputs.source_sha }}
           path: release/*.tgz
           if-no-files-found: error
           retention-days: 7
@@ -110,14 +110,14 @@ jobs:
       - run: npm ci
       - run: node --test tests/distribution/standalone.test.mjs
         env:
-          SIGNAL_RELEASE_TARGET: ${{ matrix.target }}
-          SIGNAL_RELEASE_NODE_VERSION: 24.18.0
+          SIDE_GLANCE_RELEASE_TARGET: ${{ matrix.target }}
+          SIDE_GLANCE_RELEASE_NODE_VERSION: 24.18.0
       - uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
         with:
           subject-path: outputs/*.tar.gz
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: signal-native-${{ matrix.target }}-${{ needs.validate.outputs.source_sha }}
+          name: side-glance-native-${{ matrix.target }}-${{ needs.validate.outputs.source_sha }}
           path: |
             outputs/*.tar.gz
             outputs/*.artifact.json
@@ -137,28 +137,28 @@ jobs:
           node-version: 24.18.0
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
-          pattern: signal-*
+          pattern: side-glance-*
           path: release
           merge-multiple: true
       - run: |
-          SIGNAL_RELEASE_TAG="${{ needs.validate.outputs.tag }}" \
+          SIDE_GLANCE_RELEASE_TAG="${{ needs.validate.outputs.tag }}" \
           GITHUB_SHA="${{ needs.validate.outputs.source_sha }}" \
             node scripts/release/create-release-manifest.mjs \
               release packages/cli/package.json release/release-manifest.json
           node scripts/release/generate-homebrew-formula.mjs \
-            release/release-manifest.json release/terminal-signal.rb
+            release/release-manifest.json release/side-glance.rb
           cd release
           sha256sum --check SHA256SUMS
-          ruby -c terminal-signal.rb
+          ruby -c side-glance.rb
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: signal-release-bundle-${{ needs.validate.outputs.source_sha }}
+          name: side-glance-release-bundle-${{ needs.validate.outputs.source_sha }}
           path: |
             release/*.tar.gz
             release/*.tgz
             release/SHA256SUMS
             release/release-manifest.json
-            release/terminal-signal.rb
+            release/side-glance.rb
           if-no-files-found: error
           retention-days: 14
 
@@ -172,7 +172,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
-          name: signal-release-bundle-${{ needs.validate.outputs.source_sha }}
+          name: side-glance-release-bundle-${{ needs.validate.outputs.source_sha }}
           path: release
       - env:
           GH_TOKEN: ${{ github.token }}
@@ -193,7 +193,7 @@ jobs:
             done
           else
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
-              --prerelease --latest=false --generate-notes --title "Signal $VERSION"
+              --prerelease --latest=false --generate-notes --title "Side Glance $VERSION"
           fi
           for expected in release/*; do
             if test ! -f "existing/$(basename "$expected")"; then
@@ -215,14 +215,14 @@ jobs:
           node-version: 24.18.0
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
-          name: signal-release-bundle-${{ needs.validate.outputs.source_sha }}
+          name: side-glance-release-bundle-${{ needs.validate.outputs.source_sha }}
           path: release
       - env:
           VERSION: ${{ needs.validate.outputs.version }}
         run: |
           node -e 'const { execFileSync } = require("node:child_process"); const [major, minor, patch] = execFileSync("npm", ["--version"], { encoding: "utf8" }).trim().split(".").map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) throw new Error("npm 11.5.1+ is required")'
           expected="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("release/release-manifest.json")).npm.integrity)')"
-          if remote="$(npm view "terminal-signal@$VERSION" dist.integrity --json 2>/dev/null)"; then
+          if remote="$(npm view "side-glance@$VERSION" dist.integrity --json 2>/dev/null)"; then
             actual="$(node -e 'console.log(JSON.parse(process.argv[1]))' "$remote")"
             test "$actual" = "$expected"
           else
@@ -262,8 +262,8 @@ jobs:
           cd release
           sha256sum --check SHA256SUMS
           mkdir extracted
-          tar -xzf "terminal-signal-v$VERSION-linux-x64-gnu.tar.gz" -C extracted
-          test "$(extracted/signal --version)" = "$VERSION"
+          tar -xzf "side-glance-v$VERSION-linux-x64-gnu.tar.gz" -C extracted
+          test "$(extracted/side-glance --version)" = "$VERSION"
           expected="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("release-manifest.json")).npm.integrity)')"
-          actual="$(npm view "terminal-signal@$VERSION" dist.integrity --json | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>console.log(JSON.parse(s)))')"
+          actual="$(npm view "side-glance@$VERSION" dist.integrity --json | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>console.log(JSON.parse(s)))')"
           test "$actual" = "$expected"

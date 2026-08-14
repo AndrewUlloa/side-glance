@@ -1,15 +1,15 @@
 import {
   sessionKey,
-  type SignalEvent,
-  type SignalPhase,
-  type SignalSessionState,
-  type SignalState,
+  type SideGlanceEvent,
+  type SideGlancePhase,
+  type SideGlanceSessionState,
+  type SideGlanceState,
 } from "./protocol.ts";
-import { compactSignalState } from "./compact.ts";
+import { compactSideGlanceState } from "./compact.ts";
 
 const MAX_SEEN_EVENT_IDS = 4_096;
 
-export function createSignalState(): SignalState {
+export function createSideGlanceState(): SideGlanceState {
   return {
     schemaVersion: 1,
     sessions: {},
@@ -18,10 +18,10 @@ export function createSignalState(): SignalState {
   };
 }
 
-export function reduceSignalEvent(
-  state: SignalState,
-  event: SignalEvent,
-): SignalState {
+export function reduceSideGlanceEvent(
+  state: SideGlanceState,
+  event: SideGlanceEvent,
+): SideGlanceState {
   if (state.seenEventIds.includes(event.eventId)) {
     return state;
   }
@@ -53,7 +53,7 @@ export function reduceSignalEvent(
     event.kind === "session.started" || event.kind === "turn.started"
       ? event.occurredAt
       : current?.startedAt;
-  const nextSession: SignalSessionState = {
+  const nextSession: SideGlanceSessionState = {
     source: event.source,
     sessionId: event.sessionId,
     phase,
@@ -70,7 +70,7 @@ export function reduceSignalEvent(
     updatedAt: event.occurredAt,
   };
 
-  return compactSignalState({
+  return compactSideGlanceState({
     ...state,
     sessions: {
       ...state.sessions,
@@ -83,8 +83,8 @@ export function reduceSignalEvent(
 }
 
 function nextGeneration(
-  current: SignalSessionState | undefined,
-  event: SignalEvent,
+  current: SideGlanceSessionState | undefined,
+  event: SideGlanceEvent,
 ): number {
   if (event.generation !== undefined) {
     return event.generation;
@@ -95,7 +95,7 @@ function nextGeneration(
   return current?.generation ?? 0;
 }
 
-function phaseFor(kind: SignalEvent["kind"]): SignalPhase {
+function phaseFor(kind: SideGlanceEvent["kind"]): SideGlancePhase {
   switch (kind) {
     case "session.started":
     case "turn.started":
@@ -113,7 +113,7 @@ function phaseFor(kind: SignalEvent["kind"]): SignalPhase {
   }
 }
 
-function isTurnScopedFollowUp(kind: SignalEvent["kind"]): boolean {
+function isTurnScopedFollowUp(kind: SideGlanceEvent["kind"]): boolean {
   return [
     "attention.waiting",
     "attention.acknowledged",

@@ -9,27 +9,30 @@ import { adaptGeminiHook } from "../adapters/gemini.ts";
 import { adaptOpenCodeEvent } from "../adapters/opencode.ts";
 import { inspectProviderHooks } from "../adapters/installers.ts";
 import type { AdapterContext, AdapterResult } from "../adapters/types.ts";
-import { SignalController } from "../core/controller.ts";
+import { SideGlanceController } from "../core/controller.ts";
 import { urgencyFromElapsed } from "../core/policy.ts";
-import { sessionKey, type SignalPhase } from "../core/protocol.ts";
-import { FileSignalStore } from "../core/store.ts";
+import { sessionKey, type SideGlancePhase } from "../core/protocol.ts";
+import { FileSideGlanceStore } from "../core/store.ts";
 import { discoverTerminalTarget } from "../core/target.ts";
-import { parseSignalEvent, parseSignalSource } from "../core/validation.ts";
+import { parseSideGlanceEvent, parseSideGlanceSource } from "../core/validation.ts";
 import { runInstallCommand } from "./install.ts";
 import { runSupervised } from "./run.ts";
-import { SIGNAL_VERSION } from "../version.ts";
+import { SIDE_GLANCE_VERSION } from "../version.ts";
 
 const MAX_STDIN_BYTES = 1_048_576;
 
 export async function main(args = process.argv.slice(2)): Promise<number> {
-  const stateDirectory = resolveStateDirectory();
-  const store = new FileSignalStore({ directory: stateDirectory });
+  const { stateDirectory, legacyStateDirectory } = resolveStateDirectories();
+  const store = new FileSideGlanceStore({
+    directory: stateDirectory,
+    ...(legacyStateDirectory ? { legacyDirectory: legacyStateDirectory } : {}),
+  });
   const command = args[0];
 
   switch (command) {
     case "--version":
     case "-v":
-      process.stdout.write(`${SIGNAL_VERSION}\n`);
+      process.stdout.write(`${SIDE_GLANCE_VERSION}\n`);
       return 0;
     case "--help":
     case "-h":
@@ -37,8 +40,8 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       return 0;
     case "event": {
       requireExactArgs(args.slice(1), ["--json"], "event");
-      const event = parseSignalEvent(JSON.parse(await readBoundedStdin()));
-      writeJson(await new SignalController(store).submit(event));
+      const event = parseSideGlanceEvent(JSON.parse(await readBoundedStdin()));
+      writeJson(await new SideGlanceController(store).submit(event));
       return 0;
     }
     case "hook": {
@@ -54,7 +57,9 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       );
       const sessionIndex = args.indexOf("--session");
       const fallbackSessionId =
-        sessionIndex === -1 ? process.env.SIGNAL_SESSION_ID : args[sessionIndex + 1];
+        sessionIndex === -1
+          ? process.env.SIDE_GLANCE_SESSION_ID ?? process.env.SIGNAL_SESSION_ID
+          : args[sessionIndex + 1];
       const context: AdapterContext = {
         eventId: randomUUID(),
         occurredAt: Date.now(),
@@ -67,7 +72,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         writeJson({ accepted: false });
         return 0;
       }
-      writeJson(await new SignalController(store).submit(event));
+      writeJson(await new SideGlanceController(store).submit(event));
       return 0;
     }
     case "install":
@@ -100,7 +105,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       return 0;
     }
     case "preview": {
-      const phase = parseOption(args, "--phase") as SignalPhase;
+      const phase = parseOption(args, "--phase") as SideGlancePhase;
       if (!["working", "waiting", "completed", "failed"].includes(phase)) {
         throw new Error("preview phase must be working, waiting, completed, or failed.");
       }
@@ -113,7 +118,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     case "reset": {
       if (args.includes("--all")) {
         requireExactArgs(args.slice(1), ["--all", "--json"], "reset");
-        const controller = new SignalController(store);
+        const controller = new SideGlanceController(store);
         let current = await store.read();
         for (const session of Object.values(current.sessions)) {
           if (session.phase === "inactive") continue;
@@ -133,13 +138,13 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         writeJson(current);
         return 0;
       }
-      const source = parseSignalSource(parseOption(args, "--source"));
+      const source = parseSideGlanceSource(parseOption(args, "--source"));
       const sessionId = parseOption(args, "--session");
       requireOnlyOptions(args.slice(1), ["--source", "--session", "--json"], "reset");
       const current = await store.read();
       const session = current.sessions[sessionKey(source, sessionId)];
       if (!session) throw new Error("reset session was not found.");
-      const reset = await new SignalController(store).submit({
+      const reset = await new SideGlanceController(store).submit({
         v: 1,
         eventId: randomUUID(),
         source,
@@ -155,7 +160,11 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       return 0;
     }
     case "run": {
-      const result = await runSupervised(args.slice(1), stateDirectory);
+      const result = await runSupervised(
+        args.slice(1),
+        stateDirectory,
+        legacyStateDirectory,
+      );
       if (result.signal) {
         process.kill(process.pid, result.signal);
       }
@@ -163,24 +172,24 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     default:
       throw new Error(
-        "usage: signal <event|hook|status|doctor|preview|reset|run|install|uninstall> [options]",
+        "usage: side-glance <event|hook|status|doctor|preview|reset|run|install|uninstall> [options]",
       );
   }
 }
 
 function helpText(): string {
-  return `Signal ${SIGNAL_VERSION}
+  return `Side Glance ${SIDE_GLANCE_VERSION}
 
 Usage:
-  signal doctor --json
-  signal preview --phase <phase> --elapsed <seconds> --json
-  signal run [--surface <id>] -- <command> [args...]
-  signal install <claude|codex|gemini> --json
-  signal uninstall <claude|codex|gemini> --json
-  signal status --json
-  signal reset (--all | --source <source> --session <id>) --json
-  signal event --json
-  signal hook --provider <provider> --json
+  side-glance doctor --json
+  side-glance preview --phase <phase> --elapsed <seconds> --json
+  side-glance run [--surface <id>] -- <command> [args...]
+  side-glance install <claude|codex|gemini> --json
+  side-glance uninstall <claude|codex|gemini> --json
+  side-glance status --json
+  side-glance reset (--all | --source <source> --session <id>) --json
+  side-glance event --json
+  side-glance hook --provider <provider> --json
 
 Options:
   -h, --help      Show this help
@@ -188,18 +197,32 @@ Options:
 `;
 }
 
-function resolveStateDirectory(): string {
-  const configured = process.env.SIGNAL_STATE_DIR;
+function resolveStateDirectories(): {
+  stateDirectory: string;
+  legacyStateDirectory?: string;
+} {
+  const configured = process.env.SIDE_GLANCE_STATE_DIR;
   if (configured) {
     if (!path.isAbsolute(configured)) {
-      throw new Error("SIGNAL_STATE_DIR must be an absolute path.");
+      throw new Error("SIDE_GLANCE_STATE_DIR must be an absolute path.");
     }
-    return path.resolve(configured);
+    return { stateDirectory: path.resolve(configured) };
+  }
+  const legacyConfigured = process.env.SIGNAL_STATE_DIR;
+  if (legacyConfigured) {
+    if (!path.isAbsolute(legacyConfigured)) {
+      throw new Error("Legacy state directory must be an absolute path.");
+    }
+    const directory = path.resolve(legacyConfigured);
+    return { stateDirectory: directory, legacyStateDirectory: directory };
   }
   const base = process.env.XDG_STATE_HOME
     ? path.resolve(process.env.XDG_STATE_HOME)
     : path.join(homedir(), ".local", "state");
-  return path.join(base, "signal");
+  return {
+    stateDirectory: path.join(base, "side-glance"),
+    legacyStateDirectory: path.join(base, "signal"),
+  };
 }
 
 async function readBoundedStdin(): Promise<string> {

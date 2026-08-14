@@ -1,6 +1,6 @@
-export const SIGNAL_PROTOCOL_VERSION = 1 as const;
+export const SIDE_GLANCE_PROTOCOL_VERSION = 1 as const;
 
-export type SignalSource =
+export type SideGlanceSource =
   | "claude"
   | "codex"
   | "gemini"
@@ -8,7 +8,7 @@ export type SignalSource =
   | "aider"
   | "generic";
 
-export type SignalEventKind =
+export type SideGlanceEventKind =
   | "session.started"
   | "turn.started"
   | "attention.waiting"
@@ -18,53 +18,53 @@ export type SignalEventKind =
   | "turn.cancelled"
   | "session.ended";
 
-export type SignalPhase =
+export type SideGlancePhase =
   | "inactive"
   | "working"
   | "waiting"
   | "completed"
   | "failed";
 
-export type SignalConfidence =
+export type SideGlanceConfidence =
   | "native"
   | "notification"
   | "wrapper"
   | "heuristic";
 
-export interface SignalTarget {
+export interface SideGlanceTarget {
   surfaceId: string;
   tty?: string;
   tmuxPane?: string;
 }
 
-export interface SignalEvent {
-  v: typeof SIGNAL_PROTOCOL_VERSION;
+export interface SideGlanceEvent {
+  v: typeof SIDE_GLANCE_PROTOCOL_VERSION;
   eventId: string;
-  source: SignalSource;
+  source: SideGlanceSource;
   sessionId: string;
-  kind: SignalEventKind;
+  kind: SideGlanceEventKind;
   occurredAt: number;
   generation?: number;
   turnId?: string;
   reason?: string;
-  confidence?: SignalConfidence;
-  target?: SignalTarget;
+  confidence?: SideGlanceConfidence;
+  target?: SideGlanceTarget;
 }
 
-export interface SignalSessionState {
-  source: SignalSource;
+export interface SideGlanceSessionState {
+  source: SideGlanceSource;
   sessionId: string;
-  phase: SignalPhase;
+  phase: SideGlancePhase;
   generation: number;
   turnId?: string;
   reason?: string;
-  confidence: SignalConfidence;
-  target?: SignalTarget;
+  confidence: SideGlanceConfidence;
+  target?: SideGlanceTarget;
   startedAt?: number;
   updatedAt: number;
 }
 
-export interface SignalTmuxOptionSnapshot {
+export interface SideGlanceTmuxOptionSnapshot {
   name:
     | "window-status-style"
     | "window-status-current-style"
@@ -74,29 +74,29 @@ export interface SignalTmuxOptionSnapshot {
   value?: string;
 }
 
-export interface SignalTmuxSnapshot {
+export interface SideGlanceTmuxSnapshot {
   windowId: string;
-  options: SignalTmuxOptionSnapshot[];
+  options: SideGlanceTmuxOptionSnapshot[];
 }
 
-export interface SignalSurfaceState {
+export interface SideGlanceSurfaceState {
   surfaceId: string;
-  target: SignalTarget;
-  phase: SignalPhase;
+  target: SideGlanceTarget;
+  phase: SideGlancePhase;
   generation: number;
   updatedAt: number;
   terminalPainted: boolean;
   ownerKey?: string;
-  tmuxSnapshot?: SignalTmuxSnapshot;
+  tmuxSnapshot?: SideGlanceTmuxSnapshot;
 }
 
-export interface SignalState {
+export interface SideGlanceState {
   schemaVersion: 1;
-  sessions: Record<string, SignalSessionState>;
-  surfaces: Record<string, SignalSurfaceState>;
+  sessions: Record<string, SideGlanceSessionState>;
+  surfaces: Record<string, SideGlanceSurfaceState>;
   seenEventIds: string[];
 }
 
-export function sessionKey(source: SignalSource, sessionId: string): string {
+export function sessionKey(source: SideGlanceSource, sessionId: string): string {
   return `${source}:${sessionId}`;
 }

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createSignalState, reduceSignalEvent } from "../../src/core/reducer.ts";
-import type { SignalEvent } from "../../src/core/protocol.ts";
+import { createSideGlanceState, reduceSideGlanceEvent } from "../../src/core/reducer.ts";
+import type { SideGlanceEvent } from "../../src/core/protocol.ts";
 
 const baseEvent = {
   v: 1,
@@ -11,31 +11,31 @@ const baseEvent = {
   occurredAt: 1_000,
   confidence: "native",
   target: { surfaceId: "tty:/dev/ttys001", tty: "/dev/ttys001" },
-} satisfies Omit<SignalEvent, "eventId" | "kind">;
+} satisfies Omit<SideGlanceEvent, "eventId" | "kind">;
 
 function event(
   eventId: string,
-  kind: SignalEvent["kind"],
-  overrides: Partial<SignalEvent> = {},
-): SignalEvent {
+  kind: SideGlanceEvent["kind"],
+  overrides: Partial<SideGlanceEvent> = {},
+): SideGlanceEvent {
   return { ...baseEvent, eventId, kind, ...overrides };
 }
 
 test("moves a native session through working, waiting, and completed", () => {
-  let state = createSignalState();
-  state = reduceSignalEvent(state, event("e1", "session.started"));
-  state = reduceSignalEvent(
+  let state = createSideGlanceState();
+  state = reduceSideGlanceEvent(state, event("e1", "session.started"));
+  state = reduceSideGlanceEvent(
     state,
     event("e2", "turn.started", { generation: 1, turnId: "turn-1" }),
   );
-  state = reduceSignalEvent(
+  state = reduceSideGlanceEvent(
     state,
     event("e3", "attention.waiting", { generation: 1, turnId: "turn-1" }),
   );
 
   assert.equal(state.sessions["claude:session-a"]?.phase, "waiting");
 
-  state = reduceSignalEvent(
+  state = reduceSideGlanceEvent(
     state,
     event("e4", "turn.completed", { generation: 1, turnId: "turn-1" }),
   );
@@ -54,12 +54,12 @@ test("moves a native session through working, waiting, and completed", () => {
 });
 
 test("ignores an older generation after a newer turn starts", () => {
-  let state = createSignalState();
-  state = reduceSignalEvent(
+  let state = createSideGlanceState();
+  state = reduceSideGlanceEvent(
     state,
     event("e1", "turn.started", { generation: 1, turnId: "turn-1" }),
   );
-  state = reduceSignalEvent(
+  state = reduceSideGlanceEvent(
     state,
     event("e2", "turn.started", {
       generation: 2,
@@ -69,7 +69,7 @@ test("ignores an older generation after a newer turn starts", () => {
   );
   const beforeStaleEvent = state;
 
-  state = reduceSignalEvent(
+  state = reduceSideGlanceEvent(
     state,
     event("e3", "turn.completed", { generation: 1, turnId: "turn-1" }),
   );
@@ -80,12 +80,12 @@ test("ignores an older generation after a newer turn starts", () => {
 });
 
 test("ignores a delayed provider event whose turn ID no longer owns the session", () => {
-  let state = createSignalState();
-  state = reduceSignalEvent(
+  let state = createSideGlanceState();
+  state = reduceSideGlanceEvent(
     state,
     event("turn-1-start", "turn.started", { turnId: "turn-1" }),
   );
-  state = reduceSignalEvent(
+  state = reduceSideGlanceEvent(
     state,
     event("turn-2-start", "turn.started", {
       turnId: "turn-2",
@@ -94,7 +94,7 @@ test("ignores a delayed provider event whose turn ID no longer owns the session"
   );
   const beforeDelayedCompletion = state;
 
-  state = reduceSignalEvent(
+  state = reduceSideGlanceEvent(
     state,
     event("turn-1-late", "turn.completed", {
       turnId: "turn-1",
@@ -112,25 +112,25 @@ test("applies a duplicate event ID only once", () => {
     generation: 1,
     turnId: "turn-1",
   });
-  const once = reduceSignalEvent(createSignalState(), first);
-  const twice = reduceSignalEvent(once, first);
+  const once = reduceSideGlanceEvent(createSideGlanceState(), first);
+  const twice = reduceSideGlanceEvent(once, first);
 
   assert.strictEqual(twice, once);
   assert.deepEqual(twice.seenEventIds, ["same-event"]);
 });
 
 test("rejects a delayed event even when the provider cannot supply a turn ID", () => {
-  let state = reduceSignalEvent(
-    createSignalState(),
+  let state = reduceSideGlanceEvent(
+    createSideGlanceState(),
     event("start", "turn.started", { occurredAt: 2_000 }),
   );
-  state = reduceSignalEvent(
+  state = reduceSideGlanceEvent(
     state,
     event("done", "turn.completed", { occurredAt: 3_000 }),
   );
   const completed = state;
 
-  state = reduceSignalEvent(
+  state = reduceSideGlanceEvent(
     state,
     event("late-wait", "attention.waiting", { occurredAt: 2_500 }),
   );
@@ -140,9 +140,9 @@ test("rejects a delayed event even when the provider cannot supply a turn ID", (
 });
 
 test("bounds the replay cache without changing the newest event order", () => {
-  let state = createSignalState();
+  let state = createSideGlanceState();
   for (let index = 0; index < 4_100; index += 1) {
-    state = reduceSignalEvent(
+    state = reduceSideGlanceEvent(
       state,
       event(`event-${index}`, "attention.waiting", { occurredAt: index + 1 }),
     );
@@ -154,17 +154,17 @@ test("bounds the replay cache without changing the newest event order", () => {
 });
 
 test("bounds inactive session history while preserving every active session", () => {
-  let state = createSignalState();
+  let state = createSideGlanceState();
   for (let index = 0; index < 520; index += 1) {
     const sessionId = `inactive-${index}`;
-    state = reduceSignalEvent(
+    state = reduceSideGlanceEvent(
       state,
       event(`start-${index}`, "turn.started", {
         sessionId,
         occurredAt: index * 2 + 1,
       }),
     );
-    state = reduceSignalEvent(
+    state = reduceSideGlanceEvent(
       state,
       event(`end-${index}`, "session.ended", {
         sessionId,
@@ -173,7 +173,7 @@ test("bounds inactive session history while preserving every active session", ()
     );
   }
   for (let index = 0; index < 3; index += 1) {
-    state = reduceSignalEvent(
+    state = reduceSideGlanceEvent(
       state,
       event(`active-${index}`, "turn.started", {
         sessionId: `active-${index}`,

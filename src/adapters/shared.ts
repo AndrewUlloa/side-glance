@@ -1,10 +1,10 @@
 import type {
-  SignalConfidence,
-  SignalEvent,
-  SignalEventKind,
-  SignalSource,
+  SideGlanceConfidence,
+  SideGlanceEvent,
+  SideGlanceEventKind,
+  SideGlanceSource,
 } from "../core/protocol.ts";
-import { parseSignalEvent } from "../core/validation.ts";
+import { parseSideGlanceEvent } from "../core/validation.ts";
 import type { AdapterContext } from "./types.ts";
 
 export function adapterRecord(
@@ -34,15 +34,15 @@ export function providerSessionId(
 }
 
 export function buildAdapterEvent(options: {
-  source: SignalSource;
+  source: SideGlanceSource;
   sessionId: string;
-  kind: SignalEventKind;
+  kind: SideGlanceEventKind;
   context: AdapterContext;
-  confidence?: SignalConfidence;
+  confidence?: SideGlanceConfidence;
   turnId?: string;
   reason?: string;
-}): SignalEvent {
-  return parseSignalEvent({
+}): SideGlanceEvent {
+  return parseSideGlanceEvent({
     v: 1,
     eventId: options.context.eventId,
     source: options.source,

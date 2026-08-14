@@ -18,14 +18,14 @@ test("builds and smokes the exact versioned standalone archive without Node on P
       ...process.env,
       NPM_CONFIG_CACHE: path.join(repository, "work/npm-cache"),
       PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
-      SIGNAL_RELEASE_TARGET: target,
+      SIDE_GLANCE_RELEASE_TARGET: target,
     },
   });
 
   const { version } = JSON.parse(
     await readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
   );
-  const archiveName = `terminal-signal-v${version}-${target}.tar.gz`;
+  const archiveName = `side-glance-v${version}-${target}.tar.gz`;
   const archive = path.join(repository, "outputs", archiveName);
   const archiveBytes = await readFile(archive);
   const digest = createHash("sha256").update(archiveBytes).digest("hex");
@@ -50,20 +50,20 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     "LICENSES/node.txt",
     "README.md",
     "VERSION",
-    "signal",
+    "side-glance",
   ]);
 
-  const extracted = await mkdtemp(path.join(tmpdir(), "signal-standalone-extracted-"));
+  const extracted = await mkdtemp(path.join(tmpdir(), "side-glance-standalone-extracted-"));
   context.after(() => rm(extracted, { recursive: true, force: true }));
   await command("/usr/bin/tar", ["-xzf", archive, "-C", extracted], {
     cwd: repository,
     env: process.env,
   });
-  const executable = path.join(extracted, "signal");
+  const executable = path.join(extracted, "side-glance");
   const strippedEnvironment = {
     ...process.env,
     PATH: "/usr/bin:/bin",
-    SIGNAL_STATE_DIR: path.join(extracted, "state"),
+    SIDE_GLANCE_STATE_DIR: path.join(extracted, "state"),
   };
   const versionResult = await command(executable, ["--version"], {
     cwd: extracted,
@@ -84,8 +84,8 @@ test("refuses a different embedded Node release runtime", async () => {
       cwd: repository,
       env: {
         ...process.env,
-        SIGNAL_RELEASE_TARGET: platformTarget(),
-        SIGNAL_RELEASE_NODE_VERSION: "0.0.0",
+        SIDE_GLANCE_RELEASE_TARGET: platformTarget(),
+        SIDE_GLANCE_RELEASE_NODE_VERSION: "0.0.0",
       },
     }),
     /Node runtime.*does not match pinned release runtime/iu,
@@ -101,7 +101,7 @@ test("refuses to label a native build as a different release target", async () =
         ...process.env,
         NPM_CONFIG_CACHE: path.join(repository, "work/npm-cache"),
         PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
-        SIGNAL_RELEASE_TARGET: wrongTarget,
+        SIDE_GLANCE_RELEASE_TARGET: wrongTarget,
       },
     }),
     /does not match native runtime/iu,

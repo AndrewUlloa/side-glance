@@ -22,9 +22,9 @@ const channels: Array<{ channel: PlaygroundChannel; label: string }> = [
   { channel: "both", label: "Both" },
 ];
 
-const installCommand = "npm install -g terminal-signal@beta";
+const installCommand = "npm install -g side-glance@beta";
 
-export function SignalPlayground() {
+export function SideGlancePlayground() {
   const [phase, setPhase] = useState<PlaygroundPhase>("completed");
   const [channel, setChannel] = useState<PlaygroundChannel>("both");
   const [elapsed, setElapsed] = useState(60);
@@ -33,9 +33,9 @@ export function SignalPlayground() {
   );
   const visual = visualForPhase(phase, elapsed);
   const style = {
-    "--signal-wash": `#${visual.wash}`,
-    "--signal-accent": `#${visual.accent}`,
-    "--signal-urgency": visual.urgency / 1_000,
+    "--side-glance-wash": `#${visual.wash}`,
+    "--side-glance-accent": `#${visual.accent}`,
+    "--side-glance-urgency": visual.urgency / 1_000,
   } as CSSProperties;
 
   async function copyInstallCommand() {
@@ -52,7 +52,7 @@ export function SignalPlayground() {
       <div className="playground-head">
         <div>
           <span className="playground-kicker">Live state model</span>
-          <h2 id="playground-title">Try the signal</h2>
+          <h2 id="playground-title">Try Side Glance</h2>
         </div>
         <div className="live-badge">
           <span aria-hidden="true" /> live
@@ -85,14 +85,14 @@ export function SignalPlayground() {
             <span />
             <span />
           </div>
-          <span>signal — zsh — 92×28</span>
+          <span>side-glance — zsh — 92×28</span>
           <div className="terminal-owner">
             <span aria-hidden="true" /> owned
           </div>
         </div>
         <div className="terminal-body">
           <div className="terminal-line terminal-muted">
-            <span>~</span> signal run -- claude
+            <span>~</span> side-glance run -- claude
           </div>
           <div className="terminal-line">
             <span className="terminal-prompt">❯</span> Refactor the lifecycle controller
@@ -117,7 +117,7 @@ export function SignalPlayground() {
           </div>
         </div>
         <div className="tmux-bar">
-          <span className="tmux-session">signal</span>
+          <span className="tmux-session">side-glance</span>
           <span className="tmux-window">
             <i aria-hidden="true" /> 1:controller
           </span>

@@ -5,7 +5,7 @@ import test from "node:test";
 test("uses Linear's measured one-time hero motion with a static reduced-motion path", async () => {
   const [page, playground, css, orchestrator] = await Promise.all([
     readFile("app/page.tsx", "utf8"),
-    readFile("app/components/SignalPlayground.tsx", "utf8"),
+    readFile("app/components/SideGlancePlayground.tsx", "utf8"),
     readFile("app/globals.css", "utf8"),
     readFile("app/components/MotionOrchestrator.tsx", "utf8"),
   ]);

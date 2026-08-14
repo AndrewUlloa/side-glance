@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-import { SignalController } from "../core/controller.ts";
-import type { SignalTarget } from "../core/protocol.ts";
-import { FileSignalStore } from "../core/store.ts";
+import { SideGlanceController } from "../core/controller.ts";
+import type { SideGlanceTarget } from "../core/protocol.ts";
+import { FileSideGlanceStore } from "../core/store.ts";
 import { discoverTerminalTarget } from "../core/target.ts";
 
 export interface SupervisedRunResult {
@@ -14,6 +14,7 @@ export interface SupervisedRunResult {
 export async function runSupervised(
   args: readonly string[],
   stateDirectory: string,
+  legacyStateDirectory?: string,
 ): Promise<SupervisedRunResult> {
   const separatorIndex = args.indexOf("--");
   if (separatorIndex === -1 || separatorIndex === args.length - 1) {
@@ -29,7 +30,12 @@ export async function runSupervised(
   const { surfaceId } = target;
 
   const sessionId = `wrapper-${process.pid}-${randomUUID()}`;
-  const controller = new SignalController(new FileSignalStore({ directory: stateDirectory }));
+  const controller = new SideGlanceController(
+    new FileSideGlanceStore({
+      directory: stateDirectory,
+      ...(legacyStateDirectory ? { legacyDirectory: legacyStateDirectory } : {}),
+    }),
+  );
   await controller.submit({
     v: 1,
     eventId: randomUUID(),
@@ -45,10 +51,10 @@ export async function runSupervised(
   let result: SupervisedRunResult;
   try {
     result = await superviseChild(childArgs[0], childArgs.slice(1), {
-      SIGNAL_SURFACE_ID: surfaceId,
-      SIGNAL_SESSION_ID: sessionId,
-      ...(target.tty ? { SIGNAL_TTY: target.tty } : {}),
-      ...(target.tmuxPane ? { SIGNAL_TMUX_PANE: target.tmuxPane } : {}),
+      SIDE_GLANCE_SURFACE_ID: surfaceId,
+      SIDE_GLANCE_SESSION_ID: sessionId,
+      ...(target.tty ? { SIDE_GLANCE_TTY: target.tty } : {}),
+      ...(target.tmuxPane ? { SIDE_GLANCE_TMUX_PANE: target.tmuxPane } : {}),
     });
   } catch (error) {
     await submitEnd(controller, sessionId, target, "spawn-failed");
@@ -67,12 +73,12 @@ export async function runSupervised(
 async function superviseChild(
   executable: string,
   args: readonly string[],
-  signalEnvironment: Record<string, string>,
+  sideGlanceEnvironment: Record<string, string>,
 ): Promise<SupervisedRunResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, [...args], {
       stdio: "inherit",
-      env: { ...process.env, ...signalEnvironment },
+      env: { ...process.env, ...sideGlanceEnvironment },
     });
     const forwardedSignals: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
     const handlers = new Map<NodeJS.Signals, () => void>();
@@ -104,9 +110,9 @@ async function superviseChild(
 }
 
 async function submitEnd(
-  controller: SignalController,
+  controller: SideGlanceController,
   sessionId: string,
-  target: SignalTarget,
+  target: SideGlanceTarget,
   reason: string,
 ): Promise<void> {
   await controller.submit({

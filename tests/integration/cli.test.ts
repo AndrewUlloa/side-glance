@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -19,7 +19,7 @@ async function runCli(
   args: readonly string[],
   options: {
     input?: string;
-    stateDirectory: string;
+    stateDirectory?: string;
     env?: Record<string, string>;
   },
 ): Promise<CliResult> {
@@ -27,7 +27,9 @@ async function runCli(
     const child = spawn(process.execPath, [cliPath, ...args], {
       env: {
         ...process.env,
-        SIGNAL_STATE_DIR: options.stateDirectory,
+        ...(options.stateDirectory
+          ? { SIDE_GLANCE_STATE_DIR: options.stateDirectory }
+          : {}),
         NO_COLOR: "1",
         ...options.env,
       },
@@ -49,8 +51,47 @@ async function runCli(
   });
 }
 
+test("migrates legacy default state into the Side Glance state location", async (context) => {
+  const stateHome = await mkdtemp(path.join(tmpdir(), "side-glance-state-home-"));
+  context.after(() => rm(stateHome, { recursive: true, force: true }));
+  const legacyDirectory = path.join(stateHome, "signal");
+  const payload = {
+    v: 1,
+    eventId: "legacy-event",
+    source: "generic",
+    sessionId: "legacy-session",
+    kind: "turn.started",
+    occurredAt: 1_000,
+    confidence: "wrapper",
+    target: { surfaceId: "test:legacy-state" },
+  };
+  const seeded = await runCli(["event", "--json"], {
+    stateDirectory: legacyDirectory,
+    input: JSON.stringify(payload),
+  });
+  assert.equal(seeded.code, 0, seeded.stderr);
+  await rename(
+    path.join(legacyDirectory, "side-glance-state.json"),
+    path.join(legacyDirectory, "signal-state.json"),
+  );
+
+  const migrated = await runCli(["status", "--json"], {
+    env: { XDG_STATE_HOME: stateHome },
+  });
+
+  assert.equal(migrated.code, 0, migrated.stderr);
+  assert.equal(
+    JSON.parse(migrated.stdout).sessions["generic:legacy-session"].phase,
+    "working",
+  );
+  await readFile(
+    path.join(stateHome, "side-glance", "side-glance-state.json"),
+    "utf8",
+  );
+});
+
 async function stateDirectory(context: test.TestContext): Promise<string> {
-  const directory = await mkdtemp(path.join(tmpdir(), "signal-cli-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "side-glance-cli-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   return directory;
 }
@@ -112,7 +153,7 @@ test("uses the wrapper-provided surface for an installed hook command", async (c
   const directory = await stateDirectory(context);
   const result = await runCli(["hook", "--provider", "claude", "--json"], {
     stateDirectory: directory,
-    env: { SIGNAL_SURFACE_ID: "test:wrapper-surface" },
+    env: { SIDE_GLANCE_SURFACE_ID: "test:wrapper-surface" },
     input: JSON.stringify({
       hook_event_name: "SessionStart",
       session_id: "claude-installed-hook",
@@ -170,7 +211,7 @@ test("doctor and preview are deterministic and do not require a live terminal", 
 
 test("doctor inspects Claude and Codex plans without mutating existing configuration", async (context) => {
   const directory = await stateDirectory(context);
-  const home = await mkdtemp(path.join(tmpdir(), "signal-doctor-home-"));
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-doctor-home-"));
   context.after(() => rm(home, { recursive: true, force: true }));
   await mkdir(path.join(home, ".claude"), { recursive: true });
   await mkdir(path.join(home, ".codex"), { recursive: true });
@@ -200,7 +241,7 @@ test("doctor inspects Claude and Codex plans without mutating existing configura
   assert.equal(report.providers.claude.existingHookGroups, 1);
   assert.equal(report.providers.codex.valid, true);
   assert.equal(report.providers.codex.notifyConfigured, true);
-  assert.equal(report.providers.codex.signalHooks, 0);
+  assert.equal(report.providers.codex.sideGlanceHooks, 0);
   assert.deepEqual(
     await Promise.all(
       [claudePath, codexHooksPath, codexConfigPath].map((file) => readFile(file, "utf8")),
@@ -227,7 +268,7 @@ test("supervised run preserves child output and nonzero exit while cleaning its 
   assert.equal(result.code, 7, result.stderr);
   assert.equal(result.stdout, "child-output");
   const state = JSON.parse(
-    await readFile(path.join(directory, "signal-state.json"), "utf8"),
+    await readFile(path.join(directory, "side-glance-state.json"), "utf8"),
   );
   const session = Object.values(state.sessions)[0] as {
     phase: string;
@@ -247,7 +288,7 @@ test("supervised run passes stable surface and session identity to provider hook
       "--",
       process.execPath,
       "-e",
-      "process.stdout.write(JSON.stringify({surface: process.env.SIGNAL_SURFACE_ID, session: process.env.SIGNAL_SESSION_ID}))",
+      "process.stdout.write(JSON.stringify({surface: process.env.SIDE_GLANCE_SURFACE_ID, session: process.env.SIDE_GLANCE_SESSION_ID}))",
     ],
     { stateDirectory: directory },
   );
@@ -266,11 +307,11 @@ test("supervised run can take its surface from the wrapper environment", async (
       "--",
       process.execPath,
       "-e",
-      "process.stdout.write(process.env.SIGNAL_SURFACE_ID || '')",
+      "process.stdout.write(process.env.SIDE_GLANCE_SURFACE_ID || '')",
     ],
     {
       stateDirectory: directory,
-      env: { SIGNAL_SURFACE_ID: "test:auto-surface" },
+      env: { SIDE_GLANCE_SURFACE_ID: "test:auto-surface" },
     },
   );
 
@@ -280,9 +321,9 @@ test("supervised run can take its surface from the wrapper environment", async (
 
 test("exposes transactional provider install and uninstall commands", async (context) => {
   const directory = await stateDirectory(context);
-  const home = await mkdtemp(path.join(tmpdir(), "signal-cli-install-"));
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-install-"));
   context.after(() => rm(home, { recursive: true, force: true }));
-  const executable = path.join(home, "signal-bin");
+  const executable = path.join(home, "side-glance-bin");
   await import("node:fs/promises").then(async ({ chmod, writeFile }) => {
     await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
     await chmod(executable, 0o700);
@@ -321,7 +362,7 @@ test("exposes transactional provider install and uninstall commands", async (con
 
 test("refuses permanent provider activation from an ephemeral npm execution", async (context) => {
   const directory = await stateDirectory(context);
-  const home = await mkdtemp(path.join(tmpdir(), "signal-npx-home-"));
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-npx-home-"));
   context.after(() => rm(home, { recursive: true, force: true }));
 
   const result = await runCli(
@@ -352,14 +393,14 @@ test(
           cliPath,
           "run",
           "--surface",
-          "test:signal-forwarding",
+          "test:side-glance-forwarding",
           "--",
           process.execPath,
           "-e",
           'process.stdout.write("ready\\n"); setInterval(() => {}, 1_000)',
         ],
         {
-          env: { ...process.env, SIGNAL_STATE_DIR: directory, NO_COLOR: "1" },
+          env: { ...process.env, SIDE_GLANCE_STATE_DIR: directory, NO_COLOR: "1" },
           stdio: ["ignore", "pipe", "pipe"],
         },
       );
@@ -385,7 +426,7 @@ test(
     assert.equal(result.code, null, result.stderr);
     assert.equal(result.signal, "SIGTERM");
     const state = JSON.parse(
-      await readFile(path.join(directory, "signal-state.json"), "utf8"),
+      await readFile(path.join(directory, "side-glance-state.json"), "utf8"),
     );
     const session = Object.values(state.sessions)[0] as {
       phase: string;

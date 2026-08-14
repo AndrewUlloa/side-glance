@@ -3,7 +3,7 @@
 import { appendFile, readFile } from "node:fs/promises";
 import path from "node:path";
 
-const CANONICAL_REPOSITORY = "AndrewUlloa/terminal-signal";
+const CANONICAL_REPOSITORY = "AndrewUlloa/side-glance";
 const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/u;
 
 const [, , repositoryPath] = process.argv;
@@ -12,8 +12,8 @@ if (!repositoryPath) fail("usage: validate-release.mjs <repository-path>");
 const rootManifest = await json(path.join(repositoryPath, "package.json"));
 const cliManifest = await json(path.join(repositoryPath, "packages/cli/package.json"));
 if (rootManifest.private !== true) fail("repository root must remain private");
-if (cliManifest.name !== "terminal-signal" || cliManifest.private === true) {
-  fail("only the terminal-signal CLI workspace may be publishable");
+if (cliManifest.name !== "side-glance" || cliManifest.private === true) {
+  fail("only the side-glance CLI workspace may be publishable");
 }
 if (typeof cliManifest.version !== "string" || !VERSION.test(cliManifest.version)) {
   fail("CLI package version must be canonical SemVer");

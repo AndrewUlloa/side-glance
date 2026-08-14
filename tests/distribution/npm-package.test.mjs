@@ -12,8 +12,8 @@ const packageVersion = JSON.parse(
   await readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
 ).version;
 
-test("packs a minimal CLI and executes it from an isolated global prefix", async (context) => {
-  const temporary = await mkdtemp(path.join(tmpdir(), "signal-npm-package-"));
+test("packs Side Glance as a minimal CLI and executes it from an isolated global prefix", async (context) => {
+  const temporary = await mkdtemp(path.join(tmpdir(), "side-glance-npm-package-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const npmCache = path.join(temporary, "npm-cache");
   const npmEnvironment = {
@@ -27,7 +27,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
     [
       "pack",
       "--workspace",
-      "terminal-signal",
+      "side-glance",
       "--json",
       "--pack-destination",
       temporary,
@@ -37,7 +37,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
   const [{ filename, files }] = JSON.parse(packed.stdout);
   assert.deepEqual(
     files.map(({ path: filePath }) => filePath).sort(),
-    ["LICENSE", "README.md", "dist/signal.mjs", "package.json"],
+    ["LICENSE", "README.md", "dist/side-glance.mjs", "package.json"],
   );
 
   const archive = path.join(temporary, filename);
@@ -59,13 +59,13 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
 
   const executable = path.join(
     prefix,
-    process.platform === "win32" ? "signal.cmd" : "bin/signal",
+    process.platform === "win32" ? "side-glance.cmd" : "bin/side-glance",
   );
   const stateDirectory = path.join(temporary, "state");
   const doctor = await command(executable, ["doctor", "--home", temporary, "--json"], {
     cwd: temporary,
     env: {
-      SIGNAL_STATE_DIR: stateDirectory,
+      SIDE_GLANCE_STATE_DIR: stateDirectory,
       PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
     },
   });
@@ -74,7 +74,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
   assert.equal(report.stateDirectory, stateDirectory);
   const installedHome = path.join(temporary, "installed-home");
   const runtimeEnvironment = {
-    SIGNAL_STATE_DIR: stateDirectory,
+    SIDE_GLANCE_STATE_DIR: stateDirectory,
     PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
   };
   await command(
@@ -92,7 +92,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
   });
   const firstHook = await command("/bin/sh", ["-c", hookCommand], {
     cwd: temporary,
-    env: { ...runtimeEnvironment, SIGNAL_SURFACE_ID: "test:packaged-hook" },
+    env: { ...runtimeEnvironment, SIDE_GLANCE_SURFACE_ID: "test:packaged-hook" },
     input: hookPayload,
   });
   assert.equal(
@@ -116,7 +116,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
   );
   const hookAfterReinstall = await command("/bin/sh", ["-c", hookCommand], {
     cwd: temporary,
-    env: { ...runtimeEnvironment, SIGNAL_SURFACE_ID: "test:packaged-hook" },
+    env: { ...runtimeEnvironment, SIDE_GLANCE_SURFACE_ID: "test:packaged-hook" },
     input: JSON.stringify({
       hook_event_name: "SessionEnd",
       session_id: "packaged-hook-session",
@@ -136,17 +136,16 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
     cwd: temporary,
     env: { PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}` },
   });
-  assert.match(help.stdout, /signal install <claude\|codex\|gemini>/u);
+  assert.match(help.stdout, /side-glance install <claude\|codex\|gemini>/u);
 
   const manifest = JSON.parse(
-    await readFile(path.join(prefix, "lib/node_modules/terminal-signal/package.json"), "utf8"),
+    await readFile(path.join(prefix, "lib/node_modules/side-glance/package.json"), "utf8"),
   );
   assert.deepEqual(manifest.dependencies ?? {}, {});
   assert.equal(manifest.publishConfig.tag, "beta");
   assert.equal(manifest.private, undefined);
   assert.deepEqual(manifest.bin, {
-    signal: "dist/signal.mjs",
-    "terminal-signal": "dist/signal.mjs",
+    "side-glance": "dist/side-glance.mjs",
   });
 
   const npxVersion = await command(
@@ -158,7 +157,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
       "--package",
       archive,
       "--",
-      "terminal-signal",
+      "side-glance",
       "--version",
     ],
     {
@@ -183,7 +182,7 @@ test("packs a minimal CLI and executes it from an isolated global prefix", async
           "--package",
           archive,
           "--",
-          "terminal-signal",
+          "side-glance",
           "install",
           "claude",
           "--home",

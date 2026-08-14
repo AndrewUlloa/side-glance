@@ -20,13 +20,13 @@ import {
 } from "../../src/adapters/installers.ts";
 
 async function fixtureHome(context: test.TestContext): Promise<string> {
-  const home = await mkdtemp(path.join(tmpdir(), "signal-installer-"));
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-installer-"));
   context.after(() => rm(home, { recursive: true, force: true }));
   return home;
 }
 
 async function executableFixture(home: string): Promise<string> {
-  const executable = path.join(home, "bin", "signal executable");
+  const executable = path.join(home, "bin", "side-glance executable");
   await mkdir(path.dirname(executable), { recursive: true });
   await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
   await chmod(executable, 0o700);
@@ -92,13 +92,13 @@ test("installs idempotently, backs up once, and preserves existing hook groups",
     assert.ok(commands.every((command) => path.isAbsolute(command) || command.includes(executablePath)));
 
     const backups = (await readdir(path.dirname(targetPath))).filter((name) =>
-      name.includes(".signal-backup-"),
+      name.includes(".side-glance-backup-"),
     );
     assert.equal(backups.length, 1);
   }
 });
 
-test("uninstall removes only Signal-owned handlers and preserves Codex notify", async (context) => {
+test("uninstall removes only Side Glance-owned handlers and preserves Codex notify", async (context) => {
   const home = await fixtureHome(context);
   const executablePath = await executableFixture(home);
   const hooksPath = configPath(home, "codex");
@@ -184,7 +184,7 @@ test("refuses malformed and symlinked provider configuration", async (context) =
 test("accepts a stable package-manager bin symlink and preserves its path", async (context) => {
   const home = await fixtureHome(context);
   const executableTarget = await executableFixture(home);
-  const stableBin = path.join(home, "stable-prefix", "bin", "signal");
+  const stableBin = path.join(home, "stable-prefix", "bin", "side-glance");
   await mkdir(path.dirname(stableBin), { recursive: true });
   await symlink(executableTarget, stableBin);
 
@@ -201,4 +201,50 @@ test("accepts a stable package-manager bin symlink and preserves its path", asyn
     .map((hook) => hook.command);
   assert.ok(commands.every((command) => command.includes(stableBin)));
   assert.ok(commands.every((command) => !command.includes(executableTarget)));
+});
+
+test("replaces and uninstalls pre-rename managed hooks", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const targetPath = configPath(home, "claude");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(
+    targetPath,
+    `${JSON.stringify({
+      hooks: {
+        SessionStart: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command:
+                  "SIGNAL_MANAGED_HOOK=1 '/legacy/bin/signal' hook --provider claude --json",
+              },
+              { type: "command", command: "/usr/bin/user-hook" },
+            ],
+          },
+        ],
+      },
+    }, null, 2)}\n`,
+    { mode: 0o600 },
+  );
+
+  await installProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+    executablePath,
+  });
+  const installed = await readFile(targetPath, "utf8");
+  assert.doesNotMatch(installed, /SIGNAL_MANAGED_HOOK=1/u);
+  assert.match(installed, /SIDE_GLANCE_MANAGED_HOOK=1/u);
+  assert.match(installed, /\/usr\/bin\/user-hook/u);
+
+  await uninstallProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+    executablePath,
+  });
+  const uninstalled = await readFile(targetPath, "utf8");
+  assert.doesNotMatch(uninstalled, /(?:SIGNAL|SIDE_GLANCE)_MANAGED_HOOK=1/u);
+  assert.match(uninstalled, /\/usr\/bin\/user-hook/u);
 });

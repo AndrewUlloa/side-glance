@@ -9,7 +9,7 @@ import "./globals.css";
 const productionHostname = process.env.VERCEL_PROJECT_PRODUCTION_URL;
 const siteUrl = productionHostname
   ? `https://${productionHostname}`
-  : "https://terminal-signal.vercel.app";
+  : "https://side-glance.vercel.app";
 const showAgentation = shouldShowAgentation({
   nodeEnv: process.env.NODE_ENV,
   vercelEnv: process.env.VERCEL_ENV,
@@ -27,10 +27,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Signal — attention for coding agents",
+  title: "Side Glance — attention for coding agents",
   description:
     "A local-first terminal and tmux attention layer for Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any coding CLI.",
-  applicationName: "Signal",
+  applicationName: "Side Glance",
   keywords: [
     "coding agents",
     "terminal",
@@ -41,15 +41,15 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    title: "Signal — your terminal knows when it needs you",
+    title: "Side Glance — your terminal knows when it needs you",
     description:
       "Local-first lifecycle attention for coding-agent CLIs, with safe ordering, cleanup, and restoration.",
-    siteName: "Signal",
+    siteName: "Side Glance",
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Signal — attention for coding agents",
+    title: "Side Glance — attention for coding agents",
     description:
       "A quiet thermal status layer across terminal backgrounds and tmux.",
   },

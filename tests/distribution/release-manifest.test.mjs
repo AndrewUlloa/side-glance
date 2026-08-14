@@ -22,13 +22,13 @@ test("binds the exact release artifacts to versioned checksums and immutable URL
   const temporary = await fixture(context);
   const output = path.join(temporary, "release-manifest.json");
   await command(process.execPath, [generator, temporary, path.join(temporary, "package.json"), output], {
-    SIGNAL_RELEASE_TAG: tag,
+    SIDE_GLANCE_RELEASE_TAG: tag,
     GITHUB_SHA: "e".repeat(40),
   });
 
   const manifest = JSON.parse(await readFile(output, "utf8"));
   assert.equal(manifest.schemaVersion, 1);
-  assert.equal(manifest.repository, "AndrewUlloa/terminal-signal");
+  assert.equal(manifest.repository, "AndrewUlloa/side-glance");
   assert.equal(manifest.version, version);
   assert.equal(manifest.tag, tag);
   assert.equal(manifest.sourceCommit, "e".repeat(40));
@@ -50,7 +50,7 @@ test("binds the exact release artifacts to versioned checksums and immutable URL
     assert.equal(entry.size, bytes.byteLength);
     assert.equal(
       entry.url,
-      `https://github.com/AndrewUlloa/terminal-signal/releases/download/${tag}/${entry.filename}`,
+      `https://github.com/AndrewUlloa/side-glance/releases/download/${tag}/${entry.filename}`,
     );
   }
 
@@ -63,12 +63,12 @@ test("binds the exact release artifacts to versioned checksums and immutable URL
 
 test("refuses a release with a missing supported platform artifact", async (context) => {
   const temporary = await fixture(context);
-  await rm(path.join(temporary, `terminal-signal-v${version}-linux-arm64-gnu.tar.gz`));
+  await rm(path.join(temporary, `side-glance-v${version}-linux-arm64-gnu.tar.gz`));
   await assert.rejects(
     () => command(
       process.execPath,
       [generator, temporary, path.join(temporary, "package.json"), path.join(temporary, "manifest.json")],
-      { SIGNAL_RELEASE_TAG: tag, GITHUB_SHA: "e".repeat(40) },
+      { SIDE_GLANCE_RELEASE_TAG: tag, GITHUB_SHA: "e".repeat(40) },
     ),
     /missing supported release artifact.*linux-arm64-gnu/iu,
   );
@@ -76,7 +76,7 @@ test("refuses a release with a missing supported platform artifact", async (cont
 
 test("refuses symbolic-link release artifacts", async (context) => {
   const temporary = await fixture(context);
-  const artifact = path.join(temporary, `terminal-signal-v${version}-linux-arm64-gnu.tar.gz`);
+  const artifact = path.join(temporary, `side-glance-v${version}-linux-arm64-gnu.tar.gz`);
   const outside = path.join(path.dirname(temporary), `${path.basename(temporary)}-outside.tar.gz`);
   context.after(() => rm(outside, { force: true }));
   await writeFile(outside, "outside bytes");
@@ -86,7 +86,7 @@ test("refuses symbolic-link release artifacts", async (context) => {
     () => command(
       process.execPath,
       [generator, temporary, path.join(temporary, "package.json"), path.join(temporary, "manifest.json")],
-      { SIGNAL_RELEASE_TAG: tag, GITHUB_SHA: "e".repeat(40) },
+      { SIDE_GLANCE_RELEASE_TAG: tag, GITHUB_SHA: "e".repeat(40) },
     ),
     /symbolic link/iu,
   );
@@ -98,26 +98,26 @@ test("refuses a tag that does not exactly match the package version", async (con
     () => command(
       process.execPath,
       [generator, temporary, path.join(temporary, "package.json"), path.join(temporary, "manifest.json")],
-      { SIGNAL_RELEASE_TAG: "v0.1.0", GITHUB_SHA: "e".repeat(40) },
+      { SIDE_GLANCE_RELEASE_TAG: "v0.1.0", GITHUB_SHA: "e".repeat(40) },
     ),
     /release tag must be v0\.1\.0-beta\.1/iu,
   );
 });
 
 async function fixture(context) {
-  const temporary = await mkdtemp(path.join(tmpdir(), "signal-release-manifest-"));
+  const temporary = await mkdtemp(path.join(tmpdir(), "side-glance-release-manifest-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   await mkdir(temporary, { recursive: true });
   await writeFile(
     path.join(temporary, "package.json"),
-    `${JSON.stringify({ name: "terminal-signal", version })}\n`,
+    `${JSON.stringify({ name: "side-glance", version })}\n`,
   );
   for (const [target] of targets) {
-    const filename = `terminal-signal-v${version}-${target}.tar.gz`;
+    const filename = `side-glance-v${version}-${target}.tar.gz`;
     await writeFile(path.join(temporary, filename), `native artifact for ${target}\n`);
   }
   await writeFile(
-    path.join(temporary, `terminal-signal-${version}.tgz`),
+    path.join(temporary, `side-glance-${version}.tgz`),
     "exact npm package bytes\n",
   );
   return temporary;

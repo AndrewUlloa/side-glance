@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState, type CSSProperties } from "react";
-import { DEFAULT_SIGNAL_THEME } from "../../src/core/theme";
+import { DEFAULT_SIDE_GLANCE_THEME } from "../../src/core/theme";
 import { LINEAR_MOTION } from "../lib/motion-tokens";
 
 /* ─────────────────────────────────────────────────────────
@@ -45,23 +45,23 @@ type StoryboardStage = (typeof STAGE)[keyof typeof STAGE];
 
 const PHASE_COLORS = {
   working: {
-    accent: `#${DEFAULT_SIGNAL_THEME.workingAccent}`,
-    wash: `#${DEFAULT_SIGNAL_THEME.workingWash}`,
+    accent: `#${DEFAULT_SIDE_GLANCE_THEME.workingAccent}`,
+    wash: `#${DEFAULT_SIDE_GLANCE_THEME.workingWash}`,
     border: "rgba(0, 157, 137, 0.52)",
   },
   ready: {
-    accent: `#${DEFAULT_SIGNAL_THEME.tmuxStops[1]}`,
-    wash: `#${DEFAULT_SIGNAL_THEME.washStops[1]}`,
+    accent: `#${DEFAULT_SIDE_GLANCE_THEME.tmuxStops[1]}`,
+    wash: `#${DEFAULT_SIDE_GLANCE_THEME.washStops[1]}`,
     border: "rgba(63, 168, 78, 0.5)",
   },
   waiting: {
-    accent: `#${DEFAULT_SIGNAL_THEME.waitingAccent}`,
-    wash: `#${DEFAULT_SIGNAL_THEME.waitingWash}`,
+    accent: `#${DEFAULT_SIDE_GLANCE_THEME.waitingAccent}`,
+    wash: `#${DEFAULT_SIDE_GLANCE_THEME.waitingWash}`,
     border: "rgba(240, 167, 38, 0.54)",
   },
   failed: {
-    accent: `#${DEFAULT_SIGNAL_THEME.tmuxStops[6]}`,
-    wash: `#${DEFAULT_SIGNAL_THEME.washStops[6]}`,
+    accent: `#${DEFAULT_SIDE_GLANCE_THEME.tmuxStops[6]}`,
+    wash: `#${DEFAULT_SIDE_GLANCE_THEME.washStops[6]}`,
     border: "rgba(243, 53, 51, 0.58)",
   },
 } as const;
@@ -74,7 +74,7 @@ const TERMINALS = [
     state: "Working",
     ...PHASE_COLORS.working,
     wakeStage: STAGE.working,
-    command: "signal run -- claude",
+    command: "side-glance run -- claude",
     activity: "reconciling lease generation",
     detail: "streaming · 18s",
   },
@@ -85,7 +85,7 @@ const TERMINALS = [
     state: "Ready",
     ...PHASE_COLORS.ready,
     wakeStage: STAGE.ready,
-    command: "signal run -- codex",
+    command: "side-glance run -- codex",
     activity: "turn complete — review ready",
     detail: "finished · 4s",
   },
@@ -96,7 +96,7 @@ const TERMINALS = [
     state: "Waiting",
     ...PHASE_COLORS.waiting,
     wakeStage: STAGE.waiting,
-    command: "signal run -- gemini",
+    command: "side-glance run -- gemini",
     activity: "permission required",
     detail: "waiting · 42s",
   },
@@ -107,7 +107,7 @@ const TERMINALS = [
     state: "Failed",
     ...PHASE_COLORS.failed,
     wakeStage: STAGE.failed,
-    command: "signal run -- aider",
+    command: "side-glance run -- aider",
     activity: "process exited with code 1",
     detail: "failed · now",
   },
@@ -212,7 +212,7 @@ export function TerminalStoryboard() {
     >
       <div className="storyboard-head">
         <div>
-          <span className="playground-kicker">Four sessions · one signal</span>
+          <span className="playground-kicker">Four sessions · one clear glance</span>
           <h2 id="terminal-story-title">Know which terminal needs you.</h2>
         </div>
         <motion.button
@@ -285,7 +285,7 @@ export function TerminalStoryboard() {
                 <p className="story-prompt"><span>❯</span><i aria-hidden="true" /></p>
               </div>
               <div className="story-tmux-bar">
-                <strong>signal</strong>
+                <strong>side-glance</strong>
                 <span>{terminal.id}:agent</span>
                 <em>{terminal.detail}</em>
               </div>

@@ -1,6 +1,6 @@
 # Changelog
 
-Notable user-facing changes are recorded here. Signal follows [Semantic Versioning](https://semver.org/) while beta releases may still change configuration contracts with explicit migration notes.
+Notable user-facing changes are recorded here. Side Glance follows [Semantic Versioning](https://semver.org/) while beta releases may still change configuration contracts with explicit migration notes.
 
 ## [Unreleased]
 
@@ -19,5 +19,5 @@ Notable user-facing changes are recorded here. Signal follows [Semantic Versioni
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/terminal-signal/compare/v0.1.0-beta.1...HEAD
-[0.1.0-beta.1]: https://github.com/AndrewUlloa/terminal-signal/releases/tag/v0.1.0-beta.1
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.1...HEAD
+[0.1.0-beta.1]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.1

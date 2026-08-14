@@ -15,26 +15,27 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { randomUUID } from "node:crypto";
 
-import { createSignalState } from "./reducer.ts";
+import { createSideGlanceState } from "./reducer.ts";
 import type {
-  SignalConfidence,
-  SignalPhase,
-  SignalSessionState,
-  SignalSource,
-  SignalState,
-  SignalSurfaceState,
+  SideGlanceConfidence,
+  SideGlancePhase,
+  SideGlanceSessionState,
+  SideGlanceSource,
+  SideGlanceState,
+  SideGlanceSurfaceState,
 } from "./protocol.ts";
 
 const execFileAsync = promisify(execFile);
-const STATE_FILENAME = "signal-state.json";
-const LOCK_DIRECTORY = ".signal-state.lock";
+const STATE_FILENAME = "side-glance-state.json";
+const LEGACY_STATE_FILENAME = "signal-state.json";
+const LOCK_DIRECTORY = ".side-glance-state.lock";
 const OWNER_FILENAME = "owner.json";
 const MAX_STATE_BYTES = 1_048_576;
 const DEFAULT_STALE_LOCK_MS = 30_000;
 const DEFAULT_LOCK_TIMEOUT_MS = 5_000;
 const DEFAULT_RETRY_DELAY_MS = 10;
 
-const SOURCES = new Set<SignalSource>([
+const SOURCES = new Set<SideGlanceSource>([
   "claude",
   "codex",
   "gemini",
@@ -42,14 +43,14 @@ const SOURCES = new Set<SignalSource>([
   "aider",
   "generic",
 ]);
-const PHASES = new Set<SignalPhase>([
+const PHASES = new Set<SideGlancePhase>([
   "inactive",
   "working",
   "waiting",
   "completed",
   "failed",
 ]);
-const CONFIDENCES = new Set<SignalConfidence>([
+const CONFIDENCES = new Set<SideGlanceConfidence>([
   "native",
   "notification",
   "wrapper",
@@ -63,32 +64,40 @@ interface LockOwner {
   processIdentity?: string;
 }
 
-export interface FileSignalStoreOptions {
+export interface FileSideGlanceStoreOptions {
   directory: string;
+  legacyDirectory?: string;
   staleLockMs?: number;
   lockTimeoutMs?: number;
   retryDelayMs?: number;
 }
 
-export type SignalStateUpdate = (
-  current: SignalState,
-) => SignalState | Promise<SignalState>;
+export type SideGlanceStateUpdate = (
+  current: SideGlanceState,
+) => SideGlanceState | Promise<SideGlanceState>;
 
-export class FileSignalStore {
+export class FileSideGlanceStore {
   private readonly directory: string;
   private readonly statePath: string;
+  private readonly legacyStatePath?: string;
   private readonly lockPath: string;
   private readonly staleLockMs: number;
   private readonly lockTimeoutMs: number;
   private readonly retryDelayMs: number;
 
-  constructor(options: FileSignalStoreOptions) {
+  constructor(options: FileSideGlanceStoreOptions) {
     if (!path.isAbsolute(options.directory)) {
-      throw new Error("Signal state directory must be an absolute path.");
+      throw new Error("Side Glance state directory must be an absolute path.");
+    }
+    if (options.legacyDirectory && !path.isAbsolute(options.legacyDirectory)) {
+      throw new Error("Legacy state directory must be an absolute path.");
     }
 
     this.directory = path.resolve(options.directory);
     this.statePath = path.join(this.directory, STATE_FILENAME);
+    this.legacyStatePath = options.legacyDirectory
+      ? path.join(path.resolve(options.legacyDirectory), LEGACY_STATE_FILENAME)
+      : undefined;
     this.lockPath = path.join(this.directory, LOCK_DIRECTORY);
     this.staleLockMs = positiveOption(
       options.staleLockMs,
@@ -107,16 +116,16 @@ export class FileSignalStore {
     );
   }
 
-  async read(): Promise<SignalState> {
+  async read(): Promise<SideGlanceState> {
     return this.withLock(() => this.readUnlocked());
   }
 
-  async update(transform: SignalStateUpdate): Promise<SignalState> {
+  async update(transform: SideGlanceStateUpdate): Promise<SideGlanceState> {
     return this.withLock(async () => {
       const current = await this.readUnlocked();
       const next = await transform(current);
-      if (!isSignalState(next)) {
-        throw new Error("Refusing to persist invalid Signal state.");
+      if (!isSideGlanceState(next)) {
+        throw new Error("Refusing to persist invalid Side Glance state.");
       }
       await this.writeAtomic(next);
       return next;
@@ -137,7 +146,7 @@ export class FileSignalStore {
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
     const metadata = await lstat(this.directory);
     if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
-      throw new Error("Signal state path must be a real directory.");
+      throw new Error("Side Glance state path must be a real directory.");
     }
     await chmod(this.directory, 0o700);
   }
@@ -171,7 +180,7 @@ export class FileSignalStore {
     }
 
     throw new Error(
-      `Timed out waiting for Signal state lock after ${this.lockTimeoutMs}ms.`,
+      `Timed out waiting for Side Glance state lock after ${this.lockTimeoutMs}ms.`,
     );
   }
 
@@ -234,12 +243,12 @@ export class FileSignalStore {
     await rm(this.lockPath, { recursive: true, force: true });
   }
 
-  private async readUnlocked(): Promise<SignalState> {
+  private async readUnlocked(): Promise<SideGlanceState> {
     let raw: string;
     try {
       const metadata = await lstat(this.statePath);
       if (!metadata.isFile() || metadata.isSymbolicLink()) {
-        throw new Error("Signal state must be a regular file, not a link.");
+        throw new Error("Side Glance state must be a regular file, not a link.");
       }
       if (metadata.size > MAX_STATE_BYTES) {
         return this.quarantineAndReset();
@@ -256,14 +265,19 @@ export class FileSignalStore {
       }
     } catch (error) {
       if (!hasCode(error, "ENOENT")) throw error;
-      const initial = createSignalState();
+      const legacy = await this.readLegacyState();
+      if (legacy) {
+        await this.writeAtomic(legacy);
+        return legacy;
+      }
+      const initial = createSideGlanceState();
       await this.writeAtomic(initial);
       return initial;
     }
 
     try {
       const value: unknown = JSON.parse(raw);
-      if (!isSignalState(value)) return this.quarantineAndReset();
+      if (!isSideGlanceState(value)) return this.quarantineAndReset();
       await chmod(this.statePath, 0o600);
       return value;
     } catch (error) {
@@ -272,10 +286,39 @@ export class FileSignalStore {
     }
   }
 
-  private async quarantineAndReset(): Promise<SignalState> {
+  private async readLegacyState(): Promise<SideGlanceState | undefined> {
+    if (!this.legacyStatePath) return undefined;
+    let metadata;
+    try {
+      metadata = await lstat(this.legacyStatePath);
+    } catch (error) {
+      if (hasCode(error, "ENOENT")) return undefined;
+      throw error;
+    }
+    if (!metadata.isFile() || metadata.isSymbolicLink()) {
+      throw new Error("Legacy state must be a regular file, not a link.");
+    }
+    if (metadata.size > MAX_STATE_BYTES) return undefined;
+
+    const handle = await open(
+      this.legacyStatePath,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    try {
+      const value: unknown = JSON.parse(await handle.readFile("utf8"));
+      return isSideGlanceState(value) ? value : undefined;
+    } catch (error) {
+      if (error instanceof SyntaxError) return undefined;
+      throw error;
+    } finally {
+      await handle.close();
+    }
+  }
+
+  private async quarantineAndReset(): Promise<SideGlanceState> {
     const quarantinePath = path.join(
       this.directory,
-      `signal-state.corrupt-${Date.now()}-${randomUUID()}.json`,
+      `side-glance-state.corrupt-${Date.now()}-${randomUUID()}.json`,
     );
     try {
       await rename(this.statePath, quarantinePath);
@@ -284,15 +327,15 @@ export class FileSignalStore {
       if (!hasCode(error, "ENOENT")) throw error;
     }
 
-    const reset = createSignalState();
+    const reset = createSideGlanceState();
     await this.writeAtomic(reset);
     return reset;
   }
 
-  private async writeAtomic(state: SignalState): Promise<void> {
+  private async writeAtomic(state: SideGlanceState): Promise<void> {
     const temporaryPath = path.join(
       this.directory,
-      `.signal-state.${process.pid}.${randomUUID()}.tmp`,
+      `.side-glance-state.${process.pid}.${randomUUID()}.tmp`,
     );
     let handle;
     try {
@@ -366,7 +409,7 @@ async function processIdentity(pid: number): Promise<string | undefined> {
   return undefined;
 }
 
-function isSignalState(value: unknown): value is SignalState {
+function isSideGlanceState(value: unknown): value is SideGlanceState {
   if (!isRecord(value)) return false;
   if (value.schemaVersion !== 1) return false;
   if (!isRecord(value.sessions)) return false;
@@ -379,20 +422,20 @@ function isSignalState(value: unknown): value is SignalState {
   }
 
   return (
-    Object.values(value.sessions).every(isSignalSessionState) &&
-    Object.values(value.surfaces).every(isSignalSurfaceState)
+    Object.values(value.sessions).every(isSideGlanceSessionState) &&
+    Object.values(value.surfaces).every(isSideGlanceSurfaceState)
   );
 }
 
-function isSignalSessionState(value: unknown): value is SignalSessionState {
+function isSideGlanceSessionState(value: unknown): value is SideGlanceSessionState {
   if (!isRecord(value)) return false;
-  if (typeof value.source !== "string" || !SOURCES.has(value.source as SignalSource)) {
+  if (typeof value.source !== "string" || !SOURCES.has(value.source as SideGlanceSource)) {
     return false;
   }
   if (typeof value.sessionId !== "string" || value.sessionId.length === 0) {
     return false;
   }
-  if (typeof value.phase !== "string" || !PHASES.has(value.phase as SignalPhase)) {
+  if (typeof value.phase !== "string" || !PHASES.has(value.phase as SideGlancePhase)) {
     return false;
   }
   if (!Number.isSafeInteger(value.generation) || Number(value.generation) < 0) {
@@ -400,7 +443,7 @@ function isSignalSessionState(value: unknown): value is SignalSessionState {
   }
   if (
     typeof value.confidence !== "string" ||
-    !CONFIDENCES.has(value.confidence as SignalConfidence)
+    !CONFIDENCES.has(value.confidence as SideGlanceConfidence)
   ) {
     return false;
   }
@@ -408,23 +451,23 @@ function isSignalSessionState(value: unknown): value is SignalSessionState {
   if (value.startedAt !== undefined && !Number.isFinite(value.startedAt)) return false;
   if (value.turnId !== undefined && typeof value.turnId !== "string") return false;
   if (value.reason !== undefined && typeof value.reason !== "string") return false;
-  if (value.target !== undefined && !isSignalTarget(value.target)) return false;
+  if (value.target !== undefined && !isSideGlanceTarget(value.target)) return false;
   return true;
 }
 
-function isSignalTarget(value: unknown): boolean {
+function isSideGlanceTarget(value: unknown): boolean {
   if (!isRecord(value) || typeof value.surfaceId !== "string") return false;
   if (value.tty !== undefined && typeof value.tty !== "string") return false;
   if (value.tmuxPane !== undefined && typeof value.tmuxPane !== "string") return false;
   return true;
 }
 
-function isSignalSurfaceState(value: unknown): value is SignalSurfaceState {
+function isSideGlanceSurfaceState(value: unknown): value is SideGlanceSurfaceState {
   if (!isRecord(value)) return false;
-  if (typeof value.surfaceId !== "string" || !isSignalTarget(value.target)) {
+  if (typeof value.surfaceId !== "string" || !isSideGlanceTarget(value.target)) {
     return false;
   }
-  if (typeof value.phase !== "string" || !PHASES.has(value.phase as SignalPhase)) {
+  if (typeof value.phase !== "string" || !PHASES.has(value.phase as SideGlancePhase)) {
     return false;
   }
   if (!Number.isSafeInteger(value.generation) || Number(value.generation) < 0) {

@@ -1,8 +1,8 @@
-import type { SignalPhase } from "../../src/core/protocol.ts";
+import type { SideGlancePhase } from "../../src/core/protocol.ts";
 import { urgencyFromElapsed } from "../../src/core/policy.ts";
-import { DEFAULT_SIGNAL_THEME } from "../../src/core/theme.ts";
+import { DEFAULT_SIDE_GLANCE_THEME } from "../../src/core/theme.ts";
 
-export type PlaygroundPhase = SignalPhase;
+export type PlaygroundPhase = SideGlancePhase;
 export type PlaygroundChannel = "terminal" | "tmux" | "both";
 
 export interface PlaygroundVisual {
@@ -24,8 +24,8 @@ export function visualForPhase(
         phase,
         label: "Working",
         message: "The agent is in motion.",
-        wash: DEFAULT_SIGNAL_THEME.workingWash,
-        accent: DEFAULT_SIGNAL_THEME.workingAccent,
+        wash: DEFAULT_SIDE_GLANCE_THEME.workingWash,
+        accent: DEFAULT_SIDE_GLANCE_THEME.workingAccent,
         urgency: 0,
       };
     case "waiting":
@@ -33,8 +33,8 @@ export function visualForPhase(
         phase,
         label: "Waiting",
         message: "Your agent needs a decision.",
-        wash: DEFAULT_SIGNAL_THEME.waitingWash,
-        accent: DEFAULT_SIGNAL_THEME.waitingAccent,
+        wash: DEFAULT_SIDE_GLANCE_THEME.waitingWash,
+        accent: DEFAULT_SIDE_GLANCE_THEME.waitingAccent,
         urgency: 0,
       };
     case "completed": {
@@ -42,7 +42,7 @@ export function visualForPhase(
       return {
         phase,
         label: "Ready",
-        message: "The turn finished. Signal is holding your place.",
+        message: "The turn finished. Side Glance is holding your place.",
         wash: thermal.wash,
         accent: thermal.accent,
         urgency: thermal.urgency,
@@ -53,8 +53,8 @@ export function visualForPhase(
         phase,
         label: "Failed",
         message: "The turn stopped before completion.",
-        wash: DEFAULT_SIGNAL_THEME.washStops.at(-1) ?? "732018",
-        accent: DEFAULT_SIGNAL_THEME.tmuxStops.at(-1) ?? "f33533",
+        wash: DEFAULT_SIDE_GLANCE_THEME.washStops.at(-1) ?? "732018",
+        accent: DEFAULT_SIDE_GLANCE_THEME.tmuxStops.at(-1) ?? "f33533",
         urgency: 1_000,
       };
     case "inactive":

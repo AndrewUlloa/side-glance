@@ -2,11 +2,11 @@
 
 > Source: `https://linear.app/homepage`
 > Captured: 2026-08-13 (America/New_York)
-> Purpose: primary-source evidence for Signal's requested token parity
+> Purpose: primary-source evidence for Side Glance's requested token parity
 
 ## Scope
 
-Signal adopts the measurable typography, neutral design-token, control-feedback, and entrance-motion values served by Linear's current homepage. It does not copy Linear's content, logo, product illustrations, proprietary code, or brand identity. Signal's lifecycle colors and four-terminal story remain product-specific.
+Side Glance adopts the measurable typography, neutral design-token, control-feedback, and entrance-motion values served by Linear's current homepage. It does not copy Linear's content, logo, product illustrations, proprietary code, or brand identity. Side Glance's lifecycle colors and four-terminal story remain product-specific.
 
 ## First-party assets inspected
 
@@ -40,7 +40,7 @@ Hashed filenames are a dated snapshot and may change independently of behavior.
 - Regular body: 15px/1.6 with `-.011em` tracking; tertiary text is `#8a8f98`.
 - Monospace stack starts with Berkeley Mono, then ui-monospace, SF Mono, Menlo, monospace.
 
-Inter is open source and is loaded by Signal through Next's supported font integration. Berkeley Mono is separately licensed. Signal may name it as the first local preference but must not copy Linear's font file or depend on Linear's CDN; visitors without a license receive the system fallback.
+Inter is open source and is loaded by Side Glance through Next's supported font integration. Berkeley Mono is separately licensed. Side Glance may name it as the first local preference but must not copy Linear's font file or depend on Linear's CDN; visitors without a license receive the system fallback.
 
 ## Layout and visual tokens
 
@@ -64,8 +64,8 @@ Inter is open source and is loaded by Signal through Next's supported font integ
 - Global speeds: .1s quick and .25s regular.
 - Fresh-visit guard skips reduced-motion, hash navigation, and an already-used key; first scroll cancels an active initial sequence.
 
-## Signal mapping decisions
+## Side Glance mapping decisions
 
 - Adopt exactly: Inter typography, measured neutrals, radii, shadows, duration/easing tokens, hero reveal primitive, delays, and fresh-visit guard.
-- Preserve intentionally: Signal's canonical CLI phase colors, terminal meaning, content, four-terminal composition, accessibility, Lenis reduced-motion behavior, and preview-only Agentation boundary.
+- Preserve intentionally: Side Glance's canonical CLI phase colors, terminal meaning, content, four-terminal composition, accessibility, Lenis reduced-motion behavior, and preview-only Agentation boundary.
 - Do not adopt: Linear logos, copy, screenshots, illustration assets, proprietary font binaries, or unrelated product-specific sequences.

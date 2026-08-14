@@ -13,13 +13,13 @@ export async function runInstallCommand(
 ): Promise<number> {
   if (action === "install" && isEphemeralNpmExecution(process.env, process.argv[1])) {
     throw new Error(
-      "Permanent provider hooks cannot be installed from npx/npm exec. Install Signal from a standalone release or with `npm install --global terminal-signal`, then run `signal install` again.",
+      "Permanent provider hooks cannot be installed from npx/npm exec. Install Side Glance from a standalone release or with `npm install --global side-glance`, then run `side-glance install` again.",
     );
   }
   const provider = parseProvider(args[0]);
   const homeDirectory = option(args, "--home") ?? homedir();
   const executablePath =
-    option(args, "--executable") ?? path.resolve(process.argv[1] ?? "signal");
+    option(args, "--executable") ?? path.resolve(process.argv[1] ?? "side-glance");
   validateArguments(args.slice(1), action);
 
   const operation = action === "install" ? installProviderHooks : uninstallProviderHooks;

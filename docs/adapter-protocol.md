@@ -1,6 +1,6 @@
 # Adapter protocol v1
 
-Adapters submit one JSON object on stdin to `signal event --json`, or translate a provider payload through `signal hook --provider <name> --json`.
+Adapters submit one JSON object on stdin to `side-glance event --json`, or translate a provider payload through `side-glance hook --provider <name> --json`.
 
 ```json
 {
@@ -50,4 +50,4 @@ Adapters must never add prompt, response, transcript, tool input, secret, or arb
 
 ## Target discovery
 
-The wrapper exports `SIGNAL_SURFACE_ID`, `SIGNAL_SESSION_ID`, and, when available, `SIGNAL_TTY` and `SIGNAL_TMUX_PANE`. Explicit verified values win; otherwise Signal invokes `tty` directly without a shell. Native hooks should inherit wrapper identity because providers do not consistently expose a controlling TTY.
+The wrapper exports `SIDE_GLANCE_SURFACE_ID`, `SIDE_GLANCE_SESSION_ID`, and, when available, `SIDE_GLANCE_TTY` and `SIDE_GLANCE_TMUX_PANE`. Explicit verified values win; otherwise Side Glance invokes `tty` directly without a shell. Native hooks should inherit wrapper identity because providers do not consistently expose a controlling TTY.

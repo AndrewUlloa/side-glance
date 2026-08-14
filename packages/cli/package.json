@@ -1,15 +1,14 @@
 {
-  "name": "terminal-signal",
+  "name": "side-glance",
   "version": "0.1.0-beta.1",
   "description": "A local-first attention layer for coding-agent CLIs.",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "signal": "dist/signal.mjs",
-    "terminal-signal": "dist/signal.mjs"
+    "side-glance": "dist/side-glance.mjs"
   },
   "files": [
-    "dist/signal.mjs",
+    "dist/side-glance.mjs",
     "README.md",
     "LICENSE"
   ],
@@ -18,12 +17,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AndrewUlloa/terminal-signal.git"
+    "url": "git+https://github.com/AndrewUlloa/side-glance.git"
   },
   "bugs": {
-    "url": "https://github.com/AndrewUlloa/terminal-signal/issues"
+    "url": "https://github.com/AndrewUlloa/side-glance/issues"
   },
-  "homepage": "https://github.com/AndrewUlloa/terminal-signal#readme",
+  "homepage": "https://github.com/AndrewUlloa/side-glance#readme",
   "keywords": [
     "terminal",
     "claude-code",

@@ -1,5 +1,5 @@
 import { MotionOrchestrator } from "./components/MotionOrchestrator";
-import { SignalPlayground } from "./components/SignalPlayground";
+import { SideGlancePlayground } from "./components/SideGlancePlayground";
 import { TerminalStoryboard } from "./components/TerminalStoryboard";
 
 const providers = [
@@ -45,7 +45,7 @@ const steps = [
   {
     number: "01",
     title: "Listen without reading",
-    copy: "Provider hooks report lifecycle metadata. Prompts, transcripts, and assistant messages never enter Signal state.",
+    copy: "Provider hooks report lifecycle metadata. Prompts, transcripts, and assistant messages never enter Side Glance state.",
     code: "hook → normalized event",
   },
   {
@@ -57,7 +57,7 @@ const steps = [
   {
     number: "03",
     title: "Render, then restore",
-    copy: "Signal verifies the TTY, snapshots its tmux options, paints the owned channels, and restores only what it changed.",
+    copy: "Side Glance verifies the TTY, snapshots its tmux options, paints the owned channels, and restores only what it changed.",
     code: "state → terminal + tmux",
   },
 ] as const;
@@ -68,9 +68,9 @@ export default function Home() {
       <MotionOrchestrator />
       <header className="site-header">
         <nav className="nav-wrap" aria-label="Primary navigation">
-          <a className="brand" href="#top" aria-label="Signal home">
-            <SignalMark />
-            <span>signal</span>
+          <a className="brand" href="#top" aria-label="Side Glance home">
+            <SideGlanceMark />
+            <span>Side Glance</span>
           </a>
           <div className="nav-links">
             <a href="#how-it-works">How it works</a>
@@ -79,7 +79,7 @@ export default function Home() {
           </div>
           <a
             className="nav-github"
-            href="https://github.com/AndrewUlloa/terminal-signal"
+            href="https://github.com/AndrewUlloa/side-glance"
             target="_blank"
             rel="noreferrer"
           >
@@ -100,13 +100,13 @@ export default function Home() {
               </span>
             </h1>
             <p className="hero-lede hero-enter hero-enter-description">
-              Signal turns coding-agent lifecycle events into a quiet, thermal
+              Side Glance turns coding-agent lifecycle events into a quiet, thermal
               status layer across terminal backgrounds and tmux—without reading
               your work.
             </p>
             <div className="hero-actions hero-enter hero-enter-announcement">
               <a className="primary-action" href="#playground">
-                Try the signal <span aria-hidden="true">↓</span>
+                Try Side Glance <span aria-hidden="true">↓</span>
               </a>
               <a className="text-action" href="#setup">
                 See the setup
@@ -125,7 +125,7 @@ export default function Home() {
           aria-labelledby="playground-section-title"
         >
           <div className="section-heading playground-section-copy">
-            <p className="section-kicker">Tune the signal</p>
+            <p className="section-kicker">Explore the lifecycle</p>
             <h2 id="playground-section-title">See every lifecycle state.</h2>
             <p>
               Move between working, waiting, ready, failed, and inactive. The
@@ -133,13 +133,13 @@ export default function Home() {
             </p>
           </div>
           <div className="playground-section-demo">
-            <SignalPlayground />
+            <SideGlancePlayground />
           </div>
         </section>
 
         <section className="trust-strip" aria-label="Supported coding agents">
           <div className="section-wrap trust-inner">
-            <span>One signal for</span>
+            <span>One lifecycle layer for</span>
             <div className="agent-wordmarks" aria-label="Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any CLI">
               <strong>Claude Code</strong>
               <strong>Codex</strong>
@@ -185,7 +185,7 @@ export default function Home() {
               <p className="section-kicker">Coverage without pretending</p>
               <h2>Every CLI gets a baseline. Native hooks add fidelity.</h2>
               <p>
-                Signal calls out the difference between a documented lifecycle
+                Side Glance calls out the difference between a documented lifecycle
                 event, a notification, and a wrapper observation.
               </p>
             </div>
@@ -235,7 +235,7 @@ export default function Home() {
           </div>
           <div
             className="command-panel"
-            aria-label="Signal setup commands"
+            aria-label="Side Glance setup commands"
           >
             <div className="command-panel-head">
               <span>terminal</span>
@@ -243,15 +243,15 @@ export default function Home() {
             </div>
             <div className="command-block">
               <span className="command-comment"># available after the first verified beta release</span>
-              <code><span>$</span> npm install -g terminal-signal@beta</code>
+              <code><span>$</span> npm install -g side-glance@beta</code>
             </div>
             <div className="command-block">
               <span className="command-comment"># supervise any coding CLI</span>
-              <code><span>$</span> signal run -- claude</code>
+              <code><span>$</span> side-glance run -- claude</code>
             </div>
             <div className="command-block">
               <span className="command-comment"># merge native hooks safely</span>
-              <code><span>$</span> signal install claude --json</code>
+              <code><span>$</span> side-glance install claude --json</code>
             </div>
             <div className="command-foot">
               <span className="command-ready-dot" aria-hidden="true" />
@@ -265,7 +265,7 @@ export default function Home() {
             <div className="boundary-ring boundary-ring-one" />
             <div className="boundary-ring boundary-ring-two" />
             <div className="boundary-core">
-              <SignalMark />
+              <SideGlanceMark />
             </div>
           </div>
           <div className="boundary-copy">
@@ -274,12 +274,12 @@ export default function Home() {
             <p>
               Normal session end, child exit, and forwarded signals clean up
               deterministically. A killed process, power loss, or dead terminal
-              cannot run an exit callback, so Signal reconciles stale ownership
+              cannot run an exit callback, so Side Glance reconciles stale ownership
               on the next live controller action.
             </p>
             <div className="boundary-facts">
               <div>
-                <strong>What Signal restores</strong>
+                <strong>What Side Glance restores</strong>
                 <span>Its own terminal default and exact tmux option snapshot.</span>
               </div>
               <div>
@@ -297,7 +297,7 @@ export default function Home() {
           </div>
           <div className="faq-list">
             <details>
-              <summary>Does Signal read my prompts or transcripts?</summary>
+              <summary>Does Side Glance read my prompts or transcripts?</summary>
               <p>
                 No. Adapters keep only provider, session, turn, lifecycle,
                 confidence, timing, and terminal-target metadata. Unknown fields
@@ -317,13 +317,13 @@ export default function Home() {
               <p>
                 Installer updates are atomic and backed up. Existing hook groups
                 and Codex notification commands remain intact; uninstall removes
-                only commands carrying Signal&apos;s ownership marker.
+                only commands carrying Side Glance&apos;s ownership marker.
               </p>
             </details>
             <details>
               <summary>What happens inside tmux?</summary>
               <p>
-                Signal snapshots four per-window options and restores their exact
+                Side Glance snapshots four per-window options and restores their exact
                 local-or-inherited state. A whole terminal background remains
                 shared by panes in the same client, so per-pane washes are not
                 claimed.
@@ -336,13 +336,13 @@ export default function Home() {
           className="closing-section section-wrap"
           aria-labelledby="closing-title"
         >
-          <SignalMark />
+          <SideGlanceMark />
           <h2 id="closing-title">Keep the work moving. Let the terminal ask for you.</h2>
           <div className="closing-actions">
             <a className="primary-action" href="#playground">Try the playground</a>
             <a
               className="text-action"
-              href="https://github.com/AndrewUlloa/terminal-signal"
+              href="https://github.com/AndrewUlloa/side-glance"
               target="_blank"
               rel="noreferrer"
             >
@@ -355,12 +355,12 @@ export default function Home() {
       <footer className="site-footer">
         <div className="section-wrap footer-inner">
           <a className="brand" href="#top">
-            <SignalMark />
-            <span>signal</span>
+            <SideGlanceMark />
+            <span>Side Glance</span>
           </a>
           <p>Local-first attention for coding agents.</p>
           <div>
-            <a href="https://github.com/AndrewUlloa/terminal-signal">GitHub</a>
+            <a href="https://github.com/AndrewUlloa/side-glance">GitHub</a>
             <a href="#setup">Setup</a>
           </div>
         </div>
@@ -369,10 +369,10 @@ export default function Home() {
   );
 }
 
-function SignalMark() {
+function SideGlanceMark() {
   return (
     <svg
-      className="signal-mark"
+      className="side-glance-mark"
       viewBox="0 0 28 28"
       aria-hidden="true"
       focusable="false"

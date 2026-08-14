@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-import type { SignalTarget } from "./protocol.ts";
+import type { SideGlanceTarget } from "./protocol.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -15,12 +15,19 @@ export interface TargetDiscoveryOptions {
 
 export async function discoverTerminalTarget(
   options: TargetDiscoveryOptions = {},
-): Promise<SignalTarget> {
+): Promise<SideGlanceTarget> {
   const environment = options.environment ?? process.env;
-  const explicitSurface = options.surfaceId ?? environment.SIGNAL_SURFACE_ID;
-  const explicitTty = options.tty ?? environment.SIGNAL_TTY;
+  const explicitSurface =
+    options.surfaceId ??
+    environment.SIDE_GLANCE_SURFACE_ID ??
+    environment.SIGNAL_SURFACE_ID;
+  const explicitTty =
+    options.tty ?? environment.SIDE_GLANCE_TTY ?? environment.SIGNAL_TTY;
   const tmuxPane =
-    options.tmuxPane ?? environment.SIGNAL_TMUX_PANE ?? environment.TMUX_PANE;
+    options.tmuxPane ??
+    environment.SIDE_GLANCE_TMUX_PANE ??
+    environment.SIGNAL_TMUX_PANE ??
+    environment.TMUX_PANE;
 
   if (explicitSurface) validateSurfaceId(explicitSurface);
   if (explicitTty) validateTtyPath(explicitTty);

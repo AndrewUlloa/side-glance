@@ -1,5 +1,5 @@
 {
-  "name": "terminal-signal-repository",
+  "name": "side-glance-repository",
   "version": "0.0.0",
   "description": "A local-first attention layer for coding-agent CLIs.",
   "private": true,

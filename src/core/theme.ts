@@ -1,4 +1,4 @@
-export interface SignalTheme {
+export interface SideGlanceTheme {
   washStops: readonly string[];
   tmuxStops: readonly string[];
   workingWash: string;
@@ -7,7 +7,7 @@ export interface SignalTheme {
   waitingAccent: string;
 }
 
-export const DEFAULT_SIGNAL_THEME: SignalTheme = {
+export const DEFAULT_SIDE_GLANCE_THEME: SideGlanceTheme = {
   washStops: [
     "142e2d",
     "173326",

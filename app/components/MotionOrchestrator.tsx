@@ -3,7 +3,7 @@
 import { useLayoutEffect } from "react";
 
 const animatedKeys = new Set<string>();
-const heroKey = "signal-homepage-hero";
+const heroKey = "side-glance-homepage-hero";
 
 export function MotionOrchestrator() {
   useLayoutEffect(() => {

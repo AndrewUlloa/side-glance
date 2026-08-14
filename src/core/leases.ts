@@ -1,13 +1,13 @@
-import type { SignalSessionState, SignalState } from "./protocol.ts";
+import type { SideGlanceSessionState, SideGlanceState } from "./protocol.ts";
 
 export interface SurfaceResolution {
   surfaceId: string;
   ownerKey: string;
-  session: SignalSessionState;
+  session: SideGlanceSessionState;
 }
 
 export function resolveSurface(
-  state: SignalState,
+  state: SideGlanceState,
   surfaceId: string,
 ): SurfaceResolution | undefined {
   const candidates = Object.entries(state.sessions)
@@ -35,7 +35,7 @@ export function resolveSurface(
   return candidates[0];
 }
 
-function priorityFor(phase: SignalSessionState["phase"]): number {
+function priorityFor(phase: SideGlanceSessionState["phase"]): number {
   switch (phase) {
     case "failed":
       return 4;

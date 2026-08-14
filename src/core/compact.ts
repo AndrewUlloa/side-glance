@@ -1,13 +1,13 @@
 import type {
-  SignalSessionState,
-  SignalState,
-  SignalSurfaceState,
+  SideGlanceSessionState,
+  SideGlanceState,
+  SideGlanceSurfaceState,
 } from "./protocol.ts";
 
 const MAX_INACTIVE_SESSIONS = 512;
 const MAX_INACTIVE_SURFACES = 256;
 
-export function compactSignalState(state: SignalState): SignalState {
+export function compactSideGlanceState(state: SideGlanceState): SideGlanceState {
   const sessions = boundInactiveEntries(
     state.sessions,
     MAX_INACTIVE_SESSIONS,
@@ -22,7 +22,7 @@ export function compactSignalState(state: SignalState): SignalState {
   return { ...state, sessions, surfaces };
 }
 
-function boundInactiveEntries<T extends SignalSessionState | SignalSurfaceState>(
+function boundInactiveEntries<T extends SideGlanceSessionState | SideGlanceSurfaceState>(
   entries: Record<string, T>,
   maximum: number,
   isInactive: (entry: T) => boolean,

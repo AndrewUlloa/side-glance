@@ -1,6 +1,6 @@
 ## Summary
 
-Describe the user-visible outcome and why it belongs in Signal.
+Describe the user-visible outcome and why it belongs in Side Glance.
 
 ## Safety and lifecycle
 

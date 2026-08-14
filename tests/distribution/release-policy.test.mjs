@@ -29,7 +29,7 @@ test("CI and release workflows pin actions and enforce the public protected-tag 
   assert.match(release, /cancel-in-progress:\s+false/u);
   assert.match(release, /tags:\s*\["v\*"\]/u);
   assert.match(release, /node-version:\s+24\.18\.0/u);
-  assert.match(release, /SIGNAL_RELEASE_NODE_VERSION:\s+24\.18\.0/u);
+  assert.match(release, /SIDE_GLANCE_RELEASE_NODE_VERSION:\s+24\.18\.0/u);
   for (const runner of ["ubuntu-24.04", "ubuntu-24.04-arm", "macos-15", "macos-15-intel"]) {
     assert.ok(release.includes(runner), `missing fixed release runner ${runner}`);
   }
@@ -52,12 +52,12 @@ test("CI and release workflows pin actions and enforce the public protected-tag 
   assert.match(release, /github\.ref_protected/u);
 });
 
-test("release validation accepts only Signal's public protected matching version tag", async (context) => {
-  const temporary = await mkdtemp(path.join(tmpdir(), "signal-release-policy-"));
+test("release validation accepts only Side Glance's public protected matching version tag", async (context) => {
+  const temporary = await mkdtemp(path.join(tmpdir(), "side-glance-release-policy-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const output = path.join(temporary, "output");
   const base = {
-    GITHUB_REPOSITORY: "AndrewUlloa/terminal-signal",
+    GITHUB_REPOSITORY: "AndrewUlloa/side-glance",
     GITHUB_EVENT_REPOSITORY_VISIBILITY: "public",
     GITHUB_REF_TYPE: "tag",
     GITHUB_REF_NAME: "v0.1.0-beta.1",

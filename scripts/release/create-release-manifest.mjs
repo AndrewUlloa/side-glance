@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { lstat, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const REPOSITORY = "AndrewUlloa/terminal-signal";
+const REPOSITORY = "AndrewUlloa/side-glance";
 const TARGETS = [
   ["darwin-arm64", "supported"],
   ["linux-x64-gnu", "supported"],
@@ -21,16 +21,16 @@ if (!artifactsDirectory || !packagePath || !outputPath) {
 
 const packageManifest = await parseJson(packagePath, "package manifest");
 if (
-  packageManifest.name !== "terminal-signal"
+  packageManifest.name !== "side-glance"
   || typeof packageManifest.version !== "string"
   || !VERSION.test(packageManifest.version)
 ) {
-  fail("package manifest must identify a versioned terminal-signal package");
+  fail("package manifest must identify a versioned side-glance package");
 }
 
 const version = packageManifest.version;
 const expectedTag = `v${version}`;
-const tag = process.env.SIGNAL_RELEASE_TAG ?? "";
+const tag = process.env.SIDE_GLANCE_RELEASE_TAG ?? "";
 if (tag !== expectedTag) fail(`release tag must be ${expectedTag}`);
 
 const sourceCommit = process.env.GITHUB_SHA || "";
@@ -41,7 +41,7 @@ if (!COMMIT.test(sourceCommit)) {
 const baseUrl = `https://github.com/${REPOSITORY}/releases/download/${tag}`;
 const artifacts = [];
 for (const [target, support] of TARGETS) {
-  const filename = `terminal-signal-v${version}-${target}.tar.gz`;
+  const filename = `side-glance-v${version}-${target}.tar.gz`;
   artifacts.push({
     target,
     support,
@@ -53,7 +53,7 @@ for (const [target, support] of TARGETS) {
   });
 }
 
-const npmFilename = `terminal-signal-${version}.tgz`;
+const npmFilename = `side-glance-${version}.tgz`;
 const npmPath = path.join(artifactsDirectory, npmFilename);
 const npm = {
   filename: npmFilename,

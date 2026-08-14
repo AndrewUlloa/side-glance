@@ -11,9 +11,9 @@ const stylesheet = await readFile(new URL("../../app/globals.css", import.meta.u
 
 test("hero tells the four-terminal origin story before the playground", () => {
   assert.match(pageSource, /<TerminalStoryboard\s*\/?>/);
-  assert.match(pageSource, /id="playground"[\s\S]*<SignalPlayground\s*\/?>/);
+  assert.match(pageSource, /id="playground"[\s\S]*<SideGlancePlayground\s*\/?>/);
   assert.ok(
-    pageSource.indexOf("<TerminalStoryboard") < pageSource.indexOf("<SignalPlayground"),
+    pageSource.indexOf("<TerminalStoryboard") < pageSource.indexOf("<SideGlancePlayground"),
     "the four-terminal story should precede the interactive playground",
   );
 });
@@ -22,7 +22,7 @@ test("hero stays focused on the headline, actions, and four-terminal story", () 
   assert.doesNotMatch(pageSource, /Local-first attention layer/);
   assert.doesNotMatch(pageSource, /className="eyebrow/);
   assert.doesNotMatch(pageSource, /className="hero-proof/);
-  assert.doesNotMatch(pageSource, /aria-label="Signal guarantees"/);
+  assert.doesNotMatch(pageSource, /aria-label="Side Glance guarantees"/);
   assert.doesNotMatch(stylesheet, /\.eyebrow/);
   assert.doesNotMatch(stylesheet, /\.hero-proof/);
 });
@@ -38,7 +38,7 @@ test("storyboard is data-driven, stage-driven, replayable, and finite", () => {
   assert.match(storyboardSource, /clearTimeout/);
   assert.match(storyboardSource, /Replay/);
   assert.match(storyboardSource, /from\s+"\.\.\/lib\/motion-tokens"/);
-  assert.match(storyboardSource, /DEFAULT_SIGNAL_THEME/);
+  assert.match(storyboardSource, /DEFAULT_SIDE_GLANCE_THEME/);
   assert.doesNotMatch(storyboardSource, /repeat:\s*Infinity/);
 });
 

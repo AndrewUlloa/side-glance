@@ -1,4 +1,4 @@
-import type { SignalEventKind } from "../core/protocol.ts";
+import type { SideGlanceEventKind } from "../core/protocol.ts";
 import {
   adapterRecord,
   buildAdapterEvent,
@@ -7,7 +7,7 @@ import {
 } from "./shared.ts";
 import type { AdapterContext, AdapterResult } from "./types.ts";
 
-const OPENCODE_EVENTS: Readonly<Record<string, SignalEventKind>> = {
+const OPENCODE_EVENTS: Readonly<Record<string, SideGlanceEventKind>> = {
   "session.created": "session.started",
   "session.idle": "turn.completed",
   "session.error": "turn.failed",

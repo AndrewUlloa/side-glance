@@ -118,7 +118,7 @@ async function writeAll(
     );
     if (bytesWritten === 0) {
       throw new TerminalGoneError(
-        "Terminal closed before Signal could finish rendering.",
+        "Terminal closed before Side Glance could finish rendering.",
       );
     }
     offset += bytesWritten;

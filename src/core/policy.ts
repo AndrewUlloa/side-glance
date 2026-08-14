@@ -1,11 +1,11 @@
-import { DEFAULT_SIGNAL_THEME, type SignalTheme } from "./theme.ts";
+import { DEFAULT_SIDE_GLANCE_THEME, type SideGlanceTheme } from "./theme.ts";
 
 export interface UrgencyPolicy {
   suppressBelowSeconds: number;
   midpointSeconds: number;
   maximumSeconds: number;
   adaptive: boolean;
-  theme: SignalTheme;
+  theme: SideGlanceTheme;
 }
 
 export interface UrgencyResult {
@@ -20,7 +20,7 @@ export const DEFAULT_URGENCY_POLICY: UrgencyPolicy = {
   midpointSeconds: 60,
   maximumSeconds: 300,
   adaptive: true,
-  theme: DEFAULT_SIGNAL_THEME,
+  theme: DEFAULT_SIDE_GLANCE_THEME,
 };
 
 export function validateUrgencyPolicy(policy: UrgencyPolicy): void {
@@ -68,7 +68,7 @@ export function validateUrgencyPolicy(policy: UrgencyPolicy): void {
   ];
 
   if (colors.some((color) => !/^[0-9a-f]{6}$/i.test(color))) {
-    throw new Error("Signal theme colors must be six-digit hexadecimal values.");
+    throw new Error("Side Glance theme colors must be six-digit hexadecimal values.");
   }
 }
 

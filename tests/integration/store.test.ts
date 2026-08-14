@@ -15,14 +15,14 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { FileSignalStore } from "../../src/core/store.ts";
+import { FileSideGlanceStore } from "../../src/core/store.ts";
 
 const workerPath = fileURLToPath(
   new URL("../fixtures/store-writer.ts", import.meta.url),
 );
 
 async function temporaryDirectory(): Promise<string> {
-  return mkdtemp(path.join(tmpdir(), "signal-store-"));
+  return mkdtemp(path.join(tmpdir(), "side-glance-store-"));
 }
 
 async function runWriter(
@@ -59,7 +59,7 @@ test("serializes concurrent processes without losing events", async (context) =>
     ),
   );
 
-  const state = await new FileSignalStore({ directory }).read();
+  const state = await new FileSideGlanceStore({ directory }).read();
   assert.equal(Object.keys(state.sessions).length, 4);
   assert.equal(state.seenEventIds.length, 32);
   assert.ok(
@@ -70,11 +70,11 @@ test("serializes concurrent processes without losing events", async (context) =>
 test("writes private state atomically and quarantines malformed state", async (context) => {
   const directory = await temporaryDirectory();
   context.after(() => rm(directory, { recursive: true, force: true }));
-  const store = new FileSignalStore({ directory });
+  const store = new FileSideGlanceStore({ directory });
 
   await store.update((state) => state);
 
-  const statePath = path.join(directory, "signal-state.json");
+  const statePath = path.join(directory, "side-glance-state.json");
   assert.equal((await stat(directory)).mode & 0o777, 0o700);
   assert.equal((await stat(statePath)).mode & 0o777, 0o600);
   assert.deepEqual(
@@ -96,7 +96,7 @@ test("writes private state atomically and quarantines malformed state", async (c
   });
 
   const files = await readdir(directory);
-  assert.ok(files.some((name) => name.startsWith("signal-state.corrupt-")));
+  assert.ok(files.some((name) => name.startsWith("side-glance-state.corrupt-")));
   const persistedReset = await readFile(statePath, "utf8");
   assert.doesNotThrow(() => JSON.parse(persistedReset));
 });
@@ -104,7 +104,7 @@ test("writes private state atomically and quarantines malformed state", async (c
 test("reclaims a stale lock only after proving its owner is gone", async (context) => {
   const directory = await temporaryDirectory();
   context.after(() => rm(directory, { recursive: true, force: true }));
-  const lockPath = path.join(directory, ".signal-state.lock");
+  const lockPath = path.join(directory, ".side-glance-state.lock");
   const ownerPath = path.join(lockPath, "owner.json");
 
   await mkdir(lockPath, { recursive: true, mode: 0o700 });
@@ -114,7 +114,7 @@ test("reclaims a stale lock only after proving its owner is gone", async (contex
     { mode: 0o600 },
   );
 
-  const cautiousStore = new FileSignalStore({
+  const cautiousStore = new FileSideGlanceStore({
     directory,
     staleLockMs: 1,
     lockTimeoutMs: 40,
@@ -130,5 +130,5 @@ test("reclaims a stale lock only after proving its owner is gone", async (contex
 
   const recovered = await cautiousStore.update((state) => state);
   assert.equal(recovered.schemaVersion, 1);
-  assert.equal((await readdir(directory)).includes(".signal-state.lock"), false);
+  assert.equal((await readdir(directory)).includes(".side-glance-state.lock"), false);
 });
