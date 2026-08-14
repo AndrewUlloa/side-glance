@@ -15,7 +15,6 @@
 
 # next.js
 /.next/
-/.vinext/
 /out/
 
 # misc
@@ -35,7 +34,7 @@ yarn-error.log*
 .vercel
 
 /dist/
-/.wrangler/
+/packages/cli/dist/
 /outputs/
 /work/
 *.tsbuildinfo

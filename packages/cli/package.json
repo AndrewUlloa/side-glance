@@ -1,0 +1,42 @@
+{
+  "name": "side-glance",
+  "version": "0.1.0-beta.1",
+  "description": "A local-first attention layer for coding-agent CLIs.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "side-glance": "dist/side-glance.mjs"
+  },
+  "files": [
+    "dist/side-glance.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndrewUlloa/side-glance.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AndrewUlloa/side-glance/issues"
+  },
+  "homepage": "https://github.com/AndrewUlloa/side-glance#readme",
+  "keywords": [
+    "terminal",
+    "claude-code",
+    "codex",
+    "coding-agent",
+    "cli",
+    "tmux"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "tag": "beta"
+  },
+  "scripts": {
+    "prepack": "node ../../scripts/build-cli.mjs"
+  }
+}

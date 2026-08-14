@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Signal is a local-first attention layer for coding-agent CLIs. The repository contains both the distributable `signal` CLI and its interactive product site.
+Side Glance is a local-first attention layer for coding-agent CLIs. The repository contains both the distributable `side-glance` CLI and its interactive product site.
 
 ## Working agreement
 
@@ -25,6 +25,7 @@ Before reporting work complete, run with Node 24 or newer:
 ```bash
 npm run test:unit
 npm run test:integration
+npm run test:coverage
 npm run lint
 npm run typecheck
 npm run build
@@ -40,7 +41,7 @@ Browser-facing changes also require a real browser check of the desktop and mobi
 - Never write terminal bytes until the target has been verified as an owned character TTY.
 - An event from an older generation may never repaint a newer generation.
 - Releasing one session removes only that session's lease and recomputes the surface from remaining leases.
-- Reset restores Signal-owned state only. OSC 111 restores the terminal's configured default, not an unknowable prior dynamic background.
+- Reset restores Side Glance-owned state only. OSC 111 restores the terminal's configured default, not an unknowable prior dynamic background.
 - Preserve existing CLI hooks and notification commands during install/uninstall.
 - Title mutation is opt-in. Prompt or transcript content is never persisted or displayed by default.
 

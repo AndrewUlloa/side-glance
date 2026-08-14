@@ -1,0 +1,269 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.policy.outputs.version }}
+      tag: ${{ steps.policy.outputs.tag }}
+      npm_tag: ${{ steps.policy.outputs.npm_tag }}
+      source_sha: ${{ steps.policy.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.18.0
+      - id: policy
+        env:
+          GITHUB_EVENT_REPOSITORY_VISIBILITY: ${{ github.event.repository.visibility }}
+          GITHUB_REF_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          node scripts/release/validate-release.mjs "$GITHUB_WORKSPACE"
+          git fetch origin main:refs/remotes/origin/main
+          source_sha="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
+          git merge-base --is-ancestor "$source_sha" origin/main
+          printf 'source_sha=%s\n' "$source_sha" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.18.0
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm test
+
+  pack-npm:
+    needs: [validate, verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.18.0
+      - run: npm ci
+      - run: mkdir -p release && npm pack --workspace side-glance --pack-destination release
+      - run: npm publish release/*.tgz --access public --tag beta --dry-run
+      - uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: release/*.tgz
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: side-glance-npm-${{ needs.validate.outputs.source_sha }}
+          path: release/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  build-native:
+    needs: [validate, verify]
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: darwin-arm64
+          - runner: macos-15-intel
+            target: darwin-x64.experimental
+          - runner: ubuntu-24.04
+            target: linux-x64-gnu
+          - runner: ubuntu-24.04-arm
+            target: linux-arm64-gnu
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.18.0
+      - run: npm ci
+      - run: node --test tests/distribution/standalone.test.mjs
+        env:
+          SIDE_GLANCE_RELEASE_TARGET: ${{ matrix.target }}
+          SIDE_GLANCE_RELEASE_NODE_VERSION: 24.18.0
+      - uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: outputs/*.tar.gz
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: side-glance-native-${{ matrix.target }}-${{ needs.validate.outputs.source_sha }}
+          path: |
+            outputs/*.tar.gz
+            outputs/*.artifact.json
+          if-no-files-found: error
+          retention-days: 7
+
+  assemble:
+    needs: [validate, pack-npm, build-native]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.18.0
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          pattern: side-glance-*
+          path: release
+          merge-multiple: true
+      - run: |
+          SIDE_GLANCE_RELEASE_TAG="${{ needs.validate.outputs.tag }}" \
+          GITHUB_SHA="${{ needs.validate.outputs.source_sha }}" \
+            node scripts/release/create-release-manifest.mjs \
+              release packages/cli/package.json release/release-manifest.json
+          node scripts/release/generate-homebrew-formula.mjs \
+            release/release-manifest.json release/side-glance.rb
+          cd release
+          sha256sum --check SHA256SUMS
+          ruby -c side-glance.rb
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: side-glance-release-bundle-${{ needs.validate.outputs.source_sha }}
+          path: |
+            release/*.tar.gz
+            release/*.tgz
+            release/SHA256SUMS
+            release/release-manifest.json
+            release/side-glance.rb
+          if-no-files-found: error
+          retention-days: 14
+
+  stage-release:
+    needs: [validate, assemble]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: github-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: side-glance-release-bundle-${{ needs.validate.outputs.source_sha }}
+          path: release
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          shopt -s nullglob
+          mkdir -p existing
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .draft)" = true
+            if ! gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir existing; then
+              test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets | length')" = 0
+            fi
+            for existing_asset in existing/*; do
+              expected="release/$(basename "$existing_asset")"
+              test -f "$expected"
+              cmp --silent "$existing_asset" "$expected"
+            done
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
+              --prerelease --latest=false --generate-notes --title "Side Glance $VERSION"
+          fi
+          for expected in release/*; do
+            if test ! -f "existing/$(basename "$expected")"; then
+              gh release upload "$TAG" "$expected" --repo "$GITHUB_REPOSITORY"
+            fi
+          done
+
+  publish-npm:
+    needs: [validate, assemble, stage-release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.18.0
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: side-glance-release-bundle-${{ needs.validate.outputs.source_sha }}
+          path: release
+      - env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          node -e 'const { execFileSync } = require("node:child_process"); const [major, minor, patch] = execFileSync("npm", ["--version"], { encoding: "utf8" }).trim().split(".").map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) throw new Error("npm 11.5.1+ is required")'
+          expected="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("release/release-manifest.json")).npm.integrity)')"
+          if remote="$(npm view "side-glance@$VERSION" dist.integrity --json 2>/dev/null)"; then
+            actual="$(node -e 'console.log(JSON.parse(process.argv[1]))' "$remote")"
+            test "$actual" = "$expected"
+          else
+            npm publish release/*.tgz --access public --tag beta
+          fi
+
+  finalize-release:
+    needs: [validate, publish-npm]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: github-release
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false --verify-tag
+
+  post-release-verify:
+    needs: [validate, finalize-release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.18.0
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          mkdir release
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir release
+          cd release
+          sha256sum --check SHA256SUMS
+          mkdir extracted
+          tar -xzf "side-glance-v$VERSION-linux-x64-gnu.tar.gz" -C extracted
+          test "$(extracted/side-glance --version)" = "$VERSION"
+          expected="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("release-manifest.json")).npm.integrity)')"
+          actual="$(npm view "side-glance@$VERSION" dist.integrity --json | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>console.log(JSON.parse(s)))')"
+          test "$actual" = "$expected"
