@@ -8,12 +8,13 @@ const heroKey = "side-glance-homepage-hero";
 export function MotionOrchestrator() {
   useLayoutEffect(() => {
     const root = document.documentElement;
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    );
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const hasHash = window.location.hash.length > 1;
-    const shouldAnimate =
-      !reducedMotion.matches && !hasHash && !animatedKeys.has(heroKey);
+    const shouldAnimate = !(
+      reducedMotion.matches ||
+      hasHash ||
+      animatedKeys.has(heroKey)
+    );
 
     root.dataset.heroMotion = shouldAnimate ? "ready" : "settled";
     animatedKeys.add(heroKey);

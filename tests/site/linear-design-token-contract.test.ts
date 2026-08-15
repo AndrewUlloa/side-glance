@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const read = (path: string) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+const read = (path: string) =>
+  readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("Linear homepage token parity uses the measured font and visual system", async () => {
   const [layout, css] = await Promise.all([
@@ -75,10 +76,16 @@ test("Linear homepage token parity uses the exact fresh-load choreography", asyn
   assert.match(css, /animation-timing-function:\s*var\(--hero-copy-ease\)/u);
   assert.match(css, /\.hero-enter-line-1\s*\{[^}]*animation-delay:\s*0\.4s/u);
   assert.match(css, /\.hero-enter-line-2\s*\{[^}]*animation-delay:\s*0\.5s/u);
-  assert.match(css, /\.hero-enter-description\s*\{[^}]*animation-delay:\s*0\.6s/u);
+  assert.match(
+    css,
+    /\.hero-enter-description\s*\{[^}]*animation-delay:\s*0\.6s/u
+  );
   assert.match(css, /filter:\s*blur\(10px\)/u);
   assert.match(css, /transform:\s*translateY\(20%\)/u);
-  assert.doesNotMatch(css, /@keyframes\s+(?:terminal-sheen|ambient-drift|ring-breathe|core-glow|rotate-slow)/u);
+  assert.doesNotMatch(
+    css,
+    /@keyframes\s+(?:terminal-sheen|ambient-drift|ring-breathe|core-glow|rotate-slow)/u
+  );
 
   assert.match(orchestrator, /window\.location\.hash\.length\s*>\s*1/u);
   assert.match(orchestrator, /addEventListener\("scroll"/u);
@@ -101,6 +108,12 @@ test("Linear homepage token parity uses the measured responsive hero type", asyn
   assert.match(heroRule, /font-weight:\s*var\(--font-weight-medium\)/u);
   assert.match(heroRule, /letter-spacing:\s*-0\.022em/u);
   assert.match(heroRule, /line-height:\s*1/u);
-  assert.match(css, /@media \(max-width:\s*1024px\)[\s\S]*?\.hero h1\s*\{[^}]*font-size:\s*56px[^}]*line-height:\s*1\.1/u);
-  assert.match(css, /@media \(max-width:\s*640px\)[\s\S]*?\.hero h1\s*\{[^}]*font-size:\s*38px[^}]*line-height:\s*1\.1/u);
+  assert.match(
+    css,
+    /@media \(max-width:\s*1024px\)[\s\S]*?\.hero h1\s*\{[^}]*font-size:\s*56px[^}]*line-height:\s*1\.1/u
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*640px\)[\s\S]*?\.hero h1\s*\{[^}]*font-size:\s*38px[^}]*line-height:\s*1\.1/u
+  );
 });

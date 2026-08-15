@@ -10,6 +10,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "prepare": "husky",
     "dev": "next dev",
     "build": "next build",
     "build:cli": "node scripts/build-cli.mjs",
@@ -21,7 +22,10 @@
     "test:coverage": "node --experimental-test-coverage '--test-coverage-include=src/core/**/*.ts' --test-coverage-lines=90 --test-coverage-branches=70 --test-coverage-functions=95 --test tests/unit/*.test.ts tests/integration/*.test.ts",
     "test:site": "node --test tests/site/*.test.ts",
     "test:distribution": "node --test tests/distribution/*.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern packages/cli/dist --ignore-pattern .next --ignore-pattern .vercel --ignore-pattern work --ignore-pattern outputs",
+    "lint": "npm run lint:site && npm run lint:repo",
+    "lint:site": "biome check .",
+    "lint:site:fix": "biome check --write .",
+    "lint:repo": "eslint . --ignore-pattern dist --ignore-pattern packages/cli/dist --ignore-pattern .next --ignore-pattern .vercel --ignore-pattern work --ignore-pattern outputs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -32,6 +36,7 @@
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.11",
     "@eslint/js": "9.39.4",
     "@next/eslint-plugin-next": "16.3.0",
     "@tailwindcss/postcss": "4.2.1",
@@ -45,10 +50,13 @@
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "16.4.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.1.2",
     "postject": "1.0.0-alpha.6",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.59.3"
+    "typescript-eslint": "8.59.3",
+    "ultracite": "7.0.12"
   },
   "type": "module"
 }

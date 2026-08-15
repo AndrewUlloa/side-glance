@@ -2,6 +2,11 @@
 
 Describe the user-visible outcome and why it belongs in Side Glance.
 
+## Delivery path
+
+- [ ] This feature/fix PR targets `staging`, or this promotion PR is `staging` → `main`.
+- [ ] The Vercel preview or staging deployment was checked when the change affects the site.
+
 ## Safety and lifecycle
 
 - [ ] I considered delayed/out-of-order events and cleanup.

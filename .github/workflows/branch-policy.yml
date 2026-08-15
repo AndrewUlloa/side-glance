@@ -1,0 +1,26 @@
+name: Branch Policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: branch-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  require-staging-head:
+    name: require-staging-head
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require staging as the source branch for main
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD_REF" != "staging" ]; then
+            echo "PRs to main must come from staging. Head: $HEAD_REF"
+            exit 1
+          fi

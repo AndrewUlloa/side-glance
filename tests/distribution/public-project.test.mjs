@@ -20,6 +20,7 @@ test("contains the public project's security, contribution, support, and governa
     ".github/ISSUE_TEMPLATE/config.yml",
     ".github/pull_request_template.md",
     ".github/release.yml",
+    "docs/cicd.md",
     "docs/releasing.md",
   ];
   await Promise.all(required.map((filename) => access(path.join(repository, filename))));
@@ -71,6 +72,7 @@ test("selected public Markdown documents have no broken relative links", async (
     "LAUNCH.md",
     "REVIEW.md",
     "SPEC.md",
+    "docs/cicd.md",
     "docs/releasing.md",
   ];
   for (const document of documents) {

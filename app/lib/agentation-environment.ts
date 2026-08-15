@@ -1,7 +1,7 @@
-type AgentationEnvironment = {
+interface AgentationEnvironment {
   nodeEnv?: string;
   vercelEnv?: string;
-};
+}
 
 export function shouldShowAgentation({
   nodeEnv,

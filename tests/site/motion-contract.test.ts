@@ -23,7 +23,10 @@ test("uses Linear's measured one-time hero motion with a static reduced-motion p
   assert.match(css, /filter:\s*blur\(10px\)/u);
   assert.match(css, /transform:\s*translateY\(20%\)/u);
   assert.match(css, /prefers-reduced-motion:\s*reduce/u);
-  assert.doesNotMatch(css, /@keyframes\s+(?:terminal-sheen|ambient-drift|ring-breathe|core-glow|rotate-slow)/u);
+  assert.doesNotMatch(
+    css,
+    /@keyframes\s+(?:terminal-sheen|ambient-drift|ring-breathe|core-glow|rotate-slow)/u
+  );
   assert.match(playground, /terminal-demo/u);
   assert.doesNotMatch(css, /transition:\s*all\b/u);
 });

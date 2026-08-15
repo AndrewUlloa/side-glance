@@ -1,12 +1,12 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-export type ChatGPTUser = {
+export interface ChatGPTUser {
   userId: string;
   displayName: string;
   email: string;
   fullName: string | null;
-};
+}
 
 const USER_ID_HEADER = "oai-authenticated-user-id";
 const USER_EMAIL_HEADER = "oai-authenticated-user-email";
@@ -22,7 +22,9 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
-  if (!userId || !email) return null;
+  if (!(userId && email)) {
+    return null;
+  }
 
   const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
   const fullName =
@@ -40,10 +42,12 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
 }
 
 export async function requireChatGPTUser(
-  returnTo: string,
+  returnTo: string
 ): Promise<ChatGPTUser> {
   const user = await getChatGPTUser();
-  if (user) return user;
+  if (user) {
+    return user;
+  }
 
   redirect(chatGPTSignInPath(returnTo));
 }
@@ -59,7 +63,9 @@ export function chatGPTSignOutPath(returnTo = "/"): string {
 }
 
 function safeRelativeReturnPath(value: string): string {
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
+  if (!value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
 
   let url: URL;
   try {
@@ -67,8 +73,12 @@ function safeRelativeReturnPath(value: string): string {
   } catch {
     return "/";
   }
-  if (url.origin !== "https://app.local") return "/";
-  if (isReservedAuthPath(url.pathname)) return "/";
+  if (url.origin !== "https://app.local") {
+    return "/";
+  }
+  if (isReservedAuthPath(url.pathname)) {
+    return "/";
+  }
 
   return `${url.pathname}${url.search}${url.hash}`;
 }

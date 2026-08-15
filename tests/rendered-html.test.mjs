@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 async function render() {
   const html = await readFile(
     new URL("../.next/server/app/index.html", import.meta.url),
-    "utf8",
+    "utf8"
   );
   return new Response(html, { headers: { "content-type": "text/html" } });
 }
@@ -26,7 +26,10 @@ test("server-renders Side Glance's real product and live playground", async () =
 
   const html = await response.text();
   const text = renderedText(html);
-  assert.match(html, /<title>Side Glance — attention for coding agents<\/title>/i);
+  assert.match(
+    html,
+    /<title>Side Glance — attention for coding agents<\/title>/i
+  );
   assert.match(text, /Your terminal knows when it needs you\./);
   assert.match(html, /Try Side Glance/);
   assert.match(text, /npm install -g side-glance@beta/);
@@ -58,12 +61,12 @@ test("server-renders Side Glance's real product and live playground", async () =
           fileURLToPath(
             new URL(
               `../.next${source.replace(/^\/_next/, "")}`,
-              import.meta.url,
-            ),
+              import.meta.url
+            )
           ),
-          "utf8",
-        ),
-      ),
+          "utf8"
+        )
+      )
     )
   ).join("\n");
   assert.doesNotMatch(loadedJavaScript, /Manage MCP & Webhooks/);
@@ -73,8 +76,14 @@ test("server-renders Side Glance's real product and live playground", async () =
 test("keeps the site wired to shared phase data and accessible controls", async () => {
   const [page, playground, model, css, layout] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/components/SideGlancePlayground.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/components/playground-model.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/components/SideGlancePlayground.tsx", import.meta.url),
+      "utf8"
+    ),
+    readFile(
+      new URL("../app/components/playground-model.ts", import.meta.url),
+      "utf8"
+    ),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
   ]);
@@ -93,5 +102,8 @@ test("keeps the site wired to shared phase data and accessible controls", async 
   assert.match(layout, /metadataBase/);
   assert.match(layout, /openGraph/);
   assert.doesNotMatch(page, /_sites-preview|SkeletonPreview/);
-  assert.doesNotMatch(await readFile(import.meta.filename, "utf8"), /dist\/server\/index\.js/);
+  assert.doesNotMatch(
+    await readFile(import.meta.filename, "utf8"),
+    /dist\/server\/index\.js/
+  );
 });

@@ -1,5 +1,5 @@
-import type { SideGlancePhase } from "../../src/core/protocol.ts";
 import { urgencyFromElapsed } from "../../src/core/policy.ts";
+import type { SideGlancePhase } from "../../src/core/protocol.ts";
 import { DEFAULT_SIDE_GLANCE_THEME } from "../../src/core/theme.ts";
 
 export type PlaygroundPhase = SideGlancePhase;
@@ -16,7 +16,7 @@ export interface PlaygroundVisual {
 
 export function visualForPhase(
   phase: PlaygroundPhase,
-  elapsedSeconds: number,
+  elapsedSeconds: number
 ): PlaygroundVisual {
   switch (phase) {
     case "working":
@@ -55,7 +55,7 @@ export function visualForPhase(
         message: "The turn stopped before completion.",
         wash: DEFAULT_SIDE_GLANCE_THEME.washStops.at(-1) ?? "732018",
         accent: DEFAULT_SIDE_GLANCE_THEME.tmuxStops.at(-1) ?? "f33533",
-        urgency: 1_000,
+        urgency: 1000,
       };
     case "inactive":
       return {
