@@ -36,6 +36,7 @@ test("enforces the feature to staging to main delivery path", async () => {
 
   assert.equal([...dependabot.matchAll(/target-branch:\s+staging/gu)].length, 2);
   assert.match(cicd, /feature\/\*.*staging.*main/su);
+  assert.match(cicd, /merge commit.*staging.*main/isu);
   assert.match(cicd, /Vercel Git integration/u);
   assert.match(cicd, /CI \/ verify/u);
   assert.match(cicd, /Branch Policy \/ require-staging-head/u);
