@@ -1,0 +1,16 @@
+protected="main staging"
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  branch="${remote_ref#refs/heads/}"
+  for p in $protected; do
+    if [ "$branch" = "$p" ]; then
+      echo "" >&2
+      echo "  Direct push to '$p' is blocked." >&2
+      echo "  Use the PR flow: feature/* -> staging -> main" >&2
+      echo "  Emergency override: git push --no-verify" >&2
+      echo "" >&2
+      exit 1
+    fi
+  done
+done
+
+exit 0

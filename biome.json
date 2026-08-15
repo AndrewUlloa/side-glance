@@ -1,0 +1,163 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/next"
+  ],
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "includes": [
+      "app/**/*.ts",
+      "app/**/*.tsx",
+      "app/**/*.css",
+      "tests/site/**/*.ts",
+      "tests/rendered-html.test.mjs",
+      "next.config.ts",
+      "postcss.config.mjs"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "includes": [
+      "app/**/*.ts",
+      "app/**/*.tsx",
+      "app/**/*.css",
+      "tests/site/**/*.ts",
+      "tests/rendered-html.test.mjs",
+      "next.config.ts",
+      "postcss.config.mjs"
+    ],
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useFilenamingConvention": "off"
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "includes": [
+      "app/**/*.ts",
+      "app/**/*.tsx",
+      "app/**/*.css",
+      "tests/site/**/*.ts",
+      "tests/rendered-html.test.mjs",
+      "next.config.ts",
+      "postcss.config.mjs"
+    ],
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "files": {
+    "includes": [
+      "app/**/*.ts",
+      "app/**/*.tsx",
+      "app/**/*.css",
+      "tests/site/**/*.ts",
+      "tests/rendered-html.test.mjs",
+      "next.config.ts",
+      "postcss.config.mjs"
+    ],
+    "ignoreUnknown": true
+  },
+  "overrides": [
+    {
+      "includes": ["tests/site/**/*.ts", "tests/rendered-html.test.mjs"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "useTopLevelRegex": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/page.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useFocusableInteractive": "off",
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/components/AgentationToolbar.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useBlockStatements": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/components/SmoothScroll.tsx"],
+      "assist": {
+        "actions": {
+          "source": {
+            "useSortedAttributes": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/layout.tsx"],
+      "assist": {
+        "actions": {
+          "source": {
+            "organizeImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/components/SideGlancePlayground.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/components/TerminalStoryboard.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          },
+          "complexity": {
+            "noExcessiveCognitiveComplexity": {
+              "level": "error",
+              "options": {
+                "maxAllowedComplexity": 25
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/components/playground-model.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useDefaultSwitchClause": "off"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -2,19 +2,19 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-type EnvironmentModule = {
+interface EnvironmentModule {
   shouldShowAgentation(input: {
     nodeEnv?: string;
     vercelEnv?: string;
   }): boolean;
-};
+}
 
 const environmentModuleUrl = new URL(
   "../../app/lib/agentation-environment.ts",
-  import.meta.url,
+  import.meta.url
 ).href;
 const environmentModule = (await import(environmentModuleUrl).catch(
-  () => null,
+  () => null
 )) as EnvironmentModule | null;
 
 const [packageSource, layoutSource, toolbarSource] = await Promise.all([
@@ -24,7 +24,10 @@ const [packageSource, layoutSource, toolbarSource] = await Promise.all([
 ]);
 
 test("shows Agentation only in development and Vercel preview environments", () => {
-  assert.ok(environmentModule, "the Agentation environment predicate must exist");
+  assert.ok(
+    environmentModule,
+    "the Agentation environment predicate must exist"
+  );
 
   const matrix = [
     [{ nodeEnv: "development" }, true],
@@ -55,7 +58,7 @@ test("mounts the client-only Agentation toolbar without remote sync", () => {
   assert.match(layoutSource, /shouldShowAgentation/u);
   assert.match(
     layoutSource,
-    /<AgentationToolbar\s+enabled=\{showAgentation\}\s*\/>/u,
+    /<AgentationToolbar\s+enabled=\{showAgentation\}\s*\/>/u
   );
   assert.match(toolbarSource, /["']use client["']/u);
   assert.match(toolbarSource, /if\s*\(!enabled\)\s*return/u);

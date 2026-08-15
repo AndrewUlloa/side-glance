@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useState, type CSSProperties } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { DEFAULT_SIDE_GLANCE_THEME } from "../../src/core/theme";
 import { LINEAR_MOTION } from "../lib/motion-tokens";
 
@@ -20,7 +20,7 @@ import { LINEAR_MOTION } from "../lib/motion-tokens";
  * ───────────────────────────────────────────────────────── */
 
 const TIMING = {
-  gridStart: 0,      // reset to the quiet four-window grid
+  gridStart: 0, // reset to the quiet four-window grid
   workingWake: LINEAR_MOTION.lineOneDelay * 1000,
   readyWake: LINEAR_MOTION.lineTwoDelay * 1000,
   waitingWake: LINEAR_MOTION.descriptionDelay * 1000,
@@ -167,12 +167,13 @@ export function TerminalStoryboard() {
   const [stage, setStage] = useState<StoryboardStage>(STAGE.grid);
   const [replayTrigger, setReplayTrigger] = useState(0);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const visibleStage = shouldReduceMotion && hasHydrated ? STAGE.complete : stage;
+  const visibleStage =
+    shouldReduceMotion && hasHydrated ? STAGE.complete : stage;
   const isStacked = visibleStage >= STAGE.stack;
   const isComplete = visibleStage >= STAGE.complete;
 
   useEffect(() => {
-    const timers: Array<ReturnType<typeof setTimeout>> = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
     timers.push(setTimeout(() => setHasHydrated(true), TIMING.gridStart));
 
     const shouldSkipInitialSequence =
@@ -206,23 +207,18 @@ export function TerminalStoryboard() {
 
   return (
     <section
+      aria-labelledby="terminal-story-title"
       className="terminal-storyboard"
       data-layout={isStacked ? "stack" : "grid"}
-      aria-labelledby="terminal-story-title"
     >
       <div className="storyboard-head">
         <div>
-          <span className="playground-kicker">Four sessions · one clear glance</span>
+          <span className="playground-kicker">
+            Four sessions · one clear glance
+          </span>
           <h2 id="terminal-story-title">Know which terminal needs you.</h2>
         </div>
         <motion.button
-          className="storyboard-replay"
-          type="button"
-          onClick={replay}
-          disabled={!isComplete || shouldReduceMotion === true}
-          tabIndex={isComplete && !shouldReduceMotion ? 0 : -1}
-          aria-label="Replay the four-terminal sequence"
-          initial={false}
           animate={{
             opacity:
               isComplete && !shouldReduceMotion
@@ -230,13 +226,20 @@ export function TerminalStoryboard() {
                 : REPLAY.hiddenOpacity,
             y: isComplete ? REPLAY.visibleY : REPLAY.hiddenY,
           }}
+          aria-label="Replay the four-terminal sequence"
+          className="storyboard-replay"
+          disabled={!isComplete || shouldReduceMotion === true}
+          initial={false}
+          onClick={replay}
+          tabIndex={isComplete && !shouldReduceMotion ? 0 : -1}
           transition={shouldReduceMotion ? WINDOW.instant : REPLAY.transition}
+          type="button"
         >
           <span aria-hidden="true">↻</span> Replay
         </motion.button>
       </div>
 
-      <div className="storyboard-stage" aria-live="polite">
+      <div aria-live="polite" className="storyboard-stage">
         {TERMINALS.map((terminal, index) => {
           const gridPosition = GRID.positions[index];
           const stackPosition = STACK.positions[index];
@@ -247,11 +250,6 @@ export function TerminalStoryboard() {
 
           return (
             <motion.article
-              className="story-terminal"
-              data-phase={terminal.phase}
-              data-awake={isAwake}
-              key={terminal.id}
-              initial={false}
               animate={{
                 left: isStacked ? stackPosition.left : gridPosition.left,
                 top: isStacked ? stackPosition.top : gridPosition.top,
@@ -264,11 +262,18 @@ export function TerminalStoryboard() {
                 backgroundColor: isAwake ? terminal.wash : WINDOW.sleepingWash,
                 borderColor: isAwake ? terminal.border : WINDOW.sleepingBorder,
               }}
-              transition={shouldReduceMotion ? WINDOW.instant : WINDOW.transition}
+              className="story-terminal"
+              data-awake={isAwake}
+              data-phase={terminal.phase}
+              initial={false}
+              key={terminal.id}
               style={style}
+              transition={
+                shouldReduceMotion ? WINDOW.instant : WINDOW.transition
+              }
             >
               <div className="story-terminal-bar">
-                <div className="story-window-dots" aria-hidden="true">
+                <div aria-hidden="true" className="story-window-dots">
                   <span />
                   <span />
                   <span />
@@ -279,10 +284,20 @@ export function TerminalStoryboard() {
                 </span>
               </div>
               <div className="story-terminal-body">
-                <p className="story-command"><span>❯</span> {terminal.command}</p>
-                <p><span className="story-tree">├─</span> lifecycle event normalized</p>
-                <p className="story-active"><span className="story-tree">└─</span> {terminal.activity}</p>
-                <p className="story-prompt"><span>❯</span><i aria-hidden="true" /></p>
+                <p className="story-command">
+                  <span>❯</span> {terminal.command}
+                </p>
+                <p>
+                  <span className="story-tree">├─</span> lifecycle event
+                  normalized
+                </p>
+                <p className="story-active">
+                  <span className="story-tree">└─</span> {terminal.activity}
+                </p>
+                <p className="story-prompt">
+                  <span>❯</span>
+                  <i aria-hidden="true" />
+                </p>
               </div>
               <div className="story-tmux-bar">
                 <strong>side-glance</strong>
@@ -294,14 +309,23 @@ export function TerminalStoryboard() {
         })}
       </div>
 
-      <div className="storyboard-legend" aria-label="Lifecycle color order">
+      <div
+        aria-label="Lifecycle color order"
+        className="storyboard-legend"
+        role="group"
+      >
         {TERMINALS.map((terminal) => (
           <span key={terminal.id}>
-            <i style={{ backgroundColor: terminal.accent }} aria-hidden="true" />
+            <i
+              aria-hidden="true"
+              style={{ backgroundColor: terminal.accent }}
+            />
             {terminal.state}
           </span>
         ))}
-        <strong>{isStacked ? "ordered by attention" : "four sessions active"}</strong>
+        <strong>
+          {isStacked ? "ordered by attention" : "four sessions active"}
+        </strong>
       </div>
     </section>
   );

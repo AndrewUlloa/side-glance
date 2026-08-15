@@ -11,8 +11,12 @@ const validator = path.join(repository, "scripts/release/validate-release.mjs");
 
 test("CI and release workflows pin actions and enforce the public protected-tag boundary", async () => {
   const ci = await readFile(path.join(repository, ".github/workflows/ci.yml"), "utf8");
+  const branchPolicy = await readFile(
+    path.join(repository, ".github/workflows/branch-policy.yml"),
+    "utf8",
+  );
   const release = await readFile(path.join(repository, ".github/workflows/release.yml"), "utf8");
-  const workflows = `${ci}\n${release}`;
+  const workflows = `${ci}\n${branchPolicy}\n${release}`;
 
   assert.doesNotMatch(workflows, /uses:\s+[^\s@]+@v\d/iu);
   for (const match of workflows.matchAll(/uses:\s+[^\s@]+@([^\s#]+)/gu)) {
