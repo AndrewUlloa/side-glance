@@ -12,6 +12,10 @@ branch, and each `feature/*` branch is a disposable unit of work created from th
 latest `staging` commit. Fix, dependency, and agent branches follow the same pull
 request path even when their generated prefix is not literally `feature/`.
 
+Squash disposable feature branches into `staging`. Use a merge commit when
+promoting `staging` to `main` so the long-lived branches retain shared ancestry
+and the next promotion contains only new staged work.
+
 ## Gates
 
 The `CI / verify` job runs for pull requests and pushes involving `main` or
@@ -62,8 +66,9 @@ reconcile normally.
    `CI / native-macos-arm64`.
 3. Add the `Branch Policy / require-staging-head` status check to the `main`
    branch rule only.
-4. Keep squash and rebase merges enabled. Do not allow routine bypasses; use the
-   repository owner's emergency path only for incident recovery.
+4. Keep squash merges enabled for feature PRs and merge commits enabled for
+   `staging` to `main` promotions. Rebase merges are optional. Do not allow routine
+   bypasses; use the repository owner's emergency path only for incident recovery.
 5. Confirm Vercel's production branch is `main`, then merge a harmless feature
    through `staging` and verify all three deployment classes.
 
