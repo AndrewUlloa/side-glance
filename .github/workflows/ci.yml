@@ -2,13 +2,21 @@ name: CI
 
 on:
   pull_request:
+    branches: [main, staging]
   push:
-    branches: [main]
+    branches: [main, staging]
+  merge_group:
+    branches: [main, staging]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions: {}
 
 jobs:
   verify:
+    name: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:

@@ -42,7 +42,7 @@ test("keeps failure urgent and inactive truly neutral", () => {
     message: "The turn stopped before completion.",
     wash: "732018",
     accent: "f33533",
-    urgency: 1_000,
+    urgency: 1000,
   });
   assert.deepEqual(visualForPhase("inactive", 0), {
     phase: "inactive",

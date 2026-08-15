@@ -33,7 +33,10 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
     "vite",
     "wrangler",
   ]) {
-    assert.equal((packageManifest.devDependencies as Record<string, string>)[dependency], undefined);
+    assert.equal(
+      (packageManifest.devDependencies as Record<string, string>)[dependency],
+      undefined
+    );
   }
   for (const generatedDirectory of ["dist", "outputs", "work"]) {
     assert.match(vercelIgnore, new RegExp(`^${generatedDirectory}$`, "mu"));
@@ -56,7 +59,7 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   assert.equal(dependencies["drizzle-orm"], undefined);
   assert.doesNotMatch(
     packageLock,
-    /node_modules\/(?:@cloudflare|@vinext|drizzle-kit|drizzle-orm|vinext|wrangler)(?:\/|")/u,
+    /node_modules\/(?:@cloudflare|@vinext|drizzle-kit|drizzle-orm|vinext|wrangler)(?:\/|")/u
   );
   assert.match(layout, /VERCEL_PROJECT_PRODUCTION_URL/u);
   assert.doesNotMatch(layout, /terminal-signal\.pages\.dev/u);

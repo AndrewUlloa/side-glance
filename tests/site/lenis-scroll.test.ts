@@ -21,7 +21,7 @@ test("mounts the supported Lenis React adapter once at the document root", () =>
   assert.match(smoothScrollSource, /["']use client["']/u);
   assert.match(
     smoothScrollSource,
-    /import\s*\{\s*ReactLenis\s*\}\s*from\s*["']lenis\/react["']/u,
+    /import\s*\{\s*ReactLenis\s*\}\s*from\s*["']lenis\/react["']/u
   );
   assert.match(smoothScrollSource, /<ReactLenis\s+root/u);
 });

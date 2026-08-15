@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --font-regular: var(--font-inter), "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Open Sans", "Helvetica Neue", sans-serif;
-  --font-monospace: "Berkeley Mono", ui-monospace, var(--font-geist-mono), "SF Mono", "Menlo", monospace;
+  --font-regular:
+    var(--font-inter), "SF Pro Display", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Open Sans",
+    "Helvetica Neue", sans-serif;
+  --font-monospace:
+    "Berkeley Mono", ui-monospace, var(--font-geist-mono), "SF Mono", "Menlo",
+    monospace;
   --font-weight-light: 300;
   --font-weight-normal: 400;
   --font-weight-medium: 510;
@@ -75,7 +80,6 @@
   --motion-smooth: var(--ease-out-quad);
 }
 
-
 * {
   box-sizing: border-box;
 }
@@ -137,7 +141,10 @@ a {
   width: 100%;
   max-width: var(--homepage-max-width);
   margin-inline: auto;
-  padding-inline: calc(var(--homepage-outer-padding) + var(--homepage-padding-inset));
+  padding-inline: calc(
+    var(--homepage-outer-padding) +
+    var(--homepage-padding-inset)
+  );
 }
 
 .site-header {
@@ -147,7 +154,9 @@ a {
   border-bottom: 1px solid var(--color-border-translucent-strong);
   background: #0b0b0bcc;
   backdrop-filter: blur(var(--header-blur));
-  transition: border-color var(--speed-quick-transition) var(--ease-out-quad), background-color var(--speed-quick-transition) var(--ease-out-quad);
+  transition:
+    border-color var(--speed-quick-transition) var(--ease-out-quad),
+    background-color var(--speed-quick-transition) var(--ease-out-quad);
 }
 
 .nav-wrap {
@@ -156,11 +165,13 @@ a {
   max-width: var(--homepage-max-width);
   min-height: var(--header-height);
   margin-inline: auto;
-  padding-inline: calc(var(--homepage-outer-padding) + var(--homepage-padding-inset));
+  padding-inline: calc(
+    var(--homepage-outer-padding) +
+    var(--homepage-padding-inset)
+  );
   align-items: center;
   grid-template-columns: 1fr auto 1fr;
 }
-
 
 .brand {
   display: inline-flex;
@@ -202,7 +213,11 @@ a {
 .text-action,
 .site-footer a {
   border-radius: var(--radius-rounded);
-  transition: color var(--speed-interaction) var(--ease-out-quad), background-color var(--speed-interaction) var(--ease-out-quad), filter var(--speed-interaction) var(--ease-out-quad), transform var(--speed-interaction) var(--ease-out-quad);
+  transition:
+    color var(--speed-interaction) var(--ease-out-quad),
+    background-color var(--speed-interaction) var(--ease-out-quad),
+    filter var(--speed-interaction) var(--ease-out-quad),
+    transform var(--speed-interaction) var(--ease-out-quad);
 }
 
 .nav-links a,
@@ -285,7 +300,6 @@ a {
   animation: hero-illustration-enter 0.5s var(--ease-in-out-quad) 0.2s both;
 }
 
-
 .section-kicker,
 .playground-kicker {
   color: var(--color-text-tertiary);
@@ -337,7 +351,11 @@ a {
   color: var(--color-bg-primary);
   font-size: 13px;
   font-weight: var(--font-weight-medium);
-  transition: background-color var(--speed-interaction) var(--ease-out-quad), color var(--speed-interaction) var(--ease-out-quad), filter var(--speed-interaction) var(--ease-out-quad), transform var(--speed-interaction) var(--ease-out-quad);
+  transition:
+    background-color var(--speed-interaction) var(--ease-out-quad),
+    color var(--speed-interaction) var(--ease-out-quad),
+    filter var(--speed-interaction) var(--ease-out-quad),
+    transform var(--speed-interaction) var(--ease-out-quad);
 }
 
 .primary-action:hover {
@@ -385,7 +403,13 @@ a {
   border: 1px solid #383b3f;
   border-radius: inherit;
   content: "";
-  mask-image: radial-gradient(ellipse 200px 200px at 0% 25%, #000 0%, #0009 30%, #0003 50%, #0000 70%);
+  mask-image: radial-gradient(
+    ellipse 200px 200px at 0% 25%,
+    #000 0%,
+    #0009 30%,
+    #0003 50%,
+    #0000 70%
+  );
   opacity: 0;
   pointer-events: none;
 }
@@ -393,7 +417,6 @@ a {
 [data-hero-motion="ready"] .terminal-storyboard::after {
   animation: storyboard-shine 1.5s var(--ease-in-out-quad) 0.6s both;
 }
-
 
 .storyboard-head,
 .storyboard-legend {
@@ -500,9 +523,15 @@ a {
   background: #59615f;
 }
 
-.story-window-dots span:first-child { background: #e26859; }
-.story-window-dots span:nth-child(2) { background: #d5a945; }
-.story-window-dots span:nth-child(3) { background: #4da56e; }
+.story-window-dots span:first-child {
+  background: #e26859;
+}
+.story-window-dots span:nth-child(2) {
+  background: #d5a945;
+}
+.story-window-dots span:nth-child(3) {
+  background: #4da56e;
+}
 
 .story-terminal-title {
   overflow: hidden;
@@ -733,7 +762,10 @@ a {
   color: #7f8b87;
   cursor: pointer;
   font-size: 10px;
-  transition: color var(--speed-interaction) var(--ease-out-quad), background-color var(--speed-interaction) var(--ease-out-quad), transform var(--speed-interaction) var(--ease-out-quad);
+  transition:
+    color var(--speed-interaction) var(--ease-out-quad),
+    background-color var(--speed-interaction) var(--ease-out-quad),
+    transform var(--speed-interaction) var(--ease-out-quad);
 }
 
 .phase-controls button {
@@ -757,7 +789,9 @@ a {
   color: rgba(245, 250, 247, 0.9);
   font-family: var(--font-monospace);
   box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.16);
-  transition: background-color var(--speed-regular-transition) var(--ease-out-quad), border-color var(--speed-regular-transition) var(--ease-out-quad);
+  transition:
+    background-color var(--speed-regular-transition) var(--ease-out-quad),
+    border-color var(--speed-regular-transition) var(--ease-out-quad);
 }
 
 .terminal-demo::after {
@@ -921,7 +955,8 @@ a {
   background: var(--side-glance-accent);
   color: #08100e;
   font-weight: var(--font-weight-bold);
-  transition: background-color var(--speed-regular-transition) var(--ease-out-quad);
+  transition: background-color var(--speed-regular-transition)
+    var(--ease-out-quad);
 }
 
 .tmux-window {
@@ -1054,7 +1089,10 @@ a {
   color: #9ba7a3;
   cursor: pointer;
   font-size: 9px;
-  transition: border-color var(--speed-interaction) var(--ease-out-quad), color var(--speed-interaction) var(--ease-out-quad), transform var(--speed-interaction) var(--ease-out-quad);
+  transition:
+    border-color var(--speed-interaction) var(--ease-out-quad),
+    color var(--speed-interaction) var(--ease-out-quad),
+    transform var(--speed-interaction) var(--ease-out-quad);
 }
 
 .copy-button:hover {
@@ -1420,7 +1458,11 @@ a {
   border: 1px solid rgba(32, 189, 169, 0.28);
   border-radius: 50%;
   place-items: center;
-  background: radial-gradient(circle, rgba(32, 189, 169, 0.18), rgba(32, 189, 169, 0.03));
+  background: radial-gradient(
+    circle,
+    rgba(32, 189, 169, 0.18),
+    rgba(32, 189, 169, 0.03)
+  );
   color: #d9eeea;
   box-shadow: 0 0 70px rgba(32, 189, 169, 0.12);
 }
@@ -1588,8 +1630,12 @@ a {
 }
 
 @keyframes hero-illustration-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes storyboard-shine {
@@ -1598,7 +1644,9 @@ a {
     mask-position: 0% 25%;
   }
 
-  20% { opacity: 1; }
+  20% {
+    opacity: 1;
+  }
 
   100% {
     opacity: 0;
@@ -1607,10 +1655,15 @@ a {
 }
 
 @keyframes cursor-blink {
-  0%, 48% { opacity: 1; }
-  49%, 100% { opacity: 0; }
+  0%,
+  48% {
+    opacity: 1;
+  }
+  49%,
+  100% {
+    opacity: 0;
+  }
 }
-
 
 @media (max-width: 1050px) {
   .hero {

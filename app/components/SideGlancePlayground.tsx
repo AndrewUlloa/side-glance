@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { type CSSProperties, useState } from "react";
 
 import {
-  visualForPhase,
   type PlaygroundChannel,
   type PlaygroundPhase,
+  visualForPhase,
 } from "./playground-model";
 
 const phases: Array<{ phase: PlaygroundPhase; label: string }> = [
@@ -29,13 +29,18 @@ export function SideGlancePlayground() {
   const [channel, setChannel] = useState<PlaygroundChannel>("both");
   const [elapsed, setElapsed] = useState(60);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
-    "idle",
+    "idle"
   );
   const visual = visualForPhase(phase, elapsed);
+  const copyLabel = {
+    copied: "Copied",
+    failed: "Copy failed",
+    idle: "Copy install",
+  }[copyState];
   const style = {
     "--side-glance-wash": `#${visual.wash}`,
     "--side-glance-accent": `#${visual.accent}`,
-    "--side-glance-urgency": visual.urgency / 1_000,
+    "--side-glance-urgency": visual.urgency / 1000,
   } as CSSProperties;
 
   async function copyInstallCommand() {
@@ -48,7 +53,7 @@ export function SideGlancePlayground() {
   }
 
   return (
-    <section className="playground" aria-labelledby="playground-title">
+    <section aria-labelledby="playground-title" className="playground">
       <div className="playground-head">
         <div>
           <span className="playground-kicker">Live state model</span>
@@ -59,13 +64,17 @@ export function SideGlancePlayground() {
         </div>
       </div>
 
-      <div className="phase-controls" aria-label="Choose a lifecycle state">
+      <div
+        aria-label="Choose a lifecycle state"
+        className="phase-controls"
+        role="group"
+      >
         {phases.map((item) => (
           <button
-            type="button"
-            key={item.phase}
             aria-pressed={phase === item.phase}
+            key={item.phase}
             onClick={() => setPhase(item.phase)}
+            type="button"
           >
             {item.label}
           </button>
@@ -80,7 +89,7 @@ export function SideGlancePlayground() {
         style={style}
       >
         <div className="terminal-bar">
-          <div className="window-dots" aria-hidden="true">
+          <div aria-hidden="true" className="window-dots">
             <span />
             <span />
             <span />
@@ -95,7 +104,8 @@ export function SideGlancePlayground() {
             <span>~</span> side-glance run -- claude
           </div>
           <div className="terminal-line">
-            <span className="terminal-prompt">❯</span> Refactor the lifecycle controller
+            <span className="terminal-prompt">❯</span> Refactor the lifecycle
+            controller
           </div>
           <div className="terminal-log">
             <span className="terminal-tree">├─</span>
@@ -113,7 +123,7 @@ export function SideGlancePlayground() {
           </div>
           <div className="terminal-cursor-line">
             <span className="terminal-prompt">❯</span>
-            <span className="terminal-cursor" aria-hidden="true" />
+            <span aria-hidden="true" className="terminal-cursor" />
           </div>
         </div>
         <div className="tmux-bar">
@@ -126,12 +136,12 @@ export function SideGlancePlayground() {
         </div>
       </div>
 
-      <div className="playground-status" aria-live="polite" aria-atomic="true">
+      <div aria-atomic="true" aria-live="polite" className="playground-status">
         <div>
           <span
+            aria-hidden="true"
             className="status-swatch"
             style={{ backgroundColor: `#${visual.accent}` }}
-            aria-hidden="true"
           />
           <strong>{visual.label}</strong>
           <span>{visual.urgency / 10}% heat</span>
@@ -146,42 +156,46 @@ export function SideGlancePlayground() {
         </div>
         <input
           id="elapsed-range"
-          type="range"
-          min="0"
           max="300"
-          step="5"
-          value={elapsed}
+          min="0"
           onChange={(event) => {
             setElapsed(Number(event.currentTarget.value));
             setPhase("completed");
           }}
+          step="5"
+          type="range"
+          value={elapsed}
         />
-        <div className="range-ticks" aria-hidden="true">
+        <div aria-hidden="true" className="range-ticks">
           <span>just now</span>
           <span>5 min</span>
         </div>
       </div>
 
       <div className="playground-foot">
-        <div className="channel-controls" aria-label="Choose renderer channels">
+        <div
+          aria-label="Choose renderer channels"
+          className="channel-controls"
+          role="group"
+        >
           {channels.map((item) => (
             <button
-              type="button"
-              key={item.channel}
               aria-pressed={channel === item.channel}
+              key={item.channel}
               onClick={() => setChannel(item.channel)}
+              type="button"
             >
               {item.label}
             </button>
           ))}
         </div>
-        <button className="copy-button" type="button" onClick={copyInstallCommand}>
+        <button
+          className="copy-button"
+          onClick={copyInstallCommand}
+          type="button"
+        >
           <CopyIcon />
-          {copyState === "copied"
-            ? "Copied"
-            : copyState === "failed"
-              ? "Copy failed"
-              : "Copy install"}
+          {copyLabel}
         </button>
       </div>
     </section>
@@ -190,8 +204,8 @@ export function SideGlancePlayground() {
 
 function CopyIcon() {
   return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-      <rect x="5.5" y="5.5" width="7" height="7" rx="1.5" />
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 16 16">
+      <rect height="7" rx="1.5" width="7" x="5.5" y="5.5" />
       <path d="M3.5 10.5h-.25A1.75 1.75 0 0 1 1.5 8.75v-5.5A1.75 1.75 0 0 1 3.25 1.5h5.5a1.75 1.75 0 0 1 1.75 1.75v.25" />
     </svg>
   );

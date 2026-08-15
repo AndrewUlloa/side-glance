@@ -67,8 +67,8 @@ export default function Home() {
     <div className="site-shell">
       <MotionOrchestrator />
       <header className="site-header">
-        <nav className="nav-wrap" aria-label="Primary navigation">
-          <a className="brand" href="#top" aria-label="Side Glance home">
+        <nav aria-label="Primary navigation" className="nav-wrap">
+          <a aria-label="Side Glance home" className="brand" href="#top">
             <SideGlanceMark />
             <span>Side Glance</span>
           </a>
@@ -80,8 +80,8 @@ export default function Home() {
           <a
             className="nav-github"
             href="https://github.com/AndrewUlloa/side-glance"
-            target="_blank"
             rel="noreferrer"
+            target="_blank"
           >
             GitHub <span aria-hidden="true">↗</span>
           </a>
@@ -89,7 +89,7 @@ export default function Home() {
       </header>
 
       <main id="top">
-        <section className="hero section-wrap" aria-labelledby="hero-title">
+        <section aria-labelledby="hero-title" className="hero section-wrap">
           <div className="hero-copy">
             <h1 id="hero-title">
               <span className="hero-enter hero-enter-line-1">
@@ -100,9 +100,9 @@ export default function Home() {
               </span>
             </h1>
             <p className="hero-lede hero-enter hero-enter-description">
-              Side Glance turns coding-agent lifecycle events into a quiet, thermal
-              status layer across terminal backgrounds and tmux—without reading
-              your work.
+              Side Glance turns coding-agent lifecycle events into a quiet,
+              thermal status layer across terminal backgrounds and tmux—without
+              reading your work.
             </p>
             <div className="hero-actions hero-enter hero-enter-announcement">
               <a className="primary-action" href="#playground">
@@ -120,9 +120,9 @@ export default function Home() {
         </section>
 
         <section
-          id="playground"
-          className="playground-section section-wrap"
           aria-labelledby="playground-section-title"
+          className="playground-section section-wrap"
+          id="playground"
         >
           <div className="section-heading playground-section-copy">
             <p className="section-kicker">Explore the lifecycle</p>
@@ -137,10 +137,14 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="trust-strip" aria-label="Supported coding agents">
+        <section aria-label="Supported coding agents" className="trust-strip">
           <div className="section-wrap trust-inner">
             <span>One lifecycle layer for</span>
-            <div className="agent-wordmarks" aria-label="Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any CLI">
+            <div
+              aria-label="Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any CLI"
+              className="agent-wordmarks"
+              role="group"
+            >
               <strong>Claude Code</strong>
               <strong>Codex</strong>
               <strong>Gemini CLI</strong>
@@ -152,9 +156,9 @@ export default function Home() {
         </section>
 
         <section
-          id="how-it-works"
-          className="story-section section-wrap"
           aria-labelledby="how-title"
+          className="story-section section-wrap"
+          id="how-it-works"
         >
           <div className="section-heading">
             <p className="section-kicker">One event path</p>
@@ -166,10 +170,7 @@ export default function Home() {
           </div>
           <div className="step-grid">
             {steps.map((step) => (
-              <article
-                className="step-card"
-                key={step.number}
-              >
+              <article className="step-card" key={step.number}>
                 <div className="step-number">{step.number}</div>
                 <h3>{step.title}</h3>
                 <p>{step.copy}</p>
@@ -179,25 +180,25 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="coverage" className="coverage-section">
+        <section className="coverage-section" id="coverage">
           <div className="section-wrap coverage-wrap">
             <div className="section-heading coverage-heading">
               <p className="section-kicker">Coverage without pretending</p>
               <h2>Every CLI gets a baseline. Native hooks add fidelity.</h2>
               <p>
-                Side Glance calls out the difference between a documented lifecycle
-                event, a notification, and a wrapper observation.
+                Side Glance calls out the difference between a documented
+                lifecycle event, a notification, and a wrapper observation.
               </p>
             </div>
-            <div className="coverage-table" role="table" aria-label="Coding agent coverage">
+            <div
+              aria-label="Coding agent coverage"
+              className="coverage-table"
+              role="table"
+            >
               {providers.map((provider) => (
-                <div
-                  className="coverage-row"
-                  role="row"
-                  key={provider.name}
-                >
+                <div className="coverage-row" key={provider.name} role="row">
                   <div className="provider-name" role="cell">
-                    <span className="provider-mark" aria-hidden="true">
+                    <span aria-hidden="true" className="provider-mark">
                       {provider.name.slice(0, 1)}
                     </span>
                     <strong>{provider.name}</strong>
@@ -217,10 +218,16 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="setup" className="setup-section section-wrap" aria-labelledby="setup-title">
+        <section
+          aria-labelledby="setup-title"
+          className="setup-section section-wrap"
+          id="setup"
+        >
           <div className="setup-copy">
             <p className="section-kicker">Start local</p>
-            <h2 id="setup-title">Wrap any agent. Add native hooks when you want them.</h2>
+            <h2 id="setup-title">
+              Wrap any agent. Add native hooks when you want them.
+            </h2>
             <p>
               The wrapper establishes terminal ownership and survives provider
               gaps. Installers merge native hooks transactionally, with backups,
@@ -234,34 +241,50 @@ export default function Home() {
             </ul>
           </div>
           <div
-            className="command-panel"
             aria-label="Side Glance setup commands"
+            className="command-panel"
+            role="region"
           >
             <div className="command-panel-head">
               <span>terminal</span>
               <span className="command-beta">public beta · v0.1</span>
             </div>
             <div className="command-block">
-              <span className="command-comment"># install the public beta from npm</span>
-              <code><span>$</span> npm install -g side-glance@beta</code>
+              <span className="command-comment">
+                # install the public beta from npm
+              </span>
+              <code>
+                <span>$</span> npm install -g side-glance@beta
+              </code>
             </div>
             <div className="command-block">
-              <span className="command-comment"># supervise any coding CLI</span>
-              <code><span>$</span> side-glance run -- claude</code>
+              <span className="command-comment">
+                # supervise any coding CLI
+              </span>
+              <code>
+                <span>$</span> side-glance run -- claude
+              </code>
             </div>
             <div className="command-block">
-              <span className="command-comment"># merge native hooks safely</span>
-              <code><span>$</span> side-glance install claude --json</code>
+              <span className="command-comment">
+                # merge native hooks safely
+              </span>
+              <code>
+                <span>$</span> side-glance install claude --json
+              </code>
             </div>
             <div className="command-foot">
-              <span className="command-ready-dot" aria-hidden="true" />
+              <span aria-hidden="true" className="command-ready-dot" />
               No account. No daemon. No telemetry.
             </div>
           </div>
         </section>
 
-        <section className="boundary-section section-wrap" aria-labelledby="boundary-title">
-          <div className="boundary-visual" aria-hidden="true">
+        <section
+          aria-labelledby="boundary-title"
+          className="boundary-section section-wrap"
+        >
+          <div aria-hidden="true" className="boundary-visual">
             <div className="boundary-ring boundary-ring-one" />
             <div className="boundary-ring boundary-ring-two" />
             <div className="boundary-core">
@@ -274,13 +297,15 @@ export default function Home() {
             <p>
               Normal session end, child exit, and forwarded signals clean up
               deterministically. A killed process, power loss, or dead terminal
-              cannot run an exit callback, so Side Glance reconciles stale ownership
-              on the next live controller action.
+              cannot run an exit callback, so Side Glance reconciles stale
+              ownership on the next live controller action.
             </p>
             <div className="boundary-facts">
               <div>
                 <strong>What Side Glance restores</strong>
-                <span>Its own terminal default and exact tmux option snapshot.</span>
+                <span>
+                  Its own terminal default and exact tmux option snapshot.
+                </span>
               </div>
               <div>
                 <strong>What no process can promise</strong>
@@ -290,14 +315,19 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="faq-section section-wrap" aria-labelledby="faq-title">
+        <section
+          aria-labelledby="faq-title"
+          className="faq-section section-wrap"
+        >
           <div className="section-heading faq-heading">
             <p className="section-kicker">Small print, in plain language</p>
             <h2 id="faq-title">Frequently asked questions</h2>
           </div>
           <div className="faq-list">
             <details>
-              <summary>Does Side Glance read my prompts or transcripts?</summary>
+              <summary>
+                Does Side Glance read my prompts or transcripts?
+              </summary>
               <p>
                 No. Adapters keep only provider, session, turn, lifecycle,
                 confidence, timing, and terminal-target metadata. Unknown fields
@@ -308,8 +338,8 @@ export default function Home() {
               <summary>Why use a wrapper if my CLI has hooks?</summary>
               <p>
                 Hooks provide semantic detail. The wrapper provides a stable
-                terminal identity and a cleanup supervisor when the child process
-                exits or receives a signal. They reinforce each other.
+                terminal identity and a cleanup supervisor when the child
+                process exits or receives a signal. They reinforce each other.
               </p>
             </details>
             <details>
@@ -323,28 +353,32 @@ export default function Home() {
             <details>
               <summary>What happens inside tmux?</summary>
               <p>
-                Side Glance snapshots four per-window options and restores their exact
-                local-or-inherited state. A whole terminal background remains
-                shared by panes in the same client, so per-pane washes are not
-                claimed.
+                Side Glance snapshots four per-window options and restores their
+                exact local-or-inherited state. A whole terminal background
+                remains shared by panes in the same client, so per-pane washes
+                are not claimed.
               </p>
             </details>
           </div>
         </section>
 
         <section
-          className="closing-section section-wrap"
           aria-labelledby="closing-title"
+          className="closing-section section-wrap"
         >
           <SideGlanceMark />
-          <h2 id="closing-title">Keep the work moving. Let the terminal ask for you.</h2>
+          <h2 id="closing-title">
+            Keep the work moving. Let the terminal ask for you.
+          </h2>
           <div className="closing-actions">
-            <a className="primary-action" href="#playground">Try the playground</a>
+            <a className="primary-action" href="#playground">
+              Try the playground
+            </a>
             <a
               className="text-action"
               href="https://github.com/AndrewUlloa/side-glance"
-              target="_blank"
               rel="noreferrer"
+              target="_blank"
             >
               Follow on GitHub ↗
             </a>
@@ -372,10 +406,10 @@ export default function Home() {
 function SideGlanceMark() {
   return (
     <svg
-      className="side-glance-mark"
-      viewBox="0 0 28 28"
       aria-hidden="true"
+      className="side-glance-mark"
       focusable="false"
+      viewBox="0 0 28 28"
     >
       <path d="M5.8 6.7h9.6a6.8 6.8 0 0 1 0 13.6H6.8" />
       <path d="m11.6 2.8-5.8 3.9 5.8 3.9" />

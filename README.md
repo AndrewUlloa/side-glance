@@ -82,7 +82,9 @@ npm run build
 npm test
 ```
 
-See [SPEC.md](./SPEC.md), [PLAN.md](./PLAN.md), [architecture](./docs/architecture.md), [adapter protocol](./docs/adapter-protocol.md), and the [edge-case audit](./docs/edge-case-audit.md).
+See [SPEC.md](./SPEC.md), [PLAN.md](./PLAN.md), [the CI/CD runbook](./docs/cicd.md),
+[architecture](./docs/architecture.md), [adapter protocol](./docs/adapter-protocol.md),
+and the [edge-case audit](./docs/edge-case-audit.md).
 
 ## Status
 
