@@ -72,7 +72,7 @@ jobs:
       - run: npm ci
       - run: mkdir -p release && npm pack --workspace side-glance --pack-destination release
       - run: npm publish release/*.tgz --access public --tag beta --dry-run
-      - uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: release/*.tgz
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -112,7 +112,7 @@ jobs:
         env:
           SIDE_GLANCE_RELEASE_TARGET: ${{ matrix.target }}
           SIDE_GLANCE_RELEASE_NODE_VERSION: 24.18.0
-      - uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: outputs/*.tar.gz
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
