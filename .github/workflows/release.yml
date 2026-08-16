@@ -75,7 +75,7 @@ jobs:
       - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: release/*.tgz
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: side-glance-npm-${{ needs.validate.outputs.source_sha }}
           path: release/*.tgz
@@ -115,7 +115,7 @@ jobs:
       - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: outputs/*.tar.gz
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: side-glance-native-${{ matrix.target }}-${{ needs.validate.outputs.source_sha }}
           path: |
@@ -150,7 +150,7 @@ jobs:
           cd release
           sha256sum --check SHA256SUMS
           ruby -c side-glance.rb
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: side-glance-release-bundle-${{ needs.validate.outputs.source_sha }}
           path: |
