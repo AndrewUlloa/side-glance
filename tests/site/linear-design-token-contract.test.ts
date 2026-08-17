@@ -86,7 +86,7 @@ test("focused homepage uses the exact static Figma assets and copy", async () =>
   assert.match(terminal, /The redirect behavior is ambiguous/u);
   assert.doesNotMatch(page, /src="\/hero-terminal\.png"/u);
   assert.match(css, /background-image:\s*url\("\/hero-surface\.png"\)/u);
-  assert.doesNotMatch(page, /MotionOrchestrator/u);
+  assert.match(page, /<MotionOrchestrator\s*\/>/u);
   assert.doesNotMatch(page, /TerminalStoryboard/u);
   assert.doesNotMatch(page, /SideGlancePlayground/u);
 });

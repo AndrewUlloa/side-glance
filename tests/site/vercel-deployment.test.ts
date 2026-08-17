@@ -13,6 +13,7 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   const vercelIgnore = await readFile(".vercelignore", "utf8");
   const packageLock = await readFile("package-lock.json", "utf8");
   const layout = await readFile("app/layout.tsx", "utf8");
+  const nextConfig = await readFile("next.config.ts", "utf8");
   const launch = await readFile("LAUNCH.md", "utf8");
   const readme = await readFile("README.md", "utf8");
 
@@ -23,6 +24,7 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   assert.equal(scripts["build:vercel"], undefined);
   assert.equal(vercel.framework, "nextjs");
   assert.equal(vercel.buildCommand, "npm run build");
+  assert.match(nextConfig, /turbopackFileSystemCacheForBuild:\s*false/u);
   for (const dependency of [
     "@cloudflare/vite-plugin",
     "@cloudflare/workers-types",

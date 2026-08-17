@@ -12,7 +12,7 @@ test("the header places an accessible icon-only GitHub action after Install", as
 
   assert.match(
     page,
-    /className="minimal-header-actions gap-header-actions-gap"/u
+    /className="minimal-header-actions minimal-page-enter minimal-page-enter-actions gap-header-actions-gap"/u
   );
   assert.match(page, /aria-label="View Side Glance on GitHub"/u);
   assert.match(page, /href="https:\/\/github\.com\/AndrewUlloa\/side-glance"/u);
