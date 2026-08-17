@@ -1,0 +1,133 @@
+.og-image-canvas {
+  display: flex;
+  width: 1200px;
+  height: 630px;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+  padding: 40px;
+  background: #fff;
+  color: #080b0a;
+  font-family: var(--font-alan-sans), sans-serif;
+}
+
+.og-image-canvas *,
+.og-image-canvas *::before,
+.og-image-canvas *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.og-image-brand {
+  display: flex;
+  height: 47px;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  font-size: 36px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.og-image-brand img {
+  display: block;
+  width: 52px;
+  height: 36px;
+}
+
+.og-image-main {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  align-items: center;
+  gap: 20px;
+  grid-template-columns: 461px minmax(0, 1fr);
+}
+
+.og-image-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.og-image-copy h1,
+.og-image-copy p {
+  margin: 0;
+  font-weight: 400;
+}
+
+.og-image-copy h1 {
+  font-size: 72px;
+  letter-spacing: -0.03em;
+  line-height: 1.11;
+}
+
+.og-image-copy p {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
+}
+
+.og-image-product-frame {
+  display: flex;
+  height: 378px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 29px 58px;
+  border-radius: 8px;
+  background-color: #273738;
+  background-image:
+    linear-gradient(rgb(22 35 36 / 12%), rgb(22 35 36 / 12%)),
+    url("/hero-surface.png");
+  background-position: center;
+  background-size: cover;
+}
+
+.og-image-terminal {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.og-image-terminal .mock-terminal {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 10px;
+  font-size: 8.5px;
+  grid-template-rows: 30px minmax(0, 1fr);
+}
+
+.og-image-terminal .mock-terminal-bar {
+  padding: 0 11px;
+  gap: 10px;
+  font-size: 8.5px;
+}
+
+.og-image-terminal .mock-window-dots {
+  gap: 4px;
+}
+
+.og-image-terminal .mock-window-dots span {
+  width: 8px;
+  height: 8px;
+}
+
+.og-image-terminal .mock-terminal-body {
+  gap: 6px;
+  padding: 10px 13px 8px;
+}
+
+.og-image-terminal .mock-claude-transcript {
+  gap: 5px;
+}
+
+.og-image-terminal .mock-claude-brand strong {
+  font-size: 10px;
+}
+
+.og-image-terminal .mock-claude-brand small {
+  font-size: 7px;
+}
