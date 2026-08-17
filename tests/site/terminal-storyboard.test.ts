@@ -35,11 +35,14 @@ test("focused hero shows Claude inside the real Side Glance lifecycle wash", () 
   assert.match(terminalShowcaseSource, /className="minimal-terminal-surface\b/);
   assert.match(
     terminalShowcaseSource,
-    /<InteractiveClaudeTerminal phase=\{phase\}\s*\/>/
+    /<InteractiveClaudeTerminal\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/
   );
   assert.match(interactiveTerminalSource, /className="mock-terminal"/);
   assert.match(interactiveTerminalSource, /Interactive Claude session/);
-  assert.match(interactiveTerminalSource, /visualForPhase\(phase, 60\)/);
+  assert.match(
+    interactiveTerminalSource,
+    /visualForPhase\(phase, elapsedSeconds\)/
+  );
   assert.match(interactiveTerminalSource, /install the public beta\./);
   assert.doesNotMatch(interactiveTerminalSource, /workingWash/);
   assert.match(interactiveTerminalSource, /className="mock-terminal-wash"/);

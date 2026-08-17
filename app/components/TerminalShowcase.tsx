@@ -1,40 +1,185 @@
 "use client";
 
-import Image from "next/image";
-import { type CSSProperties, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { type CSSProperties, useEffect, useState } from "react";
 
-import { InteractiveClaudeTerminal } from "./InteractiveClaudeTerminal";
+import {
+  InteractiveClaudeTerminal,
+  type TerminalScenario,
+} from "./InteractiveClaudeTerminal";
 import { type PlaygroundPhase, visualForPhase } from "./playground-model";
+
+/* ─────────────────────────────────────────────────────────
+ * ANIMATION STORYBOARD
+ *
+ * Read top-to-bottom. Each value is ms after page reveal.
+ *
+ *    0ms   terminal enters; long-loop Ready ring remains parked
+ * 2500ms   terminal settles; long-loop Ready ring fills 0 → 1
+ * 6500ms   ring completes; next terminal state activates
+ * 4000ms   each following ring fills before advancing again
+ * ───────────────────────────────────────────────────────── */
+
+const MILLISECONDS_PER_SECOND = 1000;
+const PAGE_REVEAL_EVENT = "side-glance:loading-complete";
+
+const TIMING = {
+  startPlayback: 2500, // wait for the terminal entrance to settle
+  advanceState: 4000, // fill one ring, then advance the terminal
+} as const;
+
+const PROGRESS_RING = {
+  center: 12, // SVG center point
+  radius: 9, // ring radius inside the 24px icon
+  strokeWidth: 2, // visible ring weight
+  viewBox: "0 0 24 24", // matches the lifecycle icon token
+  transition: {
+    duration: TIMING.advanceState / MILLISECONDS_PER_SECOND,
+    ease: "linear" as const,
+  },
+  resetTransition: { duration: 0 },
+} as const;
+
+const STORYBOARD_STAGE = {
+  waiting: -1, // page or terminal entrance is still in progress
+} as const;
+
+const INITIAL_STATE_INDEX = 3;
 
 const LIFECYCLE_STATES: ReadonlyArray<{
   id: string;
   label: string;
   phase: PlaygroundPhase;
+  elapsedSeconds: number;
+  scenario: TerminalScenario;
+  terminalId: string;
 }> = [
-  { id: "working", label: "Working", phase: "working" },
-  { id: "waiting", label: "Waiting", phase: "waiting" },
-  { id: "ready", label: "Ready", phase: "completed" },
-  { id: "failed", label: "Failed", phase: "failed" },
-  { id: "inactive", label: "Inactive", phase: "inactive" },
+  {
+    id: "working",
+    label: "Working",
+    phase: "working",
+    elapsedSeconds: 108,
+    scenario: "working",
+    terminalId: "tmux_01",
+  },
+  {
+    id: "waiting",
+    label: "Waiting",
+    phase: "waiting",
+    elapsedSeconds: 134,
+    scenario: "waiting",
+    terminalId: "tmux_02",
+  },
+  {
+    id: "ready-short",
+    label: "Ready · short",
+    phase: "completed",
+    elapsedSeconds: 18,
+    scenario: "ready-short",
+    terminalId: "tmux_03",
+  },
+  {
+    id: "ready-long",
+    label: "Ready · long",
+    phase: "completed",
+    elapsedSeconds: 1122,
+    scenario: "ready-long",
+    terminalId: "tmux_04",
+  },
 ];
 
 export function TerminalShowcase() {
-  const [phase, setPhase] = useState<PlaygroundPhase>("failed");
-  const selectedState = visualForPhase(phase, 60);
+  const [stage, setStage] = useState<number>(STORYBOARD_STAGE.waiting);
+  const shouldReduceMotion = useReducedMotion();
+  const activeStateIndex =
+    stage === STORYBOARD_STAGE.waiting
+      ? INITIAL_STATE_INDEX
+      : stage % LIFECYCLE_STATES.length;
+  const activeState = LIFECYCLE_STATES[activeStateIndex];
+  const phase = activeState.phase;
+  const isPlaybackRunning =
+    stage !== STORYBOARD_STAGE.waiting && !shouldReduceMotion;
+
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      return;
+    }
+
+    let startTimer: ReturnType<typeof setTimeout> | undefined;
+    const startPlayback = () => {
+      if (startTimer) {
+        clearTimeout(startTimer);
+      }
+      startTimer = setTimeout(
+        () => setStage(INITIAL_STATE_INDEX),
+        TIMING.startPlayback
+      );
+    };
+    const pageMotion = document.documentElement.dataset.pageMotion;
+
+    if (pageMotion === "ready" || pageMotion === "settled") {
+      startPlayback();
+    } else {
+      window.addEventListener(PAGE_REVEAL_EVENT, startPlayback, { once: true });
+    }
+
+    return () => {
+      if (startTimer) {
+        clearTimeout(startTimer);
+      }
+      window.removeEventListener(PAGE_REVEAL_EVENT, startPlayback);
+    };
+  }, [shouldReduceMotion]);
+
+  useEffect(() => {
+    if (stage === STORYBOARD_STAGE.waiting || shouldReduceMotion) {
+      return;
+    }
+
+    const advanceTimer = setTimeout(
+      () => setStage((currentStage) => currentStage + 1),
+      TIMING.advanceState
+    );
+
+    return () => clearTimeout(advanceTimer);
+  }, [shouldReduceMotion, stage]);
+
+  const selectState = (index: number) => {
+    setStage((currentStage) => {
+      if (currentStage === STORYBOARD_STAGE.waiting) {
+        return index;
+      }
+
+      const cycleStart =
+        Math.floor(currentStage / LIFECYCLE_STATES.length) *
+        LIFECYCLE_STATES.length;
+      const selectedStage = cycleStart + index;
+
+      return selectedStage <= currentStage
+        ? selectedStage + LIFECYCLE_STATES.length
+        : selectedStage;
+    });
+  };
 
   return (
     <figure className="minimal-terminal-showcase gap-showcase">
       <div className="minimal-terminal-surface rounded-terminal-stage px-terminal-stage-x py-terminal-stage-y">
-        <InteractiveClaudeTerminal phase={phase} />
+        <InteractiveClaudeTerminal
+          elapsedSeconds={activeState.elapsedSeconds}
+          phase={phase}
+          scenario={activeState.scenario}
+          terminalId={activeState.terminalId}
+        />
       </div>
 
       <figcaption>
         <ul
-          aria-label="Choose a Side Glance agent lifecycle state"
+          aria-label="Choose a Side Glance terminal moment"
           className="minimal-lifecycle gap-lifecycle-gap"
         >
-          {LIFECYCLE_STATES.map((state) => {
-            const visual = visualForPhase(state.phase, 60);
+          {LIFECYCLE_STATES.map((state, index) => {
+            const visual = visualForPhase(state.phase, state.elapsedSeconds);
+            const isActive = activeState.id === state.id;
             const buttonStyle = {
               "--lifecycle-accent": `#${visual.accent}`,
             } as CSSProperties;
@@ -43,20 +188,17 @@ export function TerminalShowcase() {
               <li className="minimal-lifecycle-state" key={state.id}>
                 <button
                   aria-controls="side-glance-terminal"
-                  aria-pressed={phase === state.phase}
+                  aria-pressed={activeState.id === state.id}
                   className="minimal-lifecycle-button gap-lifecycle-state rounded-lifecycle px-lifecycle-x py-lifecycle-y text-lifecycle"
                   data-state={state.id}
-                  onClick={() => setPhase(state.phase)}
+                  onClick={() => selectState(index)}
                   style={buttonStyle}
                   type="button"
                 >
-                  <Image
-                    alt=""
-                    aria-hidden="true"
-                    className="size-lifecycle-icon"
-                    height={24}
-                    src="/install-icon.svg"
-                    width={24}
+                  <LifecycleProgressRing
+                    isActive={isActive}
+                    isPlaying={isActive && isPlaybackRunning}
+                    key={isActive ? stage : state.id}
                   />
                   <span>{state.label}</span>
                 </button>
@@ -66,9 +208,48 @@ export function TerminalShowcase() {
         </ul>
 
         <span aria-live="polite" className="sr-only">
-          Showing the {selectedState.label} lifecycle state.
+          Showing the {activeState.label} terminal moment.
         </span>
       </figcaption>
     </figure>
+  );
+}
+
+function LifecycleProgressRing({
+  isActive,
+  isPlaying,
+}: {
+  isActive: boolean;
+  isPlaying: boolean;
+}) {
+  const pathLength = isActive ? 1 : 0;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="minimal-lifecycle-progress size-lifecycle-icon"
+      focusable="false"
+      viewBox={PROGRESS_RING.viewBox}
+    >
+      <circle
+        className="minimal-lifecycle-progress-track"
+        cx={PROGRESS_RING.center}
+        cy={PROGRESS_RING.center}
+        r={PROGRESS_RING.radius}
+        strokeWidth={PROGRESS_RING.strokeWidth}
+      />
+      <motion.circle
+        animate={{ pathLength }}
+        className="minimal-lifecycle-progress-value"
+        cx={PROGRESS_RING.center}
+        cy={PROGRESS_RING.center}
+        initial={{ pathLength: isPlaying ? 0 : pathLength }}
+        r={PROGRESS_RING.radius}
+        strokeWidth={PROGRESS_RING.strokeWidth}
+        transition={
+          isPlaying ? PROGRESS_RING.transition : PROGRESS_RING.resetTransition
+        }
+      />
+    </svg>
   );
 }

@@ -12,11 +12,68 @@ import { type PlaygroundPhase, visualForPhase } from "./playground-model";
 
 const INPUT_MAX_LENGTH = 120;
 
-const INITIAL_ACTIONS = [
-  ["Read", "app/auth/callback.ts"],
-  ["Update", "app/auth/callback.ts"],
-  ["Bash", "npm test -- auth-callback"],
-] as const;
+export type TerminalScenario =
+  | "working"
+  | "waiting"
+  | "ready-short"
+  | "ready-long";
+
+interface TerminalScenarioContent {
+  actions: readonly (readonly [string, string])[];
+  activity: string;
+  error?: string;
+  final: string;
+  opening: string;
+  prompt: string;
+}
+
+const TERMINAL_SCENARIOS: Record<TerminalScenario, TerminalScenarioContent> = {
+  working: {
+    prompt: "Refactor the session lease resolver and run focused tests.",
+    opening: "I’m tracing the ownership handoff, then I’ll verify it.",
+    actions: [
+      ["Read", "src/core/leases.ts"],
+      ["Update", "src/core/leases.ts"],
+      ["Bash", "npm test -- leases"],
+    ],
+    final: "The focused lease tests are running now…",
+    activity: "✻ Working for 1m 48s",
+  },
+  waiting: {
+    prompt: "Update the auth callback and run the focused tests.",
+    opening: "I’ll trace the callback, update the handler, then verify it.",
+    actions: [
+      ["Read", "app/auth/callback.ts"],
+      ["Update", "app/auth/callback.ts"],
+      ["Bash", "npm test -- auth-callback"],
+    ],
+    error: "Test failed · expected /dashboard · received /",
+    final: "The redirect behavior is ambiguous. Which route should win?",
+    activity: "✻ Worked for 2m 14s",
+  },
+  "ready-short": {
+    prompt: "Add the missing Codex permission hook and run focused tests.",
+    opening: "I’ll update the adapter mapping and verify the event contract.",
+    actions: [
+      ["Read", "src/adapters/codex.ts"],
+      ["Update", "src/adapters/codex.ts"],
+      ["Bash", "npm test -- adapters"],
+    ],
+    final: "The permission hook is mapped and all focused adapter tests pass.",
+    activity: "✻ Worked for 18s",
+  },
+  "ready-long": {
+    prompt: "Reconcile shared tmux ownership and run the full release suite.",
+    opening: "I’ll harden the handoff, then verify every release gate.",
+    actions: [
+      ["Read", "src/core/controller.ts"],
+      ["Update", "src/core/leases.ts"],
+      ["Bash", "npm test"],
+    ],
+    final: "Ownership reconciliation is complete. All release checks pass.",
+    activity: "✻ Worked for 18m 42s",
+  },
+};
 
 const SLASH_COMMANDS = [
   { command: "/model", description: "switch models", id: "model" },
@@ -309,11 +366,17 @@ function getInteractionAnnouncement(
 }
 
 interface InteractiveClaudeTerminalProps {
+  elapsedSeconds?: number;
   phase?: PlaygroundPhase;
+  scenario?: TerminalScenario;
+  terminalId?: string;
 }
 
 export function InteractiveClaudeTerminal({
-  phase = "failed",
+  elapsedSeconds = 1122,
+  phase = "completed",
+  scenario = "ready-long",
+  terminalId = "tmux_04",
 }: InteractiveClaudeTerminalProps) {
   const [draft, setDraft] = useState("");
   const [submittedPrompt, setSubmittedPrompt] = useState("");
@@ -376,7 +439,8 @@ export function InteractiveClaudeTerminal({
     closeMenu("Install Side Glance to try it in your terminal.");
   };
 
-  const visual = visualForPhase(phase, 60);
+  const visual = visualForPhase(phase, elapsedSeconds);
+  const transcript = TERMINAL_SCENARIOS[scenario];
   const terminalStyle = {
     "--terminal-current-accent": `#${visual.accent}`,
     "--terminal-current-wash": `#${visual.wash}`,
@@ -395,6 +459,7 @@ export function InteractiveClaudeTerminal({
       aria-label={`Interactive Claude session showing the ${visual.label} Side Glance state`}
       className="mock-terminal"
       data-phase={phase}
+      data-scenario={scenario}
       id="side-glance-terminal"
       style={terminalStyle}
     >
@@ -428,18 +493,16 @@ export function InteractiveClaudeTerminal({
 
             <p className="mock-claude-prompt">
               <span aria-hidden="true">❯</span>
-              <span>Update the auth callback and run the focused tests.</span>
+              <span>{transcript.prompt}</span>
             </p>
 
             <p className="mock-claude-response">
               <span aria-hidden="true">●</span>
-              <span>
-                I’ll trace the callback, update the handler, then verify it.
-              </span>
+              <span>{transcript.opening}</span>
             </p>
 
             <div className="mock-claude-actions">
-              {INITIAL_ACTIONS.map(([action, detail]) => (
+              {transcript.actions.map(([action, detail]) => (
                 <p key={action}>
                   <span aria-hidden="true">⎿</span>
                   <strong>{action}</strong> {detail}
@@ -447,19 +510,19 @@ export function InteractiveClaudeTerminal({
               ))}
             </div>
 
-            <p className="mock-claude-error">
-              <span aria-hidden="true">⎿</span>
-              <span>Test failed · expected /dashboard · received /</span>
-            </p>
+            {transcript.error ? (
+              <p className="mock-claude-error">
+                <span aria-hidden="true">⎿</span>
+                <span>{transcript.error}</span>
+              </p>
+            ) : null}
 
             <p className="mock-claude-response mock-claude-final">
               <span aria-hidden="true">●</span>
-              <span>
-                The redirect behavior is ambiguous. Which route should win?
-              </span>
+              <span>{transcript.final}</span>
             </p>
 
-            <p className="mock-claude-worked">✻ Worked for 2m 14s</p>
+            <p className="mock-claude-worked">{transcript.activity}</p>
 
             {submittedPrompt ? (
               <>
@@ -524,7 +587,7 @@ export function InteractiveClaudeTerminal({
 
           <footer className="mock-claude-chrome">
             <p>
-              <span>[LW1]</span>
+              <span>{terminalId}</span>
               <strong>{selectedModelLabel}</strong>
               <span>side-glance</span>
               <span>ctx ▰▰▱▱ 38%</span>

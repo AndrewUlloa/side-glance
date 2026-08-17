@@ -18,17 +18,29 @@ test("the launch page follows the vertical Figma showcase while keeping the term
     showcase,
     /className="minimal-terminal-surface rounded-terminal-stage px-terminal-stage-x py-terminal-stage-y"/u
   );
-  assert.match(showcase, /<InteractiveClaudeTerminal phase=\{phase\}\s*\/>/u);
+  assert.match(
+    showcase,
+    /<InteractiveClaudeTerminal\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/u
+  );
   assert.doesNotMatch(showcase, /hero-terminal\.png/u);
 
-  for (const state of ["Working", "Waiting", "Ready", "Failed", "Inactive"]) {
-    assert.match(showcase, new RegExp(`label: "${state}"`, "u"));
-    assert.match(showcase, new RegExp(`id: "${state.toLowerCase()}"`, "u"));
+  for (const [id, label] of [
+    ["working", "Working"],
+    ["waiting", "Waiting"],
+    ["ready-short", "Ready · short"],
+    ["ready-long", "Ready · long"],
+  ]) {
+    assert.match(showcase, new RegExp(`id: "${id}"`, "u"));
+    assert.match(showcase, new RegExp(`label: "${label}"`, "u"));
   }
 
   assert.match(showcase, /className="minimal-lifecycle gap-lifecycle-gap"/u);
   assert.match(showcase, /data-state=\{state\.id\}/u);
-  assert.match(showcase, /src="\/install-icon\.svg"/u);
+  assert.match(
+    showcase,
+    /className="minimal-lifecycle-progress size-lifecycle-icon"/u
+  );
+  assert.doesNotMatch(showcase, /src="\/install-icon\.svg"/u);
 
   const expectedTokens = [
     "--spacing-site-gutter: clamp(1.5rem, 7.937vw, 7.5rem)",

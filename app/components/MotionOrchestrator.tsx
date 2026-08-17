@@ -2,8 +2,19 @@
 
 import { useLayoutEffect } from "react";
 
-const animatedKeys = new Set<string>();
-const heroKey = "side-glance-homepage-hero";
+import { LINEAR_MOTION } from "../lib/motion-tokens";
+
+const PAGE_REVEAL_EVENT = "side-glance:loading-complete";
+const PAGE_ACTION_LEAD =
+  LINEAR_MOTION.lineTwoDelay - LINEAR_MOTION.lineOneDelay;
+const PAGE_REVEAL_DURATION_MS =
+  (LINEAR_MOTION.illustrationDelay -
+    LINEAR_MOTION.lineOneDelay +
+    PAGE_ACTION_LEAD +
+    LINEAR_MOTION.illustrationDuration) *
+  1000;
+
+let hasRevealedPage = false;
 
 export function MotionOrchestrator() {
   useLayoutEffect(() => {
@@ -13,18 +24,31 @@ export function MotionOrchestrator() {
     const shouldAnimate = !(
       reducedMotion.matches ||
       hasHash ||
-      animatedKeys.has(heroKey)
+      hasRevealedPage
     );
-
-    root.dataset.heroMotion = shouldAnimate ? "ready" : "settled";
-    animatedKeys.add(heroKey);
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
 
     const settle = () => {
-      root.dataset.heroMotion = "settled";
+      if (settleTimer) {
+        clearTimeout(settleTimer);
+      }
+      root.dataset.pageMotion = "settled";
+      hasRevealedPage = true;
     };
-    if (shouldAnimate) {
-      window.addEventListener("scroll", settle, { once: true, passive: true });
-    }
+
+    const reveal = () => {
+      if (!shouldAnimate || reducedMotion.matches) {
+        settle();
+        return;
+      }
+
+      root.dataset.pageMotion = "ready";
+      hasRevealedPage = true;
+      settleTimer = setTimeout(settle, PAGE_REVEAL_DURATION_MS);
+    };
+
+    root.dataset.pageMotion = shouldAnimate ? "pending" : "settled";
+    window.addEventListener(PAGE_REVEAL_EVENT, reveal, { once: true });
 
     const handleMotionPreference = (event: MediaQueryListEvent) => {
       if (event.matches) {
@@ -34,9 +58,12 @@ export function MotionOrchestrator() {
     reducedMotion.addEventListener("change", handleMotionPreference);
 
     return () => {
-      window.removeEventListener("scroll", settle);
+      if (settleTimer) {
+        clearTimeout(settleTimer);
+      }
+      window.removeEventListener(PAGE_REVEAL_EVENT, reveal);
       reducedMotion.removeEventListener("change", handleMotionPreference);
-      delete root.dataset.heroMotion;
+      delete root.dataset.pageMotion;
     };
   }, []);
 
