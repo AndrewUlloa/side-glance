@@ -28,7 +28,11 @@ test("server-renders the focused Side Glance launch hero", async () => {
   const text = renderedText(html);
   assert.match(
     html,
-    /<title>Side Glance — attention for coding agents<\/title>/i
+    /<title>Side Glance — Long loops\. Short glances\.<\/title>/i
+  );
+  assert.match(
+    html,
+    /<meta name="description" content="Know which loop needs judgment\. Let the others keep running\."\/>/i
   );
   assert.match(text, /Long loops\. Short glances\./);
   assert.match(text, /Know which loop needs judgment\./);
