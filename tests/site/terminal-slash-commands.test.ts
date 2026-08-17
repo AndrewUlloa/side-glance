@@ -55,7 +55,9 @@ test("the terminal mirrors Cursor's slash menu and keeps model switching local",
   assert.match(terminal, /setSelectedModel/u);
   assert.match(terminal, /resetDemo/u);
   assert.match(terminal, /Opus 5 \(1M context\)/u);
-  assert.match(terminal, /<span>tmux-01<\/span>/u);
+  assert.match(terminal, /terminalId\s*=\s*"tmux_04"/u);
+  assert.match(terminal, /<span>\{terminalId\}<\/span>/u);
+  assert.doesNotMatch(terminal, /tmux-01/u);
   assert.doesNotMatch(terminal, /\[LW1\]/u);
   assert.doesNotMatch(terminal, /\bfetch\s*\(/u);
   assert.doesNotMatch(terminal, /localStorage|sessionStorage/u);

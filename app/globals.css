@@ -2550,9 +2550,25 @@ a {
   outline-offset: 3px;
 }
 
-.minimal-lifecycle-button img {
+.minimal-lifecycle-progress {
   display: block;
   flex: none;
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+
+.minimal-lifecycle-progress-track,
+.minimal-lifecycle-progress-value {
+  fill: none;
+}
+
+.minimal-lifecycle-progress-track {
+  stroke: rgb(0 0 0 / 16%);
+}
+
+.minimal-lifecycle-progress-value {
+  stroke: var(--lifecycle-accent);
+  stroke-linecap: round;
 }
 
 .mock-terminal {

@@ -80,10 +80,13 @@ test("focused homepage uses the exact static Figma assets and copy", async () =>
   assert.match(page, /<InstallButton/u);
   assert.match(installButton, /src="\/install-icon\.svg"/u);
   assert.match(page, /<TerminalShowcase\s*\/>/u);
-  assert.match(showcase, /<InteractiveClaudeTerminal phase=\{phase\}\s*\/>/u);
+  assert.match(
+    showcase,
+    /<InteractiveClaudeTerminal\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/u
+  );
   assert.match(terminal, /className="mock-terminal"/u);
   assert.match(terminal, /Interactive Claude session/u);
-  assert.match(terminal, /The redirect behavior is ambiguous/u);
+  assert.match(terminal, /Ownership reconciliation is complete/u);
   assert.doesNotMatch(page, /src="\/hero-terminal\.png"/u);
   assert.match(css, /background-image:\s*url\("\/hero-surface\.png"\)/u);
   assert.match(page, /<MotionOrchestrator\s*\/>/u);

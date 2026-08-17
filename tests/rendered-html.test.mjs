@@ -37,8 +37,12 @@ test("server-renders the focused Side Glance launch hero", async () => {
   assert.match(html, /install the public beta from npm · public beta · v0\.1/);
   assert.match(text, /Claude Code/);
   assert.match(text, /Opus 5 \(1M context\)/);
-  assert.match(text, /Update the auth callback and run the focused tests\./);
-  assert.match(text, /Test failed/);
+  assert.match(
+    text,
+    /Reconcile shared tmux ownership and run the full release suite\./
+  );
+  assert.match(text, /Ownership reconciliation is complete\./);
+  assert.doesNotMatch(text, /Test failed/);
   assert.match(text, /Demo only · nothing is sent or saved/);
   assert.match(html, /Add a follow-up/);
   assert.doesNotMatch(html, /hero-terminal\.png/);
@@ -94,11 +98,14 @@ test("keeps the focused site accessible, responsive, and product-safe", async ()
   assert.match(page, /aria-label="Side Glance home"/);
   assert.match(page, /idleAriaLabel="install the public beta from npm/u);
   assert.match(page, /<TerminalShowcase\s*\/>/);
-  assert.match(showcase, /<InteractiveClaudeTerminal phase=\{phase\}\s*\/>/);
-  assert.match(showcase, /aria-pressed=\{phase === state\.phase\}/);
+  assert.match(
+    showcase,
+    /<InteractiveClaudeTerminal\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/
+  );
+  assert.match(showcase, /aria-pressed=\{activeState\.id === state\.id\}/);
   assert.match(terminal, /Interactive Claude session/);
   assert.match(terminal, /aria-label="Sample agent conversation"/);
-  assert.match(terminal, /visualForPhase\(phase, 60\)/);
+  assert.match(terminal, /visualForPhase\(phase, elapsedSeconds\)/);
   assert.match(terminal, /name="follow-up"/);
   assert.doesNotMatch(terminal, /\bfetch\s*\(/);
   assert.match(css, /background:\s*var\(--terminal-current-wash\)/);
