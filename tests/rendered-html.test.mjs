@@ -19,7 +19,7 @@ function renderedText(html) {
     .trim();
 }
 
-test("server-renders Side Glance's real product and live playground", async () => {
+test("server-renders the focused Side Glance launch hero", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -30,22 +30,22 @@ test("server-renders Side Glance's real product and live playground", async () =
     html,
     /<title>Side Glance — attention for coding agents<\/title>/i
   );
-  assert.match(text, /Your terminal knows when it needs you\./);
-  assert.match(html, /Try Side Glance/);
-  assert.match(text, /npm install -g side-glance@beta/);
-  assert.match(text, /side-glance run -- claude/);
-  assert.match(html, /Working/);
-  assert.match(html, /Waiting/);
-  assert.match(html, /Ready/);
-  assert.match(html, /Failed/);
-  assert.match(html, /Inactive/);
-  assert.match(html, /Claude Code/);
-  assert.match(html, /Codex/);
-  assert.match(html, /Gemini CLI/);
-  assert.match(html, /OpenCode/);
-  assert.match(html, /Aider/);
-  assert.match(html, /Recovery, not magic/);
-  assert.match(html, /Frequently asked questions/);
+  assert.match(text, /Long loops\. Short glances\./);
+  assert.match(text, /Know which loop needs judgment\./);
+  assert.match(text, /Let the others keep running\./);
+  assert.match(text, /Install/);
+  assert.match(html, /install the public beta from npm · public beta · v0\.1/);
+  assert.match(text, /Claude Code/);
+  assert.match(text, /Opus 5 \(1M context\)/);
+  assert.match(text, /Update the auth callback and run the focused tests\./);
+  assert.match(text, /Test failed/);
+  assert.match(text, /Demo only · nothing is sent or saved/);
+  assert.match(html, /Add a follow-up/);
+  assert.doesNotMatch(html, /hero-terminal\.png/);
+  assert.match(html, /side-glance-mark\.svg/);
+  assert.doesNotMatch(html, /Try Side Glance/);
+  assert.doesNotMatch(html, /Recovery, not magic/);
+  assert.doesNotMatch(html, /Frequently asked questions/);
   assert.doesNotMatch(text, /\bSignal\b|terminal-signal/);
   assert.doesNotMatch(html, /Your site is taking shape|react-loading-skeleton/);
   assert.doesNotMatch(html, /codex-preview/);
@@ -73,32 +73,43 @@ test("server-renders Side Glance's real product and live playground", async () =
   assert.doesNotMatch(loadedJavaScript, /data-agentation-theme/);
 });
 
-test("keeps the site wired to shared phase data and accessible controls", async () => {
-  const [page, playground, model, css, layout] = await Promise.all([
+test("keeps the focused site accessible, responsive, and product-safe", async () => {
+  const [page, showcase, terminal, css, layout] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(
-      new URL("../app/components/SideGlancePlayground.tsx", import.meta.url),
+      new URL("../app/components/TerminalShowcase.tsx", import.meta.url),
       "utf8"
     ),
     readFile(
-      new URL("../app/components/playground-model.ts", import.meta.url),
+      new URL(
+        "../app/components/InteractiveClaudeTerminal.tsx",
+        import.meta.url
+      ),
       "utf8"
     ),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /<SideGlancePlayground/);
-  assert.match(playground, /aria-pressed/);
-  assert.match(playground, /aria-live="polite"/);
-  assert.match(playground, /navigator\.clipboard/);
-  assert.match(playground, /type="range"/);
-  assert.match(model, /DEFAULT_SIDE_GLANCE_THEME/);
-  assert.match(model, /urgencyFromElapsed/);
+  assert.match(page, /aria-label="Side Glance home"/);
+  assert.match(page, /idleAriaLabel="install the public beta from npm/u);
+  assert.match(page, /<TerminalShowcase\s*\/>/);
+  assert.match(showcase, /<InteractiveClaudeTerminal phase=\{phase\}\s*\/>/);
+  assert.match(showcase, /aria-pressed=\{phase === state\.phase\}/);
+  assert.match(terminal, /Interactive Claude session/);
+  assert.match(terminal, /aria-label="Sample agent conversation"/);
+  assert.match(terminal, /visualForPhase\(phase, 60\)/);
+  assert.match(terminal, /name="follow-up"/);
+  assert.doesNotMatch(terminal, /\bfetch\s*\(/);
+  assert.match(css, /background:\s*var\(--terminal-current-wash\)/);
+  assert.doesNotMatch(page, /hero-terminal\.png/);
+  assert.doesNotMatch(page, /<SideGlancePlayground/);
+  assert.doesNotMatch(page, /<TerminalStoryboard/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /:focus-visible/);
-  assert.match(css, /@media\s*\(max-width:/);
+  assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(css, /overflow-x:\s*clip/);
+  assert.match(css, /\.minimal-home\s*\{[\s\S]*min-height:\s*100dvh/u);
   assert.match(layout, /metadataBase/);
   assert.match(layout, /openGraph/);
   assert.doesNotMatch(page, /_sites-preview|SkeletonPreview/);

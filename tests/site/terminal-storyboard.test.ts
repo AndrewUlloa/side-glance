@@ -6,6 +6,21 @@ const pageSource = await readFile(
   new URL("../../app/page.tsx", import.meta.url),
   "utf8"
 );
+const interactiveTerminalSource = await readFile(
+  new URL(
+    "../../app/components/InteractiveClaudeTerminal.tsx",
+    import.meta.url
+  ),
+  "utf8"
+);
+const terminalShowcaseSource = await readFile(
+  new URL("../../app/components/TerminalShowcase.tsx", import.meta.url),
+  "utf8"
+);
+const installButtonSource = await readFile(
+  new URL("../../app/components/InstallButton.tsx", import.meta.url),
+  "utf8"
+);
 const storyboardSource = await readFile(
   new URL("../../app/components/TerminalStoryboard.tsx", import.meta.url),
   "utf8"
@@ -15,20 +30,41 @@ const stylesheet = await readFile(
   "utf8"
 );
 
-test("hero tells the four-terminal origin story before the playground", () => {
-  assert.match(pageSource, /<TerminalStoryboard\s*\/?>/);
+test("focused hero shows Claude inside the real Side Glance lifecycle wash", () => {
+  assert.match(pageSource, /<TerminalShowcase\s*\/>/);
+  assert.match(terminalShowcaseSource, /className="minimal-terminal-surface\b/);
   assert.match(
-    pageSource,
-    /id="playground"[\s\S]*<SideGlancePlayground\s*\/?>/
+    terminalShowcaseSource,
+    /<InteractiveClaudeTerminal phase=\{phase\}\s*\/>/
   );
-  assert.ok(
-    pageSource.indexOf("<TerminalStoryboard") <
-      pageSource.indexOf("<SideGlancePlayground"),
-    "the four-terminal story should precede the interactive playground"
+  assert.match(interactiveTerminalSource, /className="mock-terminal"/);
+  assert.match(interactiveTerminalSource, /Interactive Claude session/);
+  assert.match(interactiveTerminalSource, /visualForPhase\(phase, 60\)/);
+  assert.match(interactiveTerminalSource, /install the public beta\./);
+  assert.doesNotMatch(interactiveTerminalSource, /workingWash/);
+  assert.match(interactiveTerminalSource, /className="mock-terminal-wash"/);
+  assert.match(interactiveTerminalSource, /Claude Code/);
+  assert.match(interactiveTerminalSource, /Opus 5 \(1M context\)/);
+  assert.doesNotMatch(interactiveTerminalSource, /mock-terminal-state/);
+  assert.doesNotMatch(interactiveTerminalSource, /mock-terminal-footer/);
+  assert.doesNotMatch(interactiveTerminalSource, /mock-terminal-failure/);
+  assert.match(
+    stylesheet,
+    /\.mock-terminal-wash\s*\{[\s\S]*background:\s*var\(--terminal-current-wash\)/
   );
+  assert.doesNotMatch(pageSource, /src="\/hero-terminal\.png"/);
+  assert.doesNotMatch(pageSource, /<TerminalStoryboard\s*\/?>/);
+  assert.doesNotMatch(pageSource, /<SideGlancePlayground\s*\/?>/);
 });
 
-test("hero stays focused on the headline, actions, and four-terminal story", () => {
+test("hero stays focused on one headline, one install action, and one product proof", () => {
+  assert.match(pageSource, /Long loops\./);
+  assert.match(pageSource, /Short glances\./);
+  assert.match(pageSource, /<InstallButton/u);
+  assert.match(
+    installButtonSource,
+    /className="minimal-install rounded-header-action text-header-action!"/
+  );
   assert.doesNotMatch(pageSource, /Local-first attention layer/);
   assert.doesNotMatch(pageSource, /className="eyebrow/);
   assert.doesNotMatch(pageSource, /className="hero-proof/);
@@ -77,14 +113,17 @@ test("reduced motion preserves server markup through the first hydration render"
   );
 });
 
-test("hero uses one compact dynamic viewport gutter on every side", () => {
-  const heroRule = stylesheet.match(/\.hero\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+test("focused hero uses responsive Tailwind gutters and the vertical Figma stack", () => {
+  const heroRule =
+    stylesheet.match(/\.minimal-home\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
-  assert.match(heroRule, /--hero-padding:\s*clamp\(24px, 4dvh, 48px\)/);
+  assert.match(heroRule, /min-height:\s*100dvh/);
+  assert.match(heroRule, /max-width:\s*1512px/);
+  assert.match(pageSource, /gap-layout-stack px-site-gutter pb-page-block/);
   assert.match(
-    heroRule,
-    /min-height:\s*calc\(100dvh - var\(--header-height\)\)/
+    stylesheet,
+    /--spacing-site-gutter:\s*clamp\(1\.5rem, 7\.937vw, 7\.5rem\)/
   );
-  assert.match(heroRule, /padding:\s*var\(--hero-padding\)/);
-  assert.doesNotMatch(stylesheet, /padding-block:\s*72px 64px/);
+  assert.match(heroRule, /overflow-x:\s*clip/);
+  assert.match(stylesheet, /\.minimal-hero\s*\{[^}]*flex-direction:\s*column/);
 });

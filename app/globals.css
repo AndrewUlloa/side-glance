@@ -1,8 +1,45 @@
 @import "tailwindcss";
 
+@theme {
+  --spacing-site-gutter: clamp(1.5rem, 7.937vw, 7.5rem);
+  --spacing-page-block: clamp(1.5rem, 2.778vw, 2.5rem);
+  --spacing-site-header: 3.25rem;
+  --spacing-layout-stack: 6rem;
+  --spacing-hero-copy: 2rem;
+  --spacing-showcase: 2rem;
+  --spacing-terminal-stage-x: 8rem;
+  --spacing-terminal-stage-y: 4rem;
+  --spacing-lifecycle-control-height: 2.5rem;
+  --spacing-lifecycle-gap: 4rem;
+  --spacing-lifecycle-state: 0.625rem;
+  --spacing-lifecycle-x: 1rem;
+  --spacing-lifecycle-y: 0.5rem;
+  --spacing-lifecycle-icon: 1.5rem;
+  --spacing-brand-mark-width: 2.1875rem;
+  --spacing-brand-mark-height: 1.5rem;
+  --spacing-brand-gap: 0.4375rem;
+  --spacing-header-action-icon: 1rem;
+  --spacing-header-action-gap: 0.375rem;
+  --spacing-header-action-x: 0.75rem;
+  --spacing-header-action-y: 0.5rem;
+  --spacing-header-actions-gap: 0.5rem;
+  --spacing-header-icon-button: 2rem;
+  --text-brand: 1.5rem;
+  --text-brand--line-height: 1;
+  --text-header-action: 1rem;
+  --text-header-action--line-height: 1;
+  --text-lifecycle: 1.5rem;
+  --text-lifecycle--line-height: 1;
+  --tracking-brand: -0.03em;
+  --radius-header-action: 9999px;
+  --radius-terminal-stage: 0.5rem;
+  --radius-lifecycle: 9999px;
+}
+
 :root {
+  color-scheme: dark;
   --font-regular:
-    var(--font-inter), "SF Pro Display", -apple-system, BlinkMacSystemFont,
+    var(--font-alan-sans), "SF Pro Display", -apple-system, BlinkMacSystemFont,
     "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Open Sans",
     "Helvetica Neue", sans-serif;
   --font-monospace:
@@ -80,6 +117,28 @@
   --motion-smooth: var(--ease-out-quad);
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg-marketing: #f8f9f7;
+  --color-bg-primary: #f5f6f4;
+  --color-bg-level-1: #ffffff;
+  --color-bg-level-2: #eef0ed;
+  --color-bg-level-3: #e5e8e4;
+  --color-text-primary: #111513;
+  --color-text-secondary: #303733;
+  --color-text-tertiary: #5f6964;
+  --color-text-quaternary: #7a837e;
+  --color-border-primary: #d5d9d5;
+  --color-border-secondary: #c6cbc7;
+  --color-border-tertiary: #b8beb9;
+  --color-border-translucent: #11151312;
+  --color-border-translucent-strong: #11151320;
+  --shadow-low: 0 2px 4px #1115130d;
+  --shadow-medium: 0 4px 24px #11151314;
+  --shadow-high: 0 7px 32px #1115131f;
+  --page: var(--color-bg-primary);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -94,10 +153,11 @@ body {
   overflow-x: clip;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: var(--font-inter);
+  font-family: var(--font-alan-sans);
   font-feature-settings: "cv01", "ss03";
   font-optical-sizing: auto;
   font-variation-settings: "opsz" auto;
+  letter-spacing: -0.03rem;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -157,6 +217,10 @@ a {
   transition:
     border-color var(--speed-quick-transition) var(--ease-out-quad),
     background-color var(--speed-quick-transition) var(--ease-out-quad);
+}
+
+:root[data-theme="light"] .site-header {
+  background: #f8f9f7dc;
 }
 
 .nav-wrap {
@@ -238,10 +302,63 @@ a {
 }
 
 .nav-github {
-  justify-self: end;
   color: #d5dedb;
   font-family: var(--font-monospace);
   font-size: 12px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 4px;
+}
+
+.theme-toggle {
+  display: grid;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-rounded);
+  place-items: center;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition-duration: var(--speed-interaction);
+  transition-property: background-color, color;
+  transition-timing-function: var(--ease-out-quad);
+}
+
+.theme-toggle:hover {
+  background: var(--color-bg-level-2);
+  color: var(--color-text-primary);
+}
+
+.theme-toggle-icon,
+.theme-toggle-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.theme-toggle-icon svg {
+  overflow: visible;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.55;
+}
+
+:root[data-theme="light"] .nav-github {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme="light"] .nav-links a:hover,
+:root[data-theme="light"] .nav-github:hover,
+:root[data-theme="light"] .text-action:hover,
+:root[data-theme="light"] .site-footer a:hover {
+  color: var(--color-text-primary);
 }
 
 .nav-github span {
@@ -385,6 +502,7 @@ a {
   border: 1px solid var(--color-border-translucent-strong);
   border-radius: var(--radius-12);
   background: #101112;
+  color: #f7f8f8;
   box-shadow: var(--shadow-high);
 }
 
@@ -685,6 +803,17 @@ a {
   transition-duration: var(--speed-regular-transition);
   transition-property: border-color, box-shadow, transform;
   transition-timing-function: var(--ease-out-quad);
+}
+
+:root[data-theme="light"] .playground {
+  --faint: #62666d;
+  --line: #ffffff0d;
+  --line-strong: #ffffff14;
+  border-color: #ffffff14;
+  background: #0f1011;
+  color: #f7f8f8;
+  box-shadow: 0 14px 48px #11151324;
+  color-scheme: dark;
 }
 
 .playground::before {
@@ -1235,6 +1364,31 @@ a {
   background-size: 44px 44px;
 }
 
+:root[data-theme="light"] .coverage-section {
+  background:
+    linear-gradient(rgba(17, 21, 19, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 21, 19, 0.035) 1px, transparent 1px),
+    #f0f2ef;
+  background-size: 44px 44px;
+}
+
+:root[data-theme="light"] .provider-mark,
+:root[data-theme="light"] .provider-level,
+:root[data-theme="light"] .check-list li,
+:root[data-theme="light"] .faq-list summary,
+:root[data-theme="light"] .footer-inner .brand {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme="light"] .provider-detail,
+:root[data-theme="light"] .boundary-facts span,
+:root[data-theme="light"] .faq-list p,
+:root[data-theme="light"] .footer-inner,
+:root[data-theme="light"] .step-card p,
+:root[data-theme="light"] .step-card code {
+  color: var(--color-text-tertiary);
+}
+
 .coverage-wrap {
   display: grid;
   align-items: start;
@@ -1358,6 +1512,12 @@ a {
   transition-duration: var(--speed-regular-transition);
   transition-property: border-color, box-shadow, translate;
   transition-timing-function: var(--ease-out-quad);
+}
+
+:root[data-theme="light"] .command-panel {
+  --line: #ffffff0d;
+  --line-strong: #ffffff14;
+  color-scheme: dark;
 }
 
 .command-panel-head {
@@ -1580,6 +1740,10 @@ a {
   width: 42px;
   height: 42px;
   color: #cfe2dc;
+}
+
+:root[data-theme="light"] .closing-section > .side-glance-mark {
+  color: var(--color-text-secondary);
 }
 
 .closing-section h2 {
@@ -2015,5 +2179,862 @@ a {
   .boundary-ring,
   .boundary-core {
     animation: none !important;
+  }
+}
+
+/* Focused launch page — Figma frame 65:2 */
+.minimal-home {
+  display: flex;
+  width: 100%;
+  max-width: 1512px;
+  min-height: 100dvh;
+  margin-inline: auto;
+  flex-direction: column;
+  overflow-x: clip;
+  background: #fff;
+  color: #000;
+}
+
+.minimal-header {
+  position: sticky;
+  z-index: 50;
+  top: 0;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  background: rgb(255 255 255 / 92%);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.minimal-brand,
+.minimal-github,
+.minimal-install {
+  display: inline-flex;
+  align-items: center;
+  color: #000;
+  text-decoration: none;
+}
+
+.minimal-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.minimal-brand {
+  font-family: var(--font-alan-sans);
+  font-weight: 400;
+}
+
+.minimal-brand img {
+  display: block;
+}
+
+.minimal-github {
+  flex: none;
+  justify-content: center;
+  background: #f6f5f3;
+  transition: background-color 160ms ease;
+}
+
+.minimal-github svg {
+  display: block;
+  fill: currentcolor;
+}
+
+.minimal-install {
+  appearance: none;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: #f6f5f3;
+  cursor: pointer;
+  font-family: var(--font-alan-sans);
+  letter-spacing: 0;
+  overflow: hidden;
+  transition: background-color 160ms ease;
+  white-space: nowrap;
+}
+
+.minimal-github:hover,
+.minimal-install:hover {
+  background: #eceae6;
+}
+
+.minimal-install[data-copied="true"] {
+  background: #e5f9ea;
+  color: #137a32;
+}
+
+.minimal-install-measure {
+  display: inline-flex;
+  width: max-content;
+  flex: 0 0 auto;
+}
+
+.minimal-install-inner {
+  display: inline-flex;
+}
+
+.minimal-install-state {
+  display: inline-flex;
+  align-items: center;
+}
+
+.minimal-install-state img,
+.minimal-install-state svg {
+  display: block;
+  flex: none;
+}
+
+.minimal-install-state svg {
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.minimal-install:focus-visible,
+.minimal-github:focus-visible,
+.minimal-brand:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid #000;
+  outline-offset: 4px;
+}
+
+.minimal-hero {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.minimal-copy {
+  display: flex;
+  width: 461px;
+  flex-direction: column;
+}
+
+.minimal-copy h1,
+.minimal-copy p {
+  margin: 0;
+  color: #000;
+  font-family: var(--font-alan-sans);
+  font-weight: 400;
+}
+
+.minimal-copy h1 {
+  font-size: 72px;
+  letter-spacing: -2.16px;
+  line-height: 1.08;
+}
+
+.minimal-copy p {
+  font-size: 24px;
+  letter-spacing: -0.72px;
+  line-height: 1.2;
+}
+
+.minimal-terminal-showcase {
+  display: flex;
+  width: 100%;
+  margin: 0;
+  flex-direction: column;
+  align-items: center;
+}
+
+.minimal-terminal-surface {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  background-image: url("/hero-surface.png");
+  background-position: center;
+  background-size: cover;
+}
+
+.minimal-terminal-showcase figcaption {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.minimal-lifecycle {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  list-style: none;
+}
+
+.minimal-lifecycle-state {
+  display: flex;
+}
+
+.minimal-lifecycle-button {
+  --lifecycle-accent: #71807d;
+  appearance: none;
+  display: inline-flex;
+  border: 0;
+  align-items: center;
+  justify-content: center;
+  background: #f6f5f3;
+  color: #000;
+  font-family: var(--font-alan-sans);
+  font-weight: 400;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+  white-space: nowrap;
+}
+
+.minimal-lifecycle-button:hover {
+  background: #eceae6;
+}
+
+.minimal-lifecycle-button:active {
+  transform: scale(0.98);
+}
+
+.minimal-lifecycle-button[aria-pressed="true"] {
+  background: #ebe9e5;
+  box-shadow: inset 0 0 0 2px var(--lifecycle-accent);
+}
+
+.minimal-lifecycle-button:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 3px;
+}
+
+.minimal-lifecycle-button img {
+  display: block;
+  flex: none;
+}
+
+.mock-terminal {
+  --terminal-current-accent: #f33533;
+  --terminal-current-wash: #732018;
+  --terminal-wash-duration: 420ms;
+  display: grid;
+  width: 100%;
+  overflow: hidden;
+  aspect-ratio: 1472 / 912;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 12px;
+  background: #181919;
+  color: #f4efed;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11.5px;
+  letter-spacing: -0.018em;
+  line-height: 1.38;
+  grid-template-rows: 38px minmax(0, 1fr);
+  box-shadow:
+    0 7px 16px rgb(0 0 0 / 32%),
+    0 2px 5px rgb(0 0 0 / 28%);
+}
+
+@media (min-width: 761px) {
+  .minimal-terminal-surface {
+    height: calc(
+      100dvh -
+      var(--spacing-site-header) -
+      var(--spacing-lifecycle-control-height) -
+      var(--spacing-showcase) -
+      var(--spacing-showcase) -
+      var(--spacing-page-block)
+    );
+  }
+
+  .mock-terminal {
+    width: 50dvw;
+    height: 50dvh;
+    max-width: 100%;
+    aspect-ratio: auto;
+  }
+}
+
+.mock-terminal-bar {
+  display: flex;
+  padding: 0 14px;
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
+  align-items: center;
+  gap: 14px;
+  background: #202020;
+  color: rgb(235 235 235 / 62%);
+  font-family: var(--font-alan-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mock-window-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.mock-window-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.mock-window-dots span:first-child {
+  background: #ff5f57;
+}
+
+.mock-window-dots span:nth-child(2) {
+  background: #febc2e;
+}
+
+.mock-window-dots span:last-child {
+  background: #28c840;
+}
+
+.mock-terminal-title {
+  display: inline-flex;
+  overflow: hidden;
+  align-items: center;
+  gap: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mock-folder {
+  position: relative;
+  display: inline-block;
+  width: 13px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+  background: #6ab8dc;
+  box-shadow: inset 0 1px rgb(255 255 255 / 30%);
+}
+
+.mock-folder::before {
+  position: absolute;
+  top: -2px;
+  left: 1px;
+  width: 6px;
+  height: 3px;
+  border-radius: 2px 2px 0 0;
+  background: #6ab8dc;
+  content: "";
+}
+
+.mock-terminal-screen {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: #111313;
+}
+
+.mock-terminal-wash {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: var(--terminal-current-wash);
+  transition: background-color var(--terminal-wash-duration) ease-out;
+}
+
+.mock-terminal-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 18px 9px;
+  overflow: hidden;
+}
+
+.mock-terminal-body p {
+  margin: 0;
+}
+
+.mock-claude-transcript {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+  padding-right: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(255 255 255 / 22%) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.mock-claude-brand {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  grid-template-columns: 16px minmax(0, 1fr);
+}
+
+.mock-claude-brand > span {
+  color: #f2a65a;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.mock-claude-brand p {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mock-claude-brand strong {
+  color: #fffaf7;
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.mock-claude-brand small {
+  color: rgb(233 224 220 / 58%);
+  font-size: 9px;
+}
+
+.mock-claude-prompt,
+.mock-claude-response,
+.mock-claude-error {
+  display: grid;
+  align-items: start;
+  gap: 7px;
+  grid-template-columns: 13px minmax(0, 1fr);
+}
+
+.mock-claude-prompt {
+  padding-top: 4px;
+  color: #fffaf7;
+  font-weight: 520;
+}
+
+.mock-claude-prompt > span:first-child {
+  font-weight: 800;
+}
+
+.mock-claude-response {
+  color: rgb(255 248 245 / 90%);
+}
+
+.mock-claude-response > span:first-child {
+  color: #e7dfdc;
+  font-size: 9px;
+}
+
+.mock-claude-install-response a {
+  color: #ffc15a;
+  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-color: rgb(255 193 90 / 52%);
+  text-underline-offset: 2px;
+}
+
+.mock-claude-install-response a:hover,
+.mock-claude-install-response a:focus-visible {
+  color: #ffd58e;
+  text-decoration-color: currentColor;
+}
+
+.mock-claude-install-response a:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+}
+
+.mock-claude-actions {
+  display: grid;
+  margin-left: 20px;
+  gap: 1px;
+  color: rgb(235 224 220 / 57%);
+  font-size: 9.5px;
+}
+
+.mock-claude-actions p {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 14px 42px minmax(0, 1fr);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mock-claude-actions strong {
+  color: rgb(255 248 245 / 83%);
+  font-weight: 600;
+}
+
+.mock-claude-error {
+  margin-left: 20px !important;
+  color: rgb(255 244 241 / 72%);
+  font-size: 9.5px;
+}
+
+.mock-claude-error > span:first-child {
+  color: var(--terminal-current-accent);
+}
+
+.mock-claude-final {
+  color: #fffaf7;
+}
+
+.mock-claude-worked {
+  padding-top: 2px;
+  color: rgb(230 221 217 / 58%);
+  font-size: 10px;
+}
+
+.mock-claude-input-shell {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+}
+
+.mock-claude-command-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  max-height: 190px;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 6px;
+  background: rgb(20 21 21 / 96%);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 40%);
+  color: rgb(255 248 245 / 66%);
+  scrollbar-color: rgb(255 255 255 / 22%) transparent;
+  scrollbar-width: thin;
+}
+
+.mock-claude-command-menu button {
+  display: grid;
+  width: 100%;
+  min-height: 26px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 3px;
+  align-items: center;
+  gap: 7px;
+  grid-template-columns: 12px max-content minmax(0, 1fr);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mock-claude-command-menu button.is-active {
+  background: rgb(255 255 255 / 9%);
+  color: #fffaf7;
+}
+
+.mock-claude-command-menu button:focus-visible {
+  outline: 1px solid rgb(255 255 255 / 78%);
+  outline-offset: -1px;
+}
+
+.mock-claude-command-menu strong {
+  overflow: hidden;
+  color: inherit;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mock-claude-command-menu button > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mock-claude-command-menu button > span[title="Selected model"] {
+  justify-self: end;
+  color: #fffaf7;
+}
+
+.mock-menu-arrow {
+  color: #fffaf7;
+  font-weight: 700;
+}
+
+.mock-claude-composer {
+  display: flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 0 8px;
+  border-top: 1px solid rgb(158 180 178 / 75%);
+  border-bottom: 1px solid rgb(158 180 178 / 75%);
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 650;
+  transition: border-color 160ms ease;
+}
+
+.mock-claude-composer:focus-within {
+  border-color: rgb(255 255 255 / 92%);
+}
+
+.mock-claude-composer input {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  caret-color: #fff;
+  color: #fffaf7;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 450;
+  letter-spacing: inherit;
+}
+
+.mock-claude-composer input::placeholder {
+  color: rgb(230 221 217 / 56%);
+  opacity: 1;
+}
+
+.mock-claude-composer input:disabled {
+  cursor: wait;
+}
+
+.mock-claude-chrome {
+  display: grid;
+  gap: 1px;
+  color: rgb(230 221 217 / 62%);
+  font-size: 9px;
+}
+
+.mock-claude-chrome p {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.mock-claude-chrome strong {
+  color: rgb(255 248 245 / 77%);
+  font-weight: 580;
+}
+
+.mock-claude-chrome p:last-child strong {
+  color: #ffc400;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 1100px) {
+  :root {
+    --spacing-site-gutter: clamp(1.5rem, 5vw, 3.5rem);
+    --spacing-terminal-stage-x: 3rem;
+    --spacing-terminal-stage-y: 3rem;
+    --spacing-lifecycle-gap: 1.5rem;
+  }
+
+  .minimal-copy {
+    width: 380px;
+  }
+
+  .minimal-copy h1 {
+    font-size: 58px;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --spacing-layout-stack: 3rem;
+    --spacing-hero-copy: 1.75rem;
+    --spacing-showcase: 1.5rem;
+    --spacing-terminal-stage-x: clamp(1rem, 5vw, 1.75rem);
+    --spacing-terminal-stage-y: clamp(1rem, 5vw, 1.75rem);
+    --spacing-lifecycle-gap: 0.625rem;
+    --spacing-lifecycle-state: 0.375rem;
+    --spacing-lifecycle-x: 0.75rem;
+    --spacing-lifecycle-y: 0.5rem;
+    --spacing-lifecycle-icon: 1rem;
+    --text-lifecycle: 0.875rem;
+  }
+
+  .minimal-home {
+    min-height: 100svh;
+    overflow: visible;
+  }
+
+  .minimal-copy {
+    width: 100%;
+  }
+
+  .minimal-copy h1 {
+    font-size: clamp(48px, 14vw, 64px);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+  }
+
+  .minimal-copy p {
+    font-size: 20px;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+
+  .mock-terminal {
+    min-height: 260px;
+    aspect-ratio: auto;
+    border-radius: 9px;
+    font-size: 9px;
+    line-height: 1.32;
+    grid-template-rows: 28px minmax(0, 1fr);
+  }
+
+  .mock-terminal-bar {
+    padding: 0 9px;
+    gap: 8px;
+    font-size: 8px;
+  }
+
+  .mock-window-dots {
+    gap: 3px;
+  }
+
+  .mock-window-dots span {
+    width: 6px;
+    height: 6px;
+  }
+
+  .mock-folder {
+    width: 9px;
+    height: 7px;
+  }
+
+  .mock-folder::before {
+    top: -1px;
+    width: 4px;
+    height: 2px;
+  }
+
+  .mock-terminal-body {
+    gap: 5px;
+    padding: 9px 11px 7px;
+  }
+
+  .mock-claude-transcript {
+    gap: 5px;
+    padding-right: 2px;
+  }
+
+  .mock-claude-brand {
+    gap: 5px;
+    grid-template-columns: 11px minmax(0, 1fr);
+  }
+
+  .mock-claude-brand > span {
+    font-size: 11px;
+  }
+
+  .mock-claude-brand strong {
+    font-size: 9.5px;
+  }
+
+  .mock-claude-brand small {
+    font-size: 7px;
+  }
+
+  .mock-claude-prompt,
+  .mock-claude-response,
+  .mock-claude-error {
+    gap: 4px;
+    grid-template-columns: 10px minmax(0, 1fr);
+  }
+
+  .mock-claude-actions {
+    margin-left: 14px;
+    font-size: 7.5px;
+  }
+
+  .mock-claude-actions p {
+    grid-template-columns: 9px 32px minmax(0, 1fr);
+  }
+
+  .mock-claude-error {
+    margin-left: 14px !important;
+    font-size: 7.5px;
+  }
+
+  .mock-claude-worked {
+    font-size: 7.5px;
+  }
+
+  .mock-claude-command-menu {
+    bottom: calc(100% + 4px);
+    max-height: 130px;
+    padding: 3px;
+    border-radius: 4px;
+  }
+
+  .mock-claude-command-menu button {
+    min-height: 22px;
+    padding: 3px 5px;
+    gap: 4px;
+    grid-template-columns: 9px max-content minmax(0, 1fr);
+    font-size: 7.5px;
+  }
+
+  .mock-claude-composer {
+    min-height: 32px;
+    padding: 0 6px;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .mock-claude-composer input {
+    font-size: 9px;
+  }
+
+  .mock-claude-chrome {
+    font-size: 7px;
+  }
+
+  .mock-claude-chrome p {
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minimal-install {
+    transition: none;
+  }
+
+  .minimal-lifecycle-button {
+    transition: none;
+  }
+
+  .mock-terminal-wash,
+  .mock-claude-command-menu button,
+  .mock-claude-composer {
+    transition: none;
   }
 }
