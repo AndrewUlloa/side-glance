@@ -3041,10 +3041,10 @@ a {
   }
 
   .loading-sequence-grid {
-    aspect-ratio: 1;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     gap: 8px;
-    margin-block: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(4, minmax(0, 1fr));
   }
 
   .minimal-copy {

@@ -524,7 +524,7 @@ export function InteractiveClaudeTerminal({
 
           <footer className="mock-claude-chrome">
             <p>
-              <span>[LW1]</span>
+              <span>tmux-01</span>
               <strong>{selectedModelLabel}</strong>
               <span>side-glance</span>
               <span>ctx ▰▰▱▱ 38%</span>

@@ -28,6 +28,14 @@ test("loading sequence stages four life scenes before revealing the page", async
   assert.match(component, /y:\s*LINEAR_MOTION\.loaderImageLift/u);
   assert.doesNotMatch(component, /\bx:\s*-?\d/u);
   assert.match(
+    stylesheet,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.loading-sequence-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)[^}]*grid-template-rows:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/u
+  );
+  assert.doesNotMatch(
+    stylesheet,
+    /\.loading-sequence-grid\s*\{[^}]*aspect-ratio:\s*1/u
+  );
+  assert.match(
     component,
     /const LOADER_IMAGE_DELAY\s*=\s*\n?\s*LINEAR_MOTION\.interactionDuration \+ LINEAR_MOTION\.shineDuration/u
   );
