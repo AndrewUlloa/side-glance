@@ -1,5 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#0b0f0e"/>
-  <path d="M6.5 8h10.8a7.6 7.6 0 0 1 0 15.2H7.6M12.8 3.8 6.5 8l6.3 4.2" fill="none" stroke="#e7efec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="22" cy="15.6" r="2.5" fill="#20bda9"/>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .background { fill: #fff; }
+    @media (prefers-color-scheme: dark) {
+      .background { fill: #000; }
+    }
+  </style>
+  <rect class="background" width="64" height="64"/>
+  <g clip-path="url(#clip0_8_46)">
+    <path d="M30 12.75H4V30H30V12.75Z" fill="#758A8A"/>
+    <path d="M60 12.75H34V30H60V12.75Z" fill="#20DF53"/>
+    <path d="M30 34H4V51.25H30V34Z" fill="#FF9F00"/>
+    <path d="M60 34H34V51.25H60V34Z" fill="#E0281F"/>
+  </g>
+  <defs>
+    <clipPath id="clip0_8_46">
+      <rect width="56" height="38.5" fill="white" transform="translate(4 12.75)"/>
+    </clipPath>
+  </defs>
 </svg>

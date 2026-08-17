@@ -11,6 +11,11 @@ export const LINEAR_MOTION = {
   illustrationEase: [0.455, 0.03, 0.515, 0.955] as const,
   shineDelay: 0.4,
   shineDuration: 0.5,
+  loaderAssetTimeout: 2,
+  loaderHoldDuration: 1,
+  loaderImageDuration: 0.5,
+  loaderImageLift: 24,
+  loaderImageStagger: 0.16,
   interactionDuration: 0.16,
   interactionEase: [0.25, 0.46, 0.45, 0.94] as const,
 } as const;
