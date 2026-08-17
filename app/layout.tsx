@@ -48,10 +48,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Side Glance — attention for coding agents",
-  description:
-    "A local-first terminal and tmux attention layer for Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any coding CLI.",
+  title: "Side Glance — Long loops. Short glances.",
+  description: "Know which loop needs judgment. Let the others keep running.",
   applicationName: "Side Glance",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Side Glance",
+  },
   keywords: [
     "coding agents",
     "terminal",
@@ -62,17 +66,32 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    title: "Side Glance — your terminal knows when it needs you",
-    description:
-      "Local-first lifecycle attention for coding-agent CLIs, with safe ordering, cleanup, and restoration.",
+    title: "Side Glance — Long loops. Short glances.",
+    description: "Know which loop needs judgment. Let the others keep running.",
     siteName: "Side Glance",
     url: "/",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        type: "image/png",
+        alt: "Side Glance — Long loops. Short glances.",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Side Glance — attention for coding agents",
-    description:
-      "A quiet thermal status layer across terminal backgrounds and tmux.",
+    title: "Side Glance — Long loops. Short glances.",
+    description: "Know which loop needs judgment. Let the others keep running.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Side Glance — Long loops. Short glances.",
+      },
+    ],
   },
   icons: {
     icon: "/favicon.svg",
