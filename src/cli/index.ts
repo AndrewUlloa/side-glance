@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { constants } from "node:fs";
+import { access } from "node:fs/promises";
 import { homedir } from "node:os";
-import path from "node:path";
+import path, { delimiter } from "node:path";
 
 import { adaptAiderNotification } from "../adapters/aider.ts";
 import { adaptClaudeHook } from "../adapters/claude.ts";
@@ -13,8 +15,17 @@ import { SideGlanceController } from "../core/controller.ts";
 import { urgencyFromElapsed } from "../core/policy.ts";
 import { sessionKey, type SideGlancePhase } from "../core/protocol.ts";
 import { FileSideGlanceStore } from "../core/store.ts";
-import { discoverTerminalTarget } from "../core/target.ts";
+import {
+  discoverOptionalTerminalTarget,
+  discoverTerminalTarget,
+} from "../core/target.ts";
 import { parseSideGlanceEvent, parseSideGlanceSource } from "../core/validation.ts";
+import { createNativeNotifier } from "../notifications/native.ts";
+import { inspectNotificationReadiness } from "../notifications/inspection.ts";
+import type {
+  EventNotifier,
+  NotificationOptions,
+} from "../notifications/policy.ts";
 import { runInstallCommand } from "./install.ts";
 import { runSupervised } from "./run.ts";
 import { SIDE_GLANCE_VERSION } from "../version.ts";
@@ -39,21 +50,43 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       process.stdout.write(helpText());
       return 0;
     case "event": {
-      requireExactArgs(args.slice(1), ["--json"], "event");
+      requireOnlyOptions(
+        args.slice(1),
+        ["--notifications", "--notification-sound", "--label", "--json"],
+        "event",
+        ["--notifications", "--json"],
+      );
       const event = parseSideGlanceEvent(JSON.parse(await readBoundedStdin()));
-      writeJson(await new SideGlanceController(store).submit(event));
+      writeJson(
+        await controllerWithNotifications(store, args).submit(event),
+      );
       return 0;
     }
     case "hook": {
       const provider = parseOption(args, "--provider");
-      const target = await discoverTerminalTarget({
-        environment: process.env,
-        surfaceId: optionalOption(args, "--surface"),
-      });
+      const notifications = args.includes("--notifications");
+      const target = await (notifications
+        ? discoverOptionalTerminalTarget({
+            environment: process.env,
+            surfaceId: optionalOption(args, "--surface"),
+          })
+        : discoverTerminalTarget({
+            environment: process.env,
+            surfaceId: optionalOption(args, "--surface"),
+          }));
       requireOnlyOptions(
         args.slice(1),
-        ["--provider", "--surface", "--session", "--json"],
+        [
+          "--provider",
+          "--surface",
+          "--session",
+          "--notifications",
+          "--notification-sound",
+          "--label",
+          "--json",
+        ],
         "hook",
+        ["--notifications", "--json"],
       );
       const sessionIndex = args.indexOf("--session");
       const fallbackSessionId =
@@ -63,7 +96,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       const context: AdapterContext = {
         eventId: randomUUID(),
         occurredAt: Date.now(),
-        target,
+        ...(target ? { target } : {}),
         ...(fallbackSessionId ? { fallbackSessionId } : {}),
       };
       const rawPayload: unknown = JSON.parse(await readBoundedStdin());
@@ -72,7 +105,51 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         writeJson({ accepted: false });
         return 0;
       }
-      writeJson(await new SideGlanceController(store).submit(event));
+      writeJson(await controllerWithNotifications(store, args).submit(event));
+      return 0;
+    }
+    case "notify": {
+      const source = parseSideGlanceSource(parseOption(args, "--source"));
+      const sessionId =
+        optionalOption(args, "--session") ??
+        process.env.SIDE_GLANCE_SESSION_ID ??
+        process.env.SIGNAL_SESSION_ID;
+      if (!sessionId) {
+        throw new Error(
+          "notify requires --session or a wrapper-provided SIDE_GLANCE_SESSION_ID.",
+        );
+      }
+      const kind = parseNotificationKind(parseOption(args, "--kind"));
+      const target = await discoverOptionalTerminalTarget({
+        environment: process.env,
+        surfaceId: optionalOption(args, "--surface"),
+      });
+      requireOnlyOptions(
+        args.slice(1),
+        [
+          "--source",
+          "--kind",
+          "--session",
+          "--surface",
+          "--notification-sound",
+          "--label",
+          "--json",
+        ],
+        "notify",
+      );
+      const event = parseSideGlanceEvent({
+        v: 1,
+        eventId: randomUUID(),
+        source,
+        sessionId,
+        kind,
+        occurredAt: Date.now(),
+        confidence: "notification",
+        ...(target ? { target } : {}),
+      });
+      writeJson(
+        await controllerWithNotifications(store, args, true).submit(event),
+      );
       return 0;
     }
     case "install":
@@ -90,9 +167,17 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       const inspections = await Promise.all(
         (["claude", "codex", "gemini"] as const).map(async (provider) => [
           provider,
-          await inspectProviderHooks({ provider, homeDirectory }),
+          await inspectProviderHooksSafely(provider, homeDirectory),
         ] as const),
       );
+      const notificationReadiness = await inspectNotificationReadiness({
+        homeDirectory,
+        platform: process.platform,
+        pathProbe: probeExecutable,
+        backendHints: {
+          desktopSession: desktopSessionAvailable(),
+        },
+      });
       writeJson({
         stateDirectory,
         node: { version: process.versions.node, supported: majorVersion >= 22 },
@@ -101,6 +186,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           tmux: Boolean(process.env.TMUX),
         },
         providers: Object.fromEntries(inspections),
+        notifications: notificationReadiness,
       });
       return 0;
     }
@@ -172,7 +258,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     default:
       throw new Error(
-        "usage: side-glance <event|hook|status|doctor|preview|reset|run|install|uninstall> [options]",
+        "usage: side-glance <event|hook|notify|status|doctor|preview|reset|run|install|uninstall> [options]",
       );
   }
 }
@@ -183,17 +269,22 @@ function helpText(): string {
 Usage:
   side-glance doctor --json
   side-glance preview --phase <phase> --elapsed <seconds> --json
-  side-glance run [--surface <id>] -- <command> [args...]
-  side-glance install <claude|codex|gemini> --json
-  side-glance uninstall <claude|codex|gemini> --json
+  side-glance run [--surface <id>] [--notify-on-exit] -- <command> [args...]
+  side-glance install <claude|codex|gemini|opencode> [--notifications] --json
+  side-glance uninstall <claude|codex|gemini|opencode> --json
   side-glance status --json
   side-glance reset (--all | --source <source> --session <id>) --json
   side-glance event --json
   side-glance hook --provider <provider> --json
+  side-glance notify --source <source> --kind <completed|waiting|failed|cancelled> --json
 
 Options:
-  -h, --help      Show this help
-  -v, --version   Show the installed version
+  --notifications              Enable Side Glance desktop notifications
+  --notification-sound <name>  Use an installed sound name (default: Glass)
+  --label <text>                Distinguish concurrent sessions privately
+  --notify-on-exit              Notify when a supervised process exits
+  -h, --help                    Show this help
+  -v, --version                 Show the installed version
 `;
 }
 
@@ -282,15 +373,115 @@ function requireOnlyOptions(
   args: readonly string[],
   allowed: readonly string[],
   command: string,
+  booleanOptions: readonly string[] = ["--json"],
 ): void {
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
     if (!allowed.includes(argument)) {
       throw new Error(`${command} received an unknown option: ${argument}.`);
     }
-    if (argument !== "--json") index += 1;
+    if (!booleanOptions.includes(argument)) index += 1;
   }
   if (!args.includes("--json")) throw new Error(`${command} requires --json.`);
+}
+
+async function inspectProviderHooksSafely(
+  provider: "claude" | "codex" | "gemini",
+  homeDirectory: string,
+): Promise<unknown> {
+  try {
+    return await inspectProviderHooks({ provider, homeDirectory });
+  } catch (error) {
+    return {
+      provider,
+      valid: false,
+      status: "unknown",
+      error: error instanceof Error ? error.message : "inspection failed",
+    };
+  }
+}
+
+function parseNotificationKind(value: string):
+  | "turn.completed"
+  | "attention.waiting"
+  | "turn.failed"
+  | "turn.cancelled" {
+  switch (value) {
+    case "completed":
+      return "turn.completed";
+    case "waiting":
+      return "attention.waiting";
+    case "failed":
+      return "turn.failed";
+    case "cancelled":
+      return "turn.cancelled";
+    default:
+      throw new Error("notify kind must be completed, waiting, failed, or cancelled.");
+  }
+}
+
+function controllerWithNotifications(
+  store: FileSideGlanceStore,
+  args: readonly string[],
+  enabled = args.includes("--notifications"),
+): SideGlanceController {
+  return new SideGlanceController(
+    store,
+    undefined,
+    configuredNotifier(args, enabled),
+  );
+}
+
+function configuredNotifier(
+  args: readonly string[],
+  enabled: boolean,
+): EventNotifier | undefined {
+  if (!enabled || process.env.SIDE_GLANCE_NOTIFICATION_BACKEND === "none") {
+    if (
+      !enabled &&
+      (args.includes("--notification-sound") || args.includes("--label"))
+    ) {
+      throw new Error(
+        "--notification-sound and --label require --notifications.",
+      );
+    }
+    return undefined;
+  }
+  const sound =
+    optionalOption(args, "--notification-sound") ??
+    process.env.SIDE_GLANCE_NOTIFICATION_SOUND;
+  const label = optionalOption(args, "--label") ?? process.env.SIDE_GLANCE_LABEL;
+  const options: NotificationOptions = {
+    ...(sound ? { sound } : {}),
+    ...(label ? { label } : {}),
+  };
+  return createNativeNotifier(options);
+}
+
+async function probeExecutable(candidate: string): Promise<boolean> {
+  const paths = path.isAbsolute(candidate)
+    ? [candidate]
+    : (process.env.PATH ?? "")
+        .split(delimiter)
+        .filter(Boolean)
+        .map((directory) => path.join(directory, candidate));
+  for (const executable of paths) {
+    try {
+      await access(executable, constants.X_OK);
+      return true;
+    } catch {
+      // Keep searching the configured PATH without executing the candidate.
+    }
+  }
+  return false;
+}
+
+function desktopSessionAvailable(): boolean {
+  if (process.platform === "darwin") return true;
+  if (process.platform === "linux") {
+    return Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+  }
+  return false;
 }
 
 function writeJson(value: unknown): void {

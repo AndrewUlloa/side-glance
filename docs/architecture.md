@@ -20,6 +20,8 @@ provider hook or supervised child
 
 Provider adapters translate lifecycle metadata only. The controller holds the store lock while it reduces an event, resolves the winning session for the affected surface, renders that decision, and atomically persists the resulting session and renderer snapshot. That transaction prevents a delayed hook from painting after a newer state has already committed.
 
+Desktop notification delivery is an event side effect, not another surface lease. After a waiting, completed, failed, or cancelled event commits, the controller passes that originating event to the notifier. This means targetless hooks and non-owning sessions still alert, while reducer-rejected duplicates and stale events do not. Notification backend failure is swallowed after persistence and cannot roll back lifecycle state.
+
 ## Ordering and ownership
 
 The reducer rejects duplicate IDs, older generations, older event timestamps, and turn-scoped follow-ups whose turn ID no longer matches. A `turn.started` event advances the generation when the provider does not supply one. The replay cache retains the newest 4,096 event IDs.

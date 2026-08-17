@@ -4,6 +4,36 @@ Date: 2026-08-14
 Branch: `codex/core-controller`  
 Status: beta package and renamed production site published; native release deferred
 
+## Desktop notification review — 2026-08-17
+
+| Axis | Result | Evidence |
+|---|---|---|
+| Correctness | Pass | Accepted waiting/completed/failed/cancelled events alert once; stale/duplicate/non-attention events do not. Targetless and non-owning sessions alert independently of visual leases. Aider wrapper identities clean up, and OpenCode child sessions are filtered fail-closed. |
+| Readability and simplicity | Pass | One event notifier interface sits behind the controller; CLI opt-ins use `--notifications`, `--notification-sound`, `--label`, and the deliberately narrower `--notify-on-exit`. |
+| Architecture | Pass | Notification delivery occurs after accepted persistence, outside visual arbitration. Provider-native settings remain a separately inspected capability and are never silently rewritten. |
+| Security and privacy | Pass | macOS and Linux launch fixed executables with argv and no shell; titles/bodies exclude prompts, transcripts, cwd, targets, raw IDs, and failure text. Labels/sounds are normalized, control-stripped, and bounded. Owned installers refuse unsafe files and preserve unrelated configuration. |
+| Performance and resilience | Pass | Native failures no-op after state commit. The OpenCode plugin filters unsupported/child events before spawn, bounds ancestry cache to 1,024 entries, and terminates a stuck child after two seconds. |
+
+Verification on Node 24.18.0: unit 38/38; integration 56/56 with the opt-in
+live-tmux case skipped; distribution 16/16; site 19/19; rendered HTML 2/2;
+lint and typecheck pass; core coverage is 92.57% lines / 74.59% branches /
+100% functions. The dependency-free packed CLI, standalone executable, provider
+install/uninstall, Aider bridge, OpenCode plugin, and notification-disabled test
+backend all pass. A webpack production build and rendered desktop/mobile browser
+checks pass with no console errors or horizontal overflow.
+
+The canonical Turbopack build was attempted sandboxed and escalated and still
+hits the known host-level PostCSS helper port-binding `Operation not permitted`
+failure. The equivalent `next build --webpack` path passes; publication still
+requires the canonical build to pass in CI. No live provider configuration was
+mutated and no real desktop notification was fired during verification.
+
+Explicit boundaries: macOS Focus/Notifications preferences can suppress sound;
+Linux sound is best-effort; alert clicks cannot guarantee the originating iTerm
+tab or tmux pane; meaningful concurrent-session names require `run --label`,
+otherwise notifications use a privacy-safe session digest; live Gemini,
+OpenCode, and Aider binaries remain outside local contract-test evidence.
+
 ## Side Glance rename review
 
 | Axis | Result | Evidence |

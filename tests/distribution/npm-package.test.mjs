@@ -75,17 +75,28 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   const installedHome = path.join(temporary, "installed-home");
   const runtimeEnvironment = {
     SIDE_GLANCE_STATE_DIR: stateDirectory,
+    SIDE_GLANCE_NOTIFICATION_BACKEND: "none",
     PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
   };
   await command(
     executable,
-    ["install", "claude", "--home", installedHome, "--json"],
+    [
+      "install",
+      "claude",
+      "--home",
+      installedHome,
+      "--notifications",
+      "--notification-sound",
+      "Glass",
+      "--json",
+    ],
     { cwd: temporary, env: runtimeEnvironment },
   );
   const settingsPath = path.join(installedHome, ".claude", "settings.json");
   const installedSettings = JSON.parse(await readFile(settingsPath, "utf8"));
   const hookCommand = installedSettings.hooks.SessionStart[0].hooks[0].command;
   assert.match(hookCommand, new RegExp(escapeRegularExpression(executable), "u"));
+  assert.match(hookCommand, /--notifications --notification-sound 'Glass'/u);
   const hookPayload = JSON.stringify({
     hook_event_name: "SessionStart",
     session_id: "packaged-hook-session",
@@ -136,7 +147,28 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     cwd: temporary,
     env: { PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}` },
   });
-  assert.match(help.stdout, /side-glance install <claude\|codex\|gemini>/u);
+  assert.match(
+    help.stdout,
+    /side-glance install <claude\|codex\|gemini\|opencode>/u,
+  );
+  const notified = await command(
+    executable,
+    [
+      "notify",
+      "--source",
+      "aider",
+      "--session",
+      "packaged-aider-session",
+      "--kind",
+      "completed",
+      "--json",
+    ],
+    { cwd: temporary, env: runtimeEnvironment },
+  );
+  assert.equal(
+    JSON.parse(notified.stdout).sessions["aider:packaged-aider-session"].phase,
+    "completed",
+  );
 
   const manifest = JSON.parse(
     await readFile(path.join(prefix, "lib/node_modules/side-glance/package.json"), "utf8"),

@@ -19,19 +19,19 @@ const providers = [
     name: "Gemini CLI",
     level: "Native lifecycle",
     detail: "Synchronous agent, permission, and session events.",
-    status: "Fixture verified",
+    status: "Installable",
   },
   {
     name: "OpenCode",
     level: "Plugin events",
-    detail: "Session status, idle, error, deletion, and permission events.",
-    status: "Adapter ready",
+    detail: "Top-level status, idle, error, deletion, and permission events.",
+    status: "Installable",
   },
   {
     name: "Aider",
     level: "Completion + wrapper",
     detail: "Completion notification plus supervised process cleanup.",
-    status: "Degraded native",
+    status: "Bridge ready",
   },
   {
     name: "Any CLI",
@@ -57,8 +57,8 @@ const steps = [
   {
     number: "03",
     title: "Render, then restore",
-    copy: "Side Glance verifies the TTY, snapshots its tmux options, paints the owned channels, and restores only what it changed.",
-    code: "state → terminal + tmux",
+    copy: "Side Glance paints verified terminal and tmux channels, optionally rings a privacy-safe desktop alert, and restores only what it changed.",
+    code: "state → terminal + tmux + alert",
   },
 ] as const;
 
@@ -357,6 +357,15 @@ export default function Home() {
                 exact local-or-inherited state. A whole terminal background
                 remains shared by panes in the same client, so per-pane washes
                 are not claimed.
+              </p>
+            </details>
+            <details>
+              <summary>Can it play a notification sound?</summary>
+              <p>
+                Yes, as an explicit opt-in. macOS supports a configurable
+                installed sound; Linux sound is best-effort. Focus and system
+                notification settings can still silence delivery, and a click
+                cannot reliably select its originating iTerm tab or tmux pane.
               </p>
             </details>
           </div>
