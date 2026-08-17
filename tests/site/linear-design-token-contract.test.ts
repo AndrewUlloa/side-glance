@@ -5,14 +5,15 @@ import test from "node:test";
 const read = (path: string) =>
   readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("Linear homepage token parity uses the measured font and visual system", async () => {
+test("homepage token parity uses Alan Sans and the measured visual system", async () => {
   const [layout, css] = await Promise.all([
     read("app/layout.tsx"),
     read("app/globals.css"),
   ]);
 
-  assert.match(layout, /import \{ Inter,/u);
-  assert.match(layout, /variable:\s*"--font-inter"/u);
+  assert.match(layout, /import \{ Alan_Sans,/u);
+  assert.match(layout, /variable:\s*"--font-alan-sans"/u);
+  assert.doesNotMatch(layout, /\bInter\b/u);
   assert.doesNotMatch(layout, /\bGeist\b/u);
 
   const exactTokens = [
@@ -51,69 +52,54 @@ test("Linear homepage token parity uses the measured font and visual system", as
     assert.ok(css.includes(token), `missing measured token: ${token}`);
   }
 
-  assert.match(css, /font-family:\s*var\(--font-inter\)/u);
+  assert.match(css, /font-family:\s*var\(--font-alan-sans\)/u);
+  assert.match(css, /letter-spacing:\s*-0\.03rem/u);
   assert.match(css, /font-feature-settings:\s*"cv01",\s*"ss03"/u);
   assert.match(css, /font-optical-sizing:\s*auto/u);
   assert.match(css, /--font-monospace:\s*"Berkeley Mono",\s*ui-monospace/u);
 });
 
-test("Linear homepage token parity uses the exact fresh-load choreography", async () => {
-  const [page, css, orchestrator, tokens, storyboard] = await Promise.all([
+test("focused homepage uses the exact static Figma assets and copy", async () => {
+  const [page, showcase, terminal, installButton, css] = await Promise.all([
     read("app/page.tsx"),
+    read("app/components/TerminalShowcase.tsx"),
+    read("app/components/InteractiveClaudeTerminal.tsx"),
+    read("app/components/InstallButton.tsx"),
     read("app/globals.css"),
-    read("app/components/MotionOrchestrator.tsx"),
-    read("app/lib/motion-tokens.ts").catch(() => ""),
-    read("app/components/TerminalStoryboard.tsx"),
   ]);
 
-  assert.match(page, /hero-enter-line-1/u);
-  assert.match(page, /hero-enter-line-2/u);
-  assert.match(page, /hero-enter-description/u);
-  assert.match(page, /hero-enter-announcement/u);
-  assert.doesNotMatch(page, /data-reveal/u);
-
-  assert.match(css, /animation-duration:\s*1s/u);
-  assert.match(css, /animation-timing-function:\s*var\(--hero-copy-ease\)/u);
-  assert.match(css, /\.hero-enter-line-1\s*\{[^}]*animation-delay:\s*0\.4s/u);
-  assert.match(css, /\.hero-enter-line-2\s*\{[^}]*animation-delay:\s*0\.5s/u);
   assert.match(
-    css,
-    /\.hero-enter-description\s*\{[^}]*animation-delay:\s*0\.6s/u
+    page,
+    /className="minimal-home gap-layout-stack px-site-gutter pb-page-block"/u
   );
-  assert.match(css, /filter:\s*blur\(10px\)/u);
-  assert.match(css, /transform:\s*translateY\(20%\)/u);
-  assert.doesNotMatch(
-    css,
-    /@keyframes\s+(?:terminal-sheen|ambient-drift|ring-breathe|core-glow|rotate-slow)/u
-  );
-
-  assert.match(orchestrator, /window\.location\.hash\.length\s*>\s*1/u);
-  assert.match(orchestrator, /addEventListener\("scroll"/u);
-  assert.doesNotMatch(orchestrator, /IntersectionObserver/u);
-
-  assert.match(tokens, /copyDuration:\s*1/u);
-  assert.match(tokens, /copyEase:\s*\[0\.25,\s*0\.1,\s*0\.25,\s*1\]/u);
-  assert.match(tokens, /illustrationDelay:\s*1\.3/u);
-  assert.match(tokens, /illustrationDuration:\s*1\.5/u);
-  assert.match(tokens, /interactionDuration:\s*0\.16/u);
-  assert.match(storyboard, /from\s+"\.\.\/lib\/motion-tokens"/u);
-  assert.match(storyboard, /document\.documentElement\.dataset\.heroMotion/u);
+  assert.match(page, /Long loops\./u);
+  assert.match(page, /Short glances\./u);
+  assert.match(page, /Know which loop needs judgment\./u);
+  assert.match(page, /Let the others keep running\./u);
+  assert.match(page, /src="\/side-glance-mark\.svg"/u);
+  assert.match(page, /<InstallButton/u);
+  assert.match(installButton, /src="\/install-icon\.svg"/u);
+  assert.match(page, /<TerminalShowcase\s*\/>/u);
+  assert.match(showcase, /<InteractiveClaudeTerminal phase=\{phase\}\s*\/>/u);
+  assert.match(terminal, /className="mock-terminal"/u);
+  assert.match(terminal, /Interactive Claude session/u);
+  assert.match(terminal, /The redirect behavior is ambiguous/u);
+  assert.doesNotMatch(page, /src="\/hero-terminal\.png"/u);
+  assert.match(css, /background-image:\s*url\("\/hero-surface\.png"\)/u);
+  assert.doesNotMatch(page, /MotionOrchestrator/u);
+  assert.doesNotMatch(page, /TerminalStoryboard/u);
+  assert.doesNotMatch(page, /SideGlancePlayground/u);
 });
 
-test("Linear homepage token parity uses the measured responsive hero type", async () => {
+test("focused homepage uses the measured responsive hero type", async () => {
   const css = await read("app/globals.css");
-  const heroRule = css.match(/\.hero h1\s*\{([\s\S]*?)\}/u)?.[1] ?? "";
+  const heroRule = css.match(/\.minimal-copy h1\s*\{([\s\S]*?)\}/u)?.[1] ?? "";
 
-  assert.match(heroRule, /font-size:\s*64px/u);
-  assert.match(heroRule, /font-weight:\s*var\(--font-weight-medium\)/u);
-  assert.match(heroRule, /letter-spacing:\s*-0\.022em/u);
-  assert.match(heroRule, /line-height:\s*1/u);
+  assert.match(heroRule, /font-size:\s*72px/u);
+  assert.match(heroRule, /letter-spacing:\s*-2\.16px/u);
+  assert.match(heroRule, /line-height:\s*1\.08/u);
   assert.match(
     css,
-    /@media \(max-width:\s*1024px\)[\s\S]*?\.hero h1\s*\{[^}]*font-size:\s*56px[^}]*line-height:\s*1\.1/u
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*640px\)[\s\S]*?\.hero h1\s*\{[^}]*font-size:\s*38px[^}]*line-height:\s*1\.1/u
+    /@media \(max-width:\s*760px\)[\s\S]*?\.minimal-copy h1\s*\{[^}]*font-size:\s*clamp\(48px, 14vw, 64px\)[^}]*line-height:\s*1\.02/u
   );
 });
