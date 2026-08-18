@@ -92,7 +92,7 @@ jobs:
       - run: npm publish ./release/*.tgz --access public --tag "$NPM_TAG" --dry-run
         env:
           NPM_TAG: ${{ needs.validate.outputs.npm_tag }}
-      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: release/*.tgz
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -132,7 +132,7 @@ jobs:
         env:
           SIDE_GLANCE_RELEASE_TARGET: ${{ matrix.target }}
           SIDE_GLANCE_RELEASE_NODE_VERSION: 24.18.0
-      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: outputs/*.tar.gz
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
