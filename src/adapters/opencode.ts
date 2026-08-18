@@ -31,6 +31,12 @@ export function adaptOpenCodeEvent(
   if (!kind) return undefined;
 
   const info = adapterRecord(properties.info ?? {}, "OpenCode session info");
+  if (
+    stringValue(info.parentID) !== undefined ||
+    stringValue(properties.parentID) !== undefined
+  ) {
+    return undefined;
+  }
   const sessionPayload = {
     ...properties,
     sessionID:

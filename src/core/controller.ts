@@ -13,6 +13,10 @@ import { reduceSideGlanceEvent } from "./reducer.ts";
 import type { FileSideGlanceStore } from "./store.ts";
 import { DEFAULT_SIDE_GLANCE_THEME } from "./theme.ts";
 import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
+import {
+  shouldNotifyForEvent,
+  type EventNotifier,
+} from "../notifications/policy.ts";
 
 export interface SurfaceVisual {
   wash: string;
@@ -39,19 +43,25 @@ export interface SurfaceRenderer {
 export class SideGlanceController {
   private readonly store: FileSideGlanceStore;
   private readonly renderer: SurfaceRenderer;
+  private readonly notifier?: EventNotifier;
 
   constructor(
     store: FileSideGlanceStore,
     renderer: SurfaceRenderer = createDefaultSurfaceRenderer(),
+    notifier?: EventNotifier,
   ) {
     this.store = store;
     this.renderer = renderer;
+    this.notifier = notifier;
   }
 
   async submit(event: SideGlanceEvent): Promise<SideGlanceState> {
-    return this.store.update(async (state) => {
+    let accepted = false;
+    const result = await this.store.update(async (state) => {
       const next = reduceSideGlanceEvent(state, event);
-      if (next === state || !event.target) return next;
+      if (next === state) return next;
+      accepted = true;
+      if (!event.target) return next;
 
       const { surfaceId } = event.target;
       const previous = state.surfaces[surfaceId];
@@ -102,6 +112,15 @@ export class SideGlanceController {
         },
       });
     });
+
+    if (accepted && this.notifier && shouldNotifyForEvent(event)) {
+      try {
+        await this.notifier.notify(event);
+      } catch {
+        // Notification failure must not roll back an accepted lifecycle event.
+      }
+    }
+    return result;
   }
 }
 

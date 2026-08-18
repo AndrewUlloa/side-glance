@@ -59,6 +59,15 @@ the toolbar must remain unpromoted; discarding that preview is its rollback path
 5. Browser-check desktop/mobile, keyboard, reduced motion, console, network behavior, and release-candidate copy against the production site build.
 6. Confirm the source commit is clean, merged through protected `main`, and eligible for a protected annotated version tag.
 
+## Notification activation preflight
+
+1. Run `side-glance doctor --json` and inspect the Side Glance OS backend separately from Codex, Gemini, OpenCode, and Aider native readiness.
+2. Choose one notification path per provider unless duplicate alerts are intentional. Install results warn when an active native path is detected.
+3. Enable a trial provider with `side-glance install <provider> --notifications --notification-sound Glass --json`; do not point hooks at `npx`.
+4. For several iTerm sessions, launch each through `side-glance run --label "<private label>" -- <provider>`; without a label, confirm the privacy-safe digests are distinguishable enough for the workflow.
+5. For Aider, use its static callback through the supervised wrapper; for arbitrary one-shot commands, use only the truthful `run --notify-on-exit` path.
+6. Manually verify OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
+
 ## External publication gates
 
 Follow [docs/releasing.md](./docs/releasing.md). A complete tagged native release
@@ -86,6 +95,8 @@ Side Glance's installer creates a timestamped backup before changing an existing
 side-glance reset --all --json
 side-glance uninstall claude --json
 side-glance uninstall codex --json
+side-glance uninstall gemini --json
+side-glance uninstall opencode --json
 ```
 
 If manual recovery is required, restore the installer's `.side-glance-backup-*` file after preserving the current file for diagnosis. OSC 111 restores the configured terminal background default. Existing tmux local and inherited options are restored by the controller; if the terminal has disappeared, start a new terminal and run reset before retrying.

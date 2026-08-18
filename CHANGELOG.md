@@ -7,6 +7,8 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 ### Added
 
 - Public release rehearsal with exact npm packaging, standalone artifacts, centralized checksums, release metadata, Homebrew formula generation, and protected-tag automation.
+- Opt-in native desktop notifications for accepted ready, attention, failure, and cancellation events, with privacy-safe multi-session labels and configurable macOS sound.
+- Notification-enabled provider hook installation, an owned OpenCode plugin, an Aider completion bridge, generic process-exit alerts, and notification readiness diagnostics.
 
 ## [0.1.0-beta.1] — 2026-08-14
 

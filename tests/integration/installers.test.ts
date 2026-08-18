@@ -98,6 +98,66 @@ test("installs idempotently, backs up once, and preserves existing hook groups",
   }
 });
 
+test("installs optional notification flags into every managed hook", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+
+  await installProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+    executablePath,
+    notifications: true,
+    notificationSound: "Glass",
+  });
+
+  const installed = JSON.parse(
+    await readFile(configPath(home, "claude"), "utf8"),
+  );
+  const commands = Object.values(installed.hooks)
+    .flatMap((groups) => groups as Array<{ hooks: Array<{ command: string }> }>)
+    .flatMap((group) => group.hooks)
+    .map((hook) => hook.command);
+  assert.ok(commands.length > 0);
+  assert.ok(commands.every((command) => command.includes(" --notifications")));
+  assert.ok(
+    commands.every((command) =>
+      command.endsWith(" --notification-sound 'Glass'"),
+    ),
+  );
+});
+
+test("rejects unsafe notification sound values without changing provider config", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const targetPath = configPath(home, "claude");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, '{"theme":"untouched"}\n');
+
+  await assert.rejects(
+    () =>
+      installProviderHooks({
+        provider: "claude",
+        homeDirectory: home,
+        executablePath,
+        notifications: true,
+        notificationSound: "bad\nsound",
+      }),
+    /sound|control/i,
+  );
+  await assert.rejects(
+    () =>
+      installProviderHooks({
+        provider: "claude",
+        homeDirectory: home,
+        executablePath,
+        notifications: true,
+        notificationSound: "x".repeat(65),
+      }),
+    /sound|64/i,
+  );
+  assert.equal(await readFile(targetPath, "utf8"), '{"theme":"untouched"}\n');
+});
+
 test("uninstall removes only Side Glance-owned handlers and preserves Codex notify", async (context) => {
   const home = await fixtureHome(context);
   const executablePath = await executableFixture(home);

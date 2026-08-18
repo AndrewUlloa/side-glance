@@ -16,6 +16,24 @@ export interface TargetDiscoveryOptions {
 export async function discoverTerminalTarget(
   options: TargetDiscoveryOptions = {},
 ): Promise<SideGlanceTarget> {
+  const target = await discoverTarget(options);
+  if (!target) {
+    throw new Error(
+      "No controlling terminal surface was found; pass --surface or run from a TTY.",
+    );
+  }
+  return target;
+}
+
+export async function discoverOptionalTerminalTarget(
+  options: TargetDiscoveryOptions = {},
+): Promise<SideGlanceTarget | undefined> {
+  return discoverTarget(options);
+}
+
+async function discoverTarget(
+  options: TargetDiscoveryOptions,
+): Promise<SideGlanceTarget | undefined> {
   const environment = options.environment ?? process.env;
   const explicitSurface =
     options.surfaceId ??
@@ -48,11 +66,7 @@ export async function discoverTerminalTarget(
     surfaceId = `tmux:${environment.TMUX},${tmuxPane}`;
   }
   surfaceId ??= tty ? `tty:${tty}` : undefined;
-  if (!surfaceId) {
-    throw new Error(
-      "No controlling terminal surface was found; pass --surface or run from a TTY.",
-    );
-  }
+  if (!surfaceId) return undefined;
 
   return {
     surfaceId,

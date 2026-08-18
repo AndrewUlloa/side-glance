@@ -7,7 +7,8 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 ## What is proven
 
 - Claude Code, Codex, and Gemini hook installers merge configuration transactionally and preserve unrelated handlers. Codex's existing `notify` configuration is separate and untouched.
-- OpenCode and Aider have normalized adapter contracts; every executable can use `side-glance run -- <command>` as the baseline.
+- An owned OpenCode plugin and an Aider completion bridge add lifecycle events without changing either provider's native notification preferences.
+- Opt-in macOS and Linux desktop notifications cover ready, attention, failure, and cancellation events. macOS supports a configurable installed sound; Linux sound is best-effort.
 - Delayed generations, older timestamps, mismatched turn IDs, and duplicate event IDs cannot repaint newer state.
 - Shared surfaces have one deterministic owner. Releasing one session reveals the next owner; final release resets only Side Glance-owned state.
 - TTY targets must be owned character devices. tmux options are captured and restored exactly; pane sessions use tmux status instead of a whole-client background wash.
@@ -57,6 +58,39 @@ side-glance uninstall claude --json
 ```
 
 Do not install over the existing `stoplight.sh` setup until you have reviewed `side-glance doctor --json` and chosen a migration window.
+
+## Desktop notifications and sound
+
+Side Glance notifications are disabled by default. Enable them only on Side Glance-owned hooks, with an optional macOS sound name:
+
+```bash
+side-glance install claude --notifications --notification-sound Glass --json
+side-glance install codex --notifications --notification-sound Glass --json
+side-glance install gemini --notifications --notification-sound Glass --json
+side-glance install opencode --notifications --notification-sound Glass --json
+```
+
+For several Claude sessions under iTerm, wrap each with a private label. The label appears in the notification body; without one, Side Glance uses a distinct, privacy-safe session digest:
+
+```bash
+side-glance run --label "API worker" -- claude
+side-glance run --label "Web worker" --notification-sound Hero -- claude
+```
+
+Aider exposes a static notification callback, so pair its bridge with the wrapper:
+
+```bash
+side-glance run --label "Aider worker" -- aider --notifications \
+  --notifications-command 'side-glance notify --source aider --kind completed --json'
+```
+
+For an arbitrary one-shot command, Side Glance can truthfully notify only when the process exits:
+
+```bash
+side-glance run --label "Release build" --notify-on-exit -- your-command
+```
+
+`side-glance doctor --json` reports the Side Glance OS backend separately from native Codex, OpenCode, and Aider notification readiness. Gemini readiness is explicitly scoped to the user settings file because workspace, system, environment, and CLI settings can override it. Installation also returns a warning when it detects an already-active native path; enabling both can produce duplicate alerts. A Codex top-level `notify` command is reported separately for inspection because it may perform something other than desktop notification delivery. On macOS, Notifications settings and Focus can suppress delivery or sound; notification clicks are not guaranteed to select the originating iTerm tab or tmux pane.
 
 ## Recovery contract
 

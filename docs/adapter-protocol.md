@@ -1,6 +1,6 @@
 # Adapter protocol v1
 
-Adapters submit one JSON object on stdin to `side-glance event --json`, or translate a provider payload through `side-glance hook --provider <name> --json`.
+Adapters submit one JSON object on stdin to `side-glance event --json`, or translate a provider payload through `side-glance hook --provider <name> --json`. Add `--notifications` to either Side Glance command to request the independent native notification side effect; stdout remains exactly one JSON object.
 
 ```json
 {
@@ -42,12 +42,14 @@ Adapters submit one JSON object on stdin to `side-glance event --json`, or trans
 | Claude Code | JSON hooks | Session, prompt, permission/idle notification, stop/failure, end |
 | Codex | JSON hooks | Session, prompt, permission, stop, synchronous end; existing legacy notify preserved |
 | Gemini CLI | JSON hooks | Session, before/after agent, permission notification, end |
-| OpenCode | plugin events | Session status/idle/error/delete and permission events |
-| Aider | completion command + wrapper | Completion only natively; wrapper owns start/end |
+| OpenCode | managed plugin events | Top-level session status/idle/error/delete and permission events; child sessions are filtered |
+| Aider | `side-glance notify` callback + wrapper | Completion only natively; wrapper owns start/end |
 | Any CLI | supervised wrapper | Process start, exit, common signals, cleanup |
 
 Adapters must never add prompt, response, transcript, tool input, secret, or arbitrary provider payload fields to normalized events.
 
 ## Target discovery
 
-The wrapper exports `SIDE_GLANCE_SURFACE_ID`, `SIDE_GLANCE_SESSION_ID`, and, when available, `SIDE_GLANCE_TTY` and `SIDE_GLANCE_TMUX_PANE`. Explicit verified values win; otherwise Side Glance invokes `tty` directly without a shell. Native hooks should inherit wrapper identity because providers do not consistently expose a controlling TTY.
+The wrapper exports `SIDE_GLANCE_SURFACE_ID`, `SIDE_GLANCE_SESSION_ID`, and, when available, `SIDE_GLANCE_TTY` and `SIDE_GLANCE_TMUX_PANE`. `--label` also exports `SIDE_GLANCE_LABEL`; `--notification-sound` exports `SIDE_GLANCE_NOTIFICATION_SOUND`. Explicit verified values win; otherwise Side Glance invokes `tty` directly without a shell. Native hooks should inherit wrapper identity because providers do not consistently expose a controlling TTY.
+
+Notification delivery occurs only after the originating event is accepted and persisted. Duplicate and stale events do not alert. Waiting, completed, failed, and cancelled events alert; lifecycle start, acknowledgement, and teardown do not. A target is optional for notification-only hooks, and a session that does not own the visual surface can still alert. Titles contain only the provider and lifecycle result. Bodies contain an explicit sanitized label or a short digest of the session ID—never prompt, response, transcript, cwd, target, or failure-reason content.

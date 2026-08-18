@@ -324,6 +324,116 @@ protocol + reducer
 
 ## Risks and Mitigations
 
+### Phase 14: Desktop notifications and sound
+
+- [x] **Task 37: Lock the event-local notification contract with failing tests**
+  - **Acceptance:** focused tests require accepted completion/waiting/failure events to
+    notify once independently of visual ownership while stale, duplicate, start,
+    acknowledgement, and teardown events do not.
+  - **Verify:** run the focused controller/notifier unit tests and capture observable
+    RED failures before production edits.
+  - **Depends on:** Task 36
+  - **Files:** `tests/integration/controller-rendering.test.ts`, new notifier unit test
+  - **Size:** S
+
+- [x] **Task 38: Implement safe native notification backends**
+  - **Acceptance:** macOS uses a static no-shell osascript program and sanitized argv;
+    Linux uses a capability-detected argument vector; unsupported/missing backends are
+    non-fatal; displayed content follows the privacy contract.
+  - **Verify:** focused mocked-boundary tests for exact executable/arguments, controls,
+    unicode, length limits, missing commands, and platform fallback.
+  - **Depends on:** Task 37
+  - **Files:** `src/notifications/native.ts`, `src/notifications/policy.ts`, notifier tests
+  - **Size:** M
+
+- [x] **Task 39: Integrate notification policy into accepted controller events**
+  - **Acceptance:** notification side effects occur after accepted state computation,
+    outside visual lease selection, and never make state updates fail.
+  - **Verify:** focused GREEN controller tests plus reducer/lease regression suite.
+  - **Depends on:** Task 38
+  - **Files:** `src/core/controller.ts`, controller integration tests
+  - **Size:** S
+
+### Checkpoint: notification core
+
+- [x] Focused event/policy/backend tests pass
+- [x] Existing reducer, lease, renderer, store, and privacy tests pass
+- [x] No shell interpolation or provider content reaches a notification
+
+- [x] **Task 40: Expose opt-in CLI, Aider bridge, and generic exit behavior**
+  - **Acceptance:** event/hook commands accept notification options; the no-stdin
+    `notify` bridge uses validated source/kind/session identity; `run --notify-on-exit`
+    reports process outcomes without claiming per-turn fidelity; help is accurate.
+  - **Verify:** focused CLI RED/GREEN tests for targetless hooks, Aider wrapper identity,
+    success/failure/signal/spawn failure, and default-off behavior.
+  - **Depends on:** Task 39
+  - **Files:** `src/cli/index.ts`, `src/cli/run.ts`, `tests/integration/cli.test.ts`
+  - **Size:** M
+
+- [x] **Task 41: Persist notification options in installed provider hooks**
+  - **Acceptance:** Claude, Codex, and Gemini managed hook commands preserve explicit
+    notification/sound options; reinstall and uninstall remain idempotent and preserve
+    unrelated hooks and Codex `notify`.
+  - **Verify:** installer integration and packaged distribution tests.
+  - **Depends on:** Task 40
+  - **Files:** `src/adapters/installers.ts`, `src/cli/install.ts`, installer tests,
+    distribution test
+  - **Size:** M
+
+- [x] **Task 42: Add an owned OpenCode plugin installer**
+  - **Acceptance:** install creates one bounded managed plugin using spawn argv and JSON
+    stdin; uninstall removes only that file; existing OpenCode files and native Attention
+    config remain untouched.
+  - **Verify:** temp-home install/reinstall/uninstall tests and plugin source assertions.
+  - **Depends on:** Task 41
+  - **Files:** `src/adapters/opencode-installer.ts`, install routing, integration tests
+  - **Size:** M
+
+- [x] **Task 43: Report provider and OS notification readiness**
+  - **Acceptance:** doctor distinguishes Side Glance backend availability from Codex,
+    Gemini, OpenCode, and Aider native capability/configuration without writes or full
+    provider payload exposure.
+  - **Verify:** temp-home doctor fixtures for absent, configured, malformed, overridden,
+    and unrelated configurations.
+  - **Depends on:** Tasks 40–42
+  - **Files:** notification inspection module, installer inspection, CLI doctor tests
+  - **Size:** M
+
+### Checkpoint: provider reach
+
+- [x] Claude, Codex, Gemini, and OpenCode installs are reversible in temp homes
+- [x] Aider bridge and generic exit behavior execute through the real CLI
+- [x] Native provider settings are preserved and duplicate risk is reported
+
+- [x] **Task 44: Align package docs, protocol, edge cases, and changelog**
+  - **Acceptance:** commands are copy-pasteable; OpenCode/Aider plumbing claims are
+    truthful; macOS/Linux/sound/click/Focus and generic-exit boundaries are explicit;
+    rollback uses uninstall/default-off behavior.
+  - **Verify:** public-document link/policy tests and residue scans.
+  - **Depends on:** Tasks 40–43
+  - **Files:** README files, protocol/edge-case docs, changelog, help tests
+  - **Size:** M
+
+- [x] **Task 45: Complete full verification and five-axis review**
+  - **Acceptance:** every required gate passes or an already-documented host limitation
+    has an equivalent verified path; final review has no unresolved required findings;
+    no live config or real notification was triggered.
+  - **Verify:** all `CLAUDE.md` commands, package/standalone smoke, diff/security review,
+    and notification feature default-off rollback check.
+  - **Depends on:** Task 44
+  - **Files:** `REVIEW.md`, `LAUNCH.md`
+  - **Size:** M
+
+## Notification Parallelization
+
+- **Safe to parallelize after Task 37:** Task 38 backend implementation, Task 42
+  OpenCode installer design, and Task 44 documentation inventory.
+- **Must be sequential:** Tasks 37 → 39 → 40 → 41; Task 43 follows the final CLI and
+  installer shapes; Task 45 follows all implementation/docs.
+- **Contract-first:** notifier interface, CLI option names, managed command format, and
+  privacy-safe label rules are owned by Tasks 37–40 and must not be independently
+  redefined.
+
 ### Phase 13: Side Glance identity migration
 
 - [x] **Task 33: Lock the public identity with failing tests**

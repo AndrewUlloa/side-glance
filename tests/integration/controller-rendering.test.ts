@@ -15,6 +15,7 @@ import type {
   SideGlanceTarget,
 } from "../../src/core/protocol.ts";
 import { FileSideGlanceStore } from "../../src/core/store.ts";
+import type { EventNotifier } from "../../src/notifications/policy.ts";
 
 interface PaintRecord {
   target: SideGlanceTarget;
@@ -55,15 +56,28 @@ class RecordingRenderer implements SurfaceRenderer {
   }
 }
 
-async function controllerFixture(context: test.TestContext) {
+class RecordingNotifier implements EventNotifier {
+  readonly events: SideGlanceEvent[] = [];
+
+  async notify(event: SideGlanceEvent): Promise<void> {
+    this.events.push(event);
+  }
+}
+
+async function controllerFixture(
+  context: test.TestContext,
+  notifier?: EventNotifier,
+) {
   const directory = await mkdtemp(path.join(tmpdir(), "side-glance-controller-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const renderer = new RecordingRenderer();
+  const store = new FileSideGlanceStore({ directory });
   const controller = new SideGlanceController(
-    new FileSideGlanceStore({ directory }),
+    store,
     renderer,
+    notifier,
   );
-  return { controller, renderer };
+  return { controller, renderer, store };
 }
 
 function event(
@@ -205,4 +219,120 @@ test("bounds inactive surface history after repeated terminal churn", async (con
   assert.equal(Object.keys(state?.surfaces ?? {}).length, 256);
   assert.equal(state?.surfaces["logical:0"], undefined);
   assert.equal(state?.surfaces["logical:259"]?.phase, "inactive");
+});
+
+test("notifies once for accepted attention events using the originating event", async (context) => {
+  const notifier = new RecordingNotifier();
+  const { controller, renderer } = await controllerFixture(context, notifier);
+
+  await controller.submit(
+    event("claude", "owner", "owner-failed", "turn.failed", 1_000, {
+      generation: 2,
+      turnId: "owner-turn",
+    }),
+  );
+  const arriving = event(
+    "codex",
+    "arriving",
+    "arriving-done",
+    "turn.completed",
+    2_000,
+    { generation: 1, turnId: "arriving-turn" },
+  );
+  await controller.submit(arriving);
+
+  assert.equal(renderer.paints.at(-1)?.session.sessionId, "owner");
+  assert.deepEqual(notifier.events, [
+    event("claude", "owner", "owner-failed", "turn.failed", 1_000, {
+      generation: 2,
+      turnId: "owner-turn",
+    }),
+    arriving,
+  ]);
+
+  const targetless = event(
+    "codex",
+    "targetless",
+    "targetless-wait",
+    "attention.waiting",
+    3_000,
+    { target: undefined },
+  );
+  await controller.submit(targetless);
+  assert.strictEqual(notifier.events.at(-1), targetless);
+
+  const cancelled = event(
+    "codex",
+    "targetless",
+    "targetless-cancelled",
+    "turn.cancelled",
+    3_100,
+    { target: undefined },
+  );
+  await controller.submit(cancelled);
+  assert.strictEqual(notifier.events.at(-1), cancelled);
+});
+
+test("does not notify for duplicates, stale events, starts, acknowledgements, or teardown", async (context) => {
+  const notifier = new RecordingNotifier();
+  const { controller } = await controllerFixture(context, notifier);
+
+  await controller.submit(
+    event("claude", "one", "start", "turn.started", 1_000, {
+      generation: 2,
+      turnId: "turn-2",
+    }),
+  );
+  const completed = event(
+    "claude",
+    "one",
+    "completed",
+    "turn.completed",
+    2_000,
+    { generation: 2, turnId: "turn-2" },
+  );
+  await controller.submit(completed);
+  await controller.submit(completed);
+  await controller.submit(
+    event("claude", "one", "stale", "turn.failed", 1_500, {
+      generation: 1,
+      turnId: "turn-1",
+    }),
+  );
+  await controller.submit(
+    event("claude", "one", "ack", "attention.acknowledged", 2_100, {
+      generation: 2,
+      turnId: "turn-2",
+    }),
+  );
+  await controller.submit(
+    event("claude", "one", "ended", "session.ended", 2_200, {
+      generation: 2,
+    }),
+  );
+
+  assert.deepEqual(notifier.events, [completed]);
+});
+
+test("commits accepted state when notification delivery throws", async (context) => {
+  const notifier: EventNotifier = {
+    async notify() {
+      throw new Error("notification service unavailable");
+    },
+  };
+  const { controller, store } = await controllerFixture(context, notifier);
+  const completed = event(
+    "claude",
+    "one",
+    "completed",
+    "turn.completed",
+    1_000,
+  );
+
+  const submitted = await controller.submit(completed);
+  const persisted = await store.read();
+
+  assert.equal(submitted.sessions["claude:one"]?.phase, "completed");
+  assert.equal(persisted.sessions["claude:one"]?.phase, "completed");
+  assert.deepEqual(persisted.seenEventIds, ["completed"]);
 });
