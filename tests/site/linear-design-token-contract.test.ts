@@ -88,7 +88,7 @@ test("focused homepage uses the exact static Figma assets and copy", async () =>
   assert.match(terminal, /Interactive Claude session/u);
   assert.match(terminal, /Ownership reconciliation is complete/u);
   assert.doesNotMatch(page, /src="\/hero-terminal\.png"/u);
-  assert.match(css, /background-image:\s*url\("\/hero-surface\.png"\)/u);
+  assert.match(css, /background-image:\s*var\(--side-glance-hero-surface\)/u);
   assert.match(page, /<MotionOrchestrator\s*\/>/u);
   assert.doesNotMatch(page, /TerminalStoryboard/u);
   assert.doesNotMatch(page, /SideGlancePlayground/u);

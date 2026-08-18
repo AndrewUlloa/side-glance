@@ -46,12 +46,17 @@ Vercel token or create duplicate builds.
 - A push to `feature/*` creates an ephemeral Preview deployment.
 - A push to `staging` updates its stable Vercel branch URL.
 - A merge to `main` creates the Production deployment at
-  `https://side-glance.vercel.app`.
+  `https://sideglance.ai`. The Vercel project alias at
+  `https://side-glance.vercel.app` remains a fallback.
 
 The Vercel project must stay connected to `AndrewUlloa/side-glance`, with
 Production Branch set to `main` and Node.js 24.x. Preview-only environment values
 may be scoped to `staging` when the staging environment needs to differ. A custom
 staging domain is optional; Vercel's stable branch URL is sufficient by default.
+Production and Preview both receive the Cloudflare Web Analytics site token. A
+Preview-only `NEXT_PUBLIC_ASSET_ORIGIN` may point at the temporary R2 development
+URL until `assets.sideglance.ai` is active; Production always uses the custom R2
+hostname.
 
 Rollback is a Vercel promotion of the last known-good production deployment. A
 follow-up fix still moves through `staging` so the Git history and deployed state

@@ -33,6 +33,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# cloudflare local cache
+.wrangler/
+
 /dist/
 /packages/cli/dist/
 /outputs/
