@@ -79,7 +79,6 @@ release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
 remaining beta.2 gates are:
 
-- confirm npm's trusted-publisher binding for `release.yml` and `npm-release`;
 - merge this release through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;
 - let the workflow stage every asset, publish npm, and then expose the immutable prerelease;

@@ -13,10 +13,11 @@ coverage job, Node 22 and 24 package checks, the native macOS package check, and
 the Vercel preview check.
 
 Initial npm ownership is established by the published
-`side-glance@0.1.0-beta.1` package. Before the next tag, confirm npm trusted publishing
-for owner `AndrewUlloa`, repository `side-glance`, workflow
-`release.yml`, and environment `npm-release`; no legacy npm automation token is
-used by this repository. Required environment reviewers can be added when a
+`side-glance@0.1.0-beta.1` package. npm trusted publishing is configured for
+owner `AndrewUlloa`, repository `side-glance`, workflow `release.yml`, and
+environment `npm-release`; publishing is allowed while staged publishing is not,
+and no legacy npm automation token is used by this repository. Required
+environment reviewers can be added when a
 second qualified release operator is available. Create `AndrewUlloa/homebrew-tap`
 only after the first immutable release exists, and update it through a narrowly
 scoped pull request rather than this repository's release token.
