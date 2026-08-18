@@ -1,13 +1,29 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { spawn } from "node:child_process";
+import type { Readable, Stream } from "node:stream";
 
 import type { SideGlanceTarget } from "./protocol.ts";
 
-const execFileAsync = promisify(execFile);
+interface TtyProcess {
+  kill: (signal: NodeJS.Signals) => boolean;
+  onClose: (listener: (code: number | null) => void) => void;
+  onError: (listener: (error: Error) => void) => void;
+  stdout: Readable;
+}
+
+interface TtySpawnOptions {
+  stdio: [Stream, "pipe", "ignore"];
+}
+
+type SpawnTtyProcess = (
+  command: string,
+  arguments_: string[],
+  options: TtySpawnOptions,
+) => TtyProcess;
 
 export interface TargetDiscoveryOptions {
   environment?: Readonly<Record<string, string | undefined>>;
   resolveTty?: () => Promise<string | undefined>;
+  spawnProcess?: SpawnTtyProcess;
   surfaceId?: string;
   tty?: string;
   tmuxPane?: string;
@@ -57,7 +73,8 @@ async function discoverTarget(
     explicitTty ??
     (explicitSurface || tmuxPane
       ? undefined
-      : await (options.resolveTty ?? resolveControllingTty)());
+      : await (options.resolveTty ??
+          (() => resolveControllingTty(options.spawnProcess)))());
   if (tty) validateTtyPath(tty);
 
   let surfaceId = explicitSurface;
@@ -75,18 +92,69 @@ async function discoverTarget(
   };
 }
 
-async function resolveControllingTty(): Promise<string | undefined> {
-  try {
-    const { stdout } = await execFileAsync("tty", [], {
-      encoding: "utf8",
-      maxBuffer: 4_096,
-      timeout: 2_000,
+async function resolveControllingTty(
+  spawnProcess: SpawnTtyProcess = defaultSpawnTtyProcess,
+): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    let child: TtyProcess;
+    try {
+      child = spawnProcess("tty", [], {
+        stdio: [process.stdin, "pipe", "ignore"],
+      });
+    } catch {
+      resolve(undefined);
+      return;
+    }
+
+    let output = "";
+    let settled = false;
+    function finish(value: string | undefined): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      resolve(value);
+    }
+
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM");
+      finish(undefined);
+    }, 2_000);
+    timeout.unref();
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      if (output.length + chunk.length > 4_096) {
+        child.kill("SIGTERM");
+        finish(undefined);
+        return;
+      }
+      output += chunk;
     });
-    const tty = stdout.trim();
-    return tty.startsWith("/dev/") ? tty : undefined;
-  } catch {
-    return undefined;
-  }
+    child.onError(() => finish(undefined));
+    child.onClose((code) => {
+      const tty = output.trim();
+      finish(code === 0 && tty.startsWith("/dev/") ? tty : undefined);
+    });
+  });
+}
+
+function defaultSpawnTtyProcess(
+  command: string,
+  arguments_: string[],
+  options: TtySpawnOptions,
+): TtyProcess {
+  const child = spawn(command, arguments_, options);
+  if (!child.stdout) throw new Error("tty stdout was unavailable.");
+  return {
+    stdout: child.stdout,
+    kill: (signal) => child.kill(signal),
+    onClose: (listener) => {
+      child.once("close", (code) => listener(code));
+    },
+    onError: (listener) => {
+      child.once("error", listener);
+    },
+  };
 }
 
 function validateTtyPath(value: string): void {
