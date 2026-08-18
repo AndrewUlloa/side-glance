@@ -1,6 +1,6 @@
 # Launch and rollback
 
-Side Glance is a beta. Version `0.1.0-beta.2` is the release candidate for the
+Side Glance is a beta. Version `0.1.0-beta.3` is the release candidate for the
 desktop-notification work integrated on `staging`. Preparing this candidate does
 not create a version tag or GitHub Release, publish to npm, update a Homebrew tap,
 or migrate live provider configuration.
@@ -25,10 +25,12 @@ historical deployment identifiers are not rewritten during a product rename.
 
 ## npm beta release candidate
 
-- Candidate: `side-glance@0.1.0-beta.2`
+- Candidate: `side-glance@0.1.0-beta.3`
 - Channel: `beta`
 - Status: pending protected `main` promotion and the matching annotated tag
 - Previously published: `side-glance@0.1.0-beta.1`
+- Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
+  dry-run; no npm package or GitHub Release was published.
 - Previous integrity: `sha512-xW2t4IJEwDHRgh3uMi4FhXP9zhYCEdcvefCHVrXesWMfaOlMzx+QEgLfkaaHJkGvR0boC5bZnZq0dEwDax9szw==`
 - The candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
@@ -42,10 +44,12 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-The beta.2 release candidate passed the canonical Turbopack build locally and in
-CI on Node 24.18.0. Turbopack reports a non-blocking missing fallback-override
-warning for Alan Sans; compilation, type checking, static generation, and rendered
-HTML verification still complete successfully.
+The beta.2 source passed the canonical Turbopack build locally and in CI on Node
+24.18.0. Beta.3 retains that product source, changes the release path, and has
+repeated every local gate; protected CI must still pass before tagging. Turbopack
+reports a non-blocking missing fallback-override warning for Alan Sans;
+compilation, type checking, static generation, and rendered HTML verification
+still complete successfully.
 
 ## Vercel Preview annotation tooling
 
@@ -77,7 +81,7 @@ the toolbar must remain unpromoted; discarding that preview is its rollback path
 Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
 release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
-remaining beta.2 gates are:
+remaining beta.3 gates are:
 
 - merge this release through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;

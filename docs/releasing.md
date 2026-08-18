@@ -48,6 +48,12 @@ The release workflow rejects private repositories, forks, unprotected tags, tags
 
 The GitHub release remains a draft until npm succeeds. A retry downloads existing draft assets and byte-compares them; mismatches require a new version. If npm already has the version, its SHA-512 integrity must match the release manifest. The workflow never clobbers an asset or republishes different bytes under one version.
 
+Do not move or delete a protected version tag after a workflow defect. If the
+tagged workflow itself must change before publication, keep the failed tag as an
+audit record, fix and test the workflow through protected branches, bump the
+package to the next version, and create a new annotated tag. A transient retry is
+appropriate only when the tagged workflow and its assembled bytes remain valid.
+
 After the release finishes, verify GitHub's immutable-release attestation,
 download the public artifacts again, verify `SHA256SUMS`, execute the Linux x64
 binary, compare npm integrity, and open a separate Homebrew tap pull request using
