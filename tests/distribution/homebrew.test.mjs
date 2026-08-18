@@ -21,7 +21,7 @@ test("generates a validated Homebrew formula from immutable release metadata", a
 
   const formula = await readFile(formulaPath, "utf8");
   assert.match(formula, /class SideGlance < Formula/u);
-  assert.match(formula, /version "0\.1\.0-beta\.2"/u);
+  assert.match(formula, /version "0\.1\.0-beta\.3"/u);
   assert.match(formula, /license "Apache-2\.0"/u);
   for (const artifact of manifest.artifacts) {
     assert.ok(formula.includes(artifact.url));
@@ -50,7 +50,7 @@ test("refuses formula metadata that does not point at Side Glance's immutable re
 });
 
 function releaseManifest() {
-  const version = "0.1.0-beta.2";
+  const version = "0.1.0-beta.3";
   const tag = `v${version}`;
   const base = `https://github.com/AndrewUlloa/side-glance/releases/download/${tag}`;
   const artifact = (target, character, support = "supported") => {

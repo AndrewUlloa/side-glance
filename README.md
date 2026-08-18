@@ -131,7 +131,7 @@ and the [edge-case audit](./docs/edge-case-audit.md).
 Beta. The GitHub repository, Vercel project and production domain, npm package,
 CLI, site, documentation, and local workspace identity use Side Glance. Public
 GitHub visibility, repository security controls, immutable releases, protected
-Vercel checks, and npm trusted publishing are active. The beta.2 protected-branch
+Vercel checks, and npm trusted publishing are active. The beta.3 protected-branch
 promotion and tag, environment reviewers when a second release operator exists,
 the Homebrew tap, and live provider migration remain explicit release gates.
 
