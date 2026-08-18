@@ -239,6 +239,73 @@ previously managed hooks, or disguise a stale product reference as generic wordi
 
 No local implementation decision is blocking. The first public release still requires explicit approval and external setup for repository visibility, protected rulesets/environments, npm ownership and trusted publishing, private vulnerability reporting, and the Homebrew tap destination.
 
+## Desktop Notification and Sound Contract
+
+Side Glance adds an explicit, local-first computer-notification channel for developers
+running several coding agents at once. The channel is disabled by default and is
+enabled only through `--notifications` or the matching Side Glance environment
+configuration.
+
+Success means:
+
+- accepted `turn.completed`, `attention.waiting`, `turn.failed`, and
+  `turn.cancelled` events each request one desktop notification; session start, turn
+  start, acknowledgement, teardown, duplicate event IDs, stale timestamps,
+  generations, and turn IDs request none;
+- notification delivery is independent of visual surface ownership and terminal target
+  discovery, so a lower-priority or targetless session still reports its own accepted
+  attention event;
+- macOS uses `/usr/bin/osascript` without a shell to request Notification Center with a
+  bounded title/body and configurable installed sound name; Linux capability-detects a
+  `notify-send` backend and treats sound as best-effort; unsupported/headless systems
+  degrade without failing lifecycle state or provider hooks;
+- titles contain only Side Glance, provider, normalized phase, and either an explicit
+  bounded label or a short deterministic digest of the session ID; provider-generated
+  titles, cwd, prompts, responses, transcripts, tool inputs, and secrets are never
+  displayed by default;
+- `side-glance install <claude|codex|gemini|opencode> --notifications --json`
+  persistently enables Side Glance notifications in only Side Glance-owned hook/plugin
+  entries, preserves provider-native notification settings and unrelated handlers, and
+  remains idempotent and exactly reversible;
+- OpenCode installation creates and removes only a managed global plugin that forwards
+  documented events as JSON to the durable Side Glance executable; it does not mutate
+  OpenCode's native Attention configuration or duplicate provider-native notifications
+  unless the user explicitly enables both;
+- `side-glance notify --source aider --kind completed --json` gives Aider's static
+  notification command a no-stdin bridge using wrapper-provided session/surface
+  identity, and documentation pairs it with `side-glance run`; no existing Aider
+  notification command is overwritten;
+- `side-glance run --notify-on-exit` reports a generic child success, failure, signal,
+  or spawn failure exactly once and is documented as process-exit—not per-turn—support;
+- `doctor` reports Side Glance's native OS backend and separately reports provider-native
+  notification readiness for Codex, Gemini, OpenCode, and Aider without mutating live
+  configuration;
+- provider hook stdout remains one valid JSON object with no raw terminal bytes;
+  provider-native notification commands/settings are preserved byte-for-byte unless a
+  future explicit provider-owned operation is separately specified; and
+- unit/integration/distribution tests cover notification bytes/arguments, privacy,
+  dedupe/staleness, concurrent sessions, missing backends, install/uninstall ownership,
+  OpenCode plugin generation, Aider bridge behavior, generic exit semantics, packaged
+  execution, and help/docs accuracy.
+
+**Always:** use argument-vector process execution, bound and sanitize every displayed
+field, make notification failure non-fatal, preserve provider configuration, and keep
+the published CLI dependency-free.
+
+**Ask first:** mutate live provider configuration, fire a real desktop notification in
+the user's session during development, publish, deploy, or add a runtime dependency.
+
+**Never:** interpolate untrusted notification content into a shell or script program,
+display provider prompt-derived content by default, replace Codex `notify`, change
+Gemini/OpenCode/Aider native preferences silently, promise sound on Linux/headless
+systems, or describe generic process exit as per-turn completion.
+
+Assumptions approved by the requester's “I want it all; go ahead” direction: native
+Side Glance notifications and provider-native alerts may coexist only by explicit user
+choice; the default Side Glance notification sound is a configurable macOS installed
+sound; exact click-to-terminal routing and delivery while Focus/notification settings
+silence alerts are not guaranteed.
+
 ## References
 
 - `docs/edge-case-audit.md`

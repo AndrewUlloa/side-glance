@@ -131,6 +131,12 @@ test("maps OpenCode session, error, and permission events", () => {
   assert.equal(event("permission.asked")?.kind, "attention.waiting");
   assert.equal(event("permission.replied")?.kind, "attention.acknowledged");
   assert.equal(event("session.deleted")?.kind, "session.ended");
+  assert.equal(
+    event("session.idle", {
+      info: { id: "child-session", parentID: "opencode-session" },
+    }),
+    undefined,
+  );
 });
 
 test("keeps Aider explicitly completion-only and requires wrapper identity", () => {

@@ -13,6 +13,8 @@ import {
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
+import { MAX_NOTIFICATION_SOUND_CODE_POINTS } from "../notifications/policy.ts";
+
 const MANAGED_MARKER = "SIDE_GLANCE_MANAGED_HOOK=1";
 const LEGACY_MANAGED_MARKER = "SIGNAL_MANAGED_HOOK=1";
 const MAX_CONFIG_BYTES = 2 * 1_048_576;
@@ -23,6 +25,8 @@ export interface InstallerOptions {
   provider: InstallableProvider;
   homeDirectory: string;
   executablePath: string;
+  notifications?: boolean;
+  notificationSound?: string;
 }
 
 export interface InstallerResult {
@@ -119,7 +123,11 @@ export async function installProviderHooks(
   const loaded = await readConfiguration(validated.configPath);
   const configuration = loaded.value;
   const hooks = readHooks(configuration);
-  const command = managedCommand(options.provider, validated.executablePath);
+  const command = managedCommand(
+    options.provider,
+    validated.executablePath,
+    options,
+  );
 
   for (const eventName of PROVIDER_EVENTS[options.provider]) {
     const groups = hooks[eventName] ?? [];
@@ -359,8 +367,41 @@ function isManagedCommand(
 function managedCommand(
   provider: InstallableProvider,
   executablePath: string,
+  options: Pick<InstallerOptions, "notifications" | "notificationSound">,
 ): string {
-  return `${MANAGED_MARKER} ${shellQuote(executablePath)} hook --provider ${provider} --json`;
+  if (options.notificationSound !== undefined && !options.notifications) {
+    throw new Error("--notification-sound requires --notifications.");
+  }
+  const notificationArguments = options.notifications
+    ? ` --notifications${
+        options.notificationSound === undefined
+          ? ""
+          : ` --notification-sound ${shellQuote(
+              validateNotificationSound(options.notificationSound),
+            )}`
+      }`
+    : "";
+  return `${MANAGED_MARKER} ${shellQuote(executablePath)} hook --provider ${provider} --json${notificationArguments}`;
+}
+
+function validateNotificationSound(value: string): string {
+  const normalized = value.normalize("NFC");
+  if (
+    normalized.trim() !== normalized ||
+    normalized.length === 0 ||
+    [...normalized].length > MAX_NOTIFICATION_SOUND_CODE_POINTS ||
+    normalized.startsWith("--") ||
+    normalized.includes("/") ||
+    [...normalized].some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f);
+    })
+  ) {
+    throw new Error(
+      `notification sound must be a safe installed sound name of 1 to ${MAX_NOTIFICATION_SOUND_CODE_POINTS} characters.`,
+    );
+  }
+  return normalized;
 }
 
 function shellQuote(value: string): string {

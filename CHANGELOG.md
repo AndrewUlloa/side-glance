@@ -4,9 +4,20 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.2] — 2026-08-17
+
 ### Added
 
 - Public release rehearsal with exact npm packaging, standalone artifacts, centralized checksums, release metadata, Homebrew formula generation, and protected-tag automation.
+- Opt-in native desktop notifications for accepted ready, attention, failure, and cancellation events, with privacy-safe multi-session labels and configurable macOS sound.
+- Notification-enabled provider hook installation, an owned OpenCode plugin, an Aider completion bridge, generic process-exit alerts, and notification readiness diagnostics.
+
+### Changed
+
+- Public deployment now requires immutable GitHub Releases, SHA-pinned Actions,
+  protected Vercel checks, and npm OIDC publishing with SemVer-derived release channels.
+- Future releases are licensed under Apache-2.0, adding an explicit patent grant;
+  the already-published beta.1 release remains available under its original MIT terms.
 
 ## [0.1.0-beta.1] — 2026-08-14
 
@@ -19,5 +30,6 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.1...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.2...HEAD
+[0.1.0-beta.2]: https://www.npmjs.com/package/side-glance/v/0.1.0-beta.2
 [0.1.0-beta.1]: https://www.npmjs.com/package/side-glance/v/0.1.0-beta.1

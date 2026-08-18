@@ -5,6 +5,12 @@ import { SideGlanceController } from "../core/controller.ts";
 import type { SideGlanceTarget } from "../core/protocol.ts";
 import { FileSideGlanceStore } from "../core/store.ts";
 import { discoverTerminalTarget } from "../core/target.ts";
+import { createNativeNotifier } from "../notifications/native.ts";
+import {
+  sanitizeNotificationLabel,
+  sanitizeNotificationSound,
+  type EventNotifier,
+} from "../notifications/policy.ts";
 
 export interface SupervisedRunResult {
   exitCode: number;
@@ -23,19 +29,20 @@ export async function runSupervised(
 
   const wrapperArgs = args.slice(0, separatorIndex);
   const childArgs = args.slice(separatorIndex + 1);
+  const wrapperOptions = parseWrapperOptions(wrapperArgs);
   const target = await discoverTerminalTarget({
     environment: process.env,
-    ...parseTargetOptions(wrapperArgs),
+    ...wrapperOptions.target,
   });
   const { surfaceId } = target;
 
   const sessionId = `wrapper-${process.pid}-${randomUUID()}`;
-  const controller = new SideGlanceController(
-    new FileSideGlanceStore({
-      directory: stateDirectory,
-      ...(legacyStateDirectory ? { legacyDirectory: legacyStateDirectory } : {}),
-    }),
-  );
+  const store = new FileSideGlanceStore({
+    directory: stateDirectory,
+    ...(legacyStateDirectory ? { legacyDirectory: legacyStateDirectory } : {}),
+  });
+  const controller = new SideGlanceController(store);
+  const notifier = configuredExitNotifier(wrapperOptions);
   await controller.submit({
     v: 1,
     eventId: randomUUID(),
@@ -55,16 +62,41 @@ export async function runSupervised(
       SIDE_GLANCE_SESSION_ID: sessionId,
       ...(target.tty ? { SIDE_GLANCE_TTY: target.tty } : {}),
       ...(target.tmuxPane ? { SIDE_GLANCE_TMUX_PANE: target.tmuxPane } : {}),
+      ...(wrapperOptions.label
+        ? { SIDE_GLANCE_LABEL: wrapperOptions.label }
+        : {}),
+      ...(wrapperOptions.notificationSound
+        ? { SIDE_GLANCE_NOTIFICATION_SOUND: wrapperOptions.notificationSound }
+        : {}),
     });
   } catch (error) {
+    await notifyExit(notifier, sessionId, target, "turn.failed", "spawn-failed");
     await submitEnd(controller, sessionId, target, "spawn-failed");
+    await submitInheritedEnds(controller, store, sessionId, "spawn-failed");
     throw error;
   }
 
+  await notifyExit(
+    notifier,
+    sessionId,
+    target,
+    result.signal
+      ? "turn.cancelled"
+      : result.exitCode === 0
+        ? "turn.completed"
+        : "turn.failed",
+    result.signal ? `signal:${result.signal}` : `exit:${result.exitCode}`,
+  );
   await submitEnd(
     controller,
     sessionId,
     target,
+    result.signal ? `signal:${result.signal}` : `exit:${result.exitCode}`,
+  );
+  await submitInheritedEnds(
+    controller,
+    store,
+    sessionId,
     result.signal ? `signal:${result.signal}` : `exit:${result.exitCode}`,
   );
   return result;
@@ -129,30 +161,142 @@ async function submitEnd(
   });
 }
 
-function parseTargetOptions(args: readonly string[]): {
-  surfaceId?: string;
-  tty?: string;
-  tmuxPane?: string;
-} {
-  const values: { surfaceId?: string; tty?: string; tmuxPane?: string } = {};
-  const names = {
+async function submitInheritedEnds(
+  controller: SideGlanceController,
+  store: FileSideGlanceStore,
+  sessionId: string,
+  reason: string,
+): Promise<void> {
+  const state = await store.read();
+  for (const session of Object.values(state.sessions)) {
+    if (
+      session.source === "generic" ||
+      session.sessionId !== sessionId ||
+      session.phase === "inactive"
+    ) {
+      continue;
+    }
+    await controller.submit({
+      v: 1,
+      eventId: randomUUID(),
+      source: session.source,
+      sessionId,
+      kind: "session.ended",
+      occurredAt: Math.max(Date.now(), session.updatedAt + 1),
+      generation: session.generation,
+      reason,
+      confidence: "wrapper",
+      ...(session.target ? { target: session.target } : {}),
+    });
+  }
+}
+
+interface WrapperOptions {
+  target: {
+    surfaceId?: string;
+    tty?: string;
+    tmuxPane?: string;
+  };
+  notifyOnExit: boolean;
+  notificationSound?: string;
+  label?: string;
+}
+
+function parseWrapperOptions(args: readonly string[]): WrapperOptions {
+  const values: WrapperOptions = { target: {}, notifyOnExit: false };
+  const targetNames = {
     "--surface": "surfaceId",
     "--tty": "tty",
     "--tmux-pane": "tmuxPane",
   } as const;
-  for (let index = 0; index < args.length; index += 2) {
+  const valueNames = {
+    ...targetNames,
+    "--notification-sound": "notificationSound",
+    "--label": "label",
+  } as const;
+  const seen = new Set<string>();
+  for (let index = 0; index < args.length; index += 1) {
     const name = args[index];
-    const key = names[name as keyof typeof names];
+    if (name === "--notify-on-exit") {
+      if (seen.has(name)) {
+        throw new Error(`run received duplicate option: ${name}.`);
+      }
+      seen.add(name);
+      values.notifyOnExit = true;
+      continue;
+    }
+    const key = valueNames[name as keyof typeof valueNames];
     const value = args[index + 1];
     if (!key || !value || value.startsWith("--")) {
-      throw new Error(`run received an invalid target option: ${name ?? "missing"}.`);
+      throw new Error(`run received an invalid option: ${name ?? "missing"}.`);
     }
-    if (values[key] !== undefined) {
-      throw new Error(`run received duplicate target option: ${name}.`);
+    if (seen.has(name)) {
+      throw new Error(`run received duplicate option: ${name}.`);
     }
-    values[key] = value;
+    seen.add(name);
+    if (name in targetNames) {
+      values.target[key as keyof typeof values.target] = value;
+    } else if (key === "notificationSound") {
+      values.notificationSound = sanitizeRequiredOption(
+        value,
+        "notification sound",
+        sanitizeNotificationSound,
+      );
+    } else if (key === "label") {
+      values.label = sanitizeRequiredOption(
+        value,
+        "notification label",
+        sanitizeNotificationLabel,
+      );
+    }
+    index += 1;
   }
   return values;
+}
+
+function sanitizeRequiredOption(
+  value: string,
+  name: string,
+  sanitize: (input: string) => string,
+): string {
+  const sanitized = sanitize(value);
+  if (!sanitized) throw new Error(`${name} must contain visible text.`);
+  return sanitized;
+}
+
+function configuredExitNotifier(options: WrapperOptions): EventNotifier | undefined {
+  if (
+    !options.notifyOnExit ||
+    process.env.SIDE_GLANCE_NOTIFICATION_BACKEND === "none"
+  ) {
+    return undefined;
+  }
+  return createNativeNotifier({
+    ...(options.notificationSound ? { sound: options.notificationSound } : {}),
+    ...(options.label ? { label: options.label } : {}),
+  });
+}
+
+async function notifyExit(
+  notifier: EventNotifier | undefined,
+  sessionId: string,
+  target: SideGlanceTarget,
+  kind: "turn.completed" | "turn.failed" | "turn.cancelled",
+  reason: string,
+): Promise<void> {
+  if (!notifier) return;
+  await notifier.notify({
+    v: 1,
+    eventId: randomUUID(),
+    source: "generic",
+    sessionId,
+    kind,
+    occurredAt: Date.now(),
+    generation: 0,
+    reason,
+    confidence: "wrapper",
+    target,
+  });
 }
 
 function signalExitCode(signal: NodeJS.Signals | null): number {

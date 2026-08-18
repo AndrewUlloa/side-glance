@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { discoverTerminalTarget } from "../../src/core/target.ts";
+import {
+  discoverOptionalTerminalTarget,
+  discoverTerminalTarget,
+} from "../../src/core/target.ts";
 
 test("prefers an explicit wrapper surface and carries verified channels", async () => {
   assert.deepEqual(
@@ -81,5 +84,24 @@ test("fails actionably when no controlling terminal exists", async () => {
         resolveTty: async () => undefined,
       }),
     /terminal|surface/i,
+  );
+});
+
+test("optional discovery permits targetless hooks but still rejects invalid explicit targets", async () => {
+  assert.equal(
+    await discoverOptionalTerminalTarget({
+      environment: {},
+      resolveTty: async () => undefined,
+    }),
+    undefined,
+  );
+  await assert.rejects(
+    () =>
+      discoverOptionalTerminalTarget({
+        environment: {},
+        surfaceId: "bad\nsurface",
+        resolveTty: async () => undefined,
+      }),
+    /surface|control/i,
   );
 });

@@ -38,11 +38,12 @@ const npmTag = cliManifest.version.includes("-") ? "beta" : "latest";
 if (cliManifest.publishConfig?.tag !== npmTag) {
   fail(`publishConfig.tag must be ${npmTag} for ${cliManifest.version}`);
 }
+const prerelease = npmTag === "beta";
 const outputPath = process.env.GITHUB_OUTPUT;
 if (!outputPath) fail("GITHUB_OUTPUT is required");
 await appendFile(
   outputPath,
-  `version=${cliManifest.version}\ntag=${expectedTag}\nnpm_tag=${npmTag}\n`,
+  `version=${cliManifest.version}\ntag=${expectedTag}\nnpm_tag=${npmTag}\nprerelease=${prerelease}\n`,
   "utf8",
 );
 

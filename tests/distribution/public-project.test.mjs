@@ -62,6 +62,26 @@ test("documents only durable installation and truthful beta availability", async
   assert.match(releaseGuide, /ad-hoc signed/u);
 });
 
+test("publishes one consistent Apache-2.0 license surface", async () => {
+  const rootLicense = await text("LICENSE");
+  const packageLicense = await text("packages/cli/LICENSE");
+  const repositoryManifest = JSON.parse(await text("package.json"));
+  const manifest = JSON.parse(await text("packages/cli/package.json"));
+  const lockfile = JSON.parse(await text("package-lock.json"));
+  const readme = await text("README.md");
+  const formulaGenerator = await text("scripts/release/generate-homebrew-formula.mjs");
+
+  assert.equal(packageLicense, rootLicense);
+  assert.match(rootLicense, /^\s*Apache License\s+Version 2\.0, January 2004/u);
+  assert.match(rootLicense, /Copyright 2026 Andrew Ulloa/u);
+  assert.equal(repositoryManifest.license, "Apache-2.0");
+  assert.equal(manifest.license, "Apache-2.0");
+  assert.equal(lockfile.packages[""].license, "Apache-2.0");
+  assert.equal(lockfile.packages["packages/cli"].license, "Apache-2.0");
+  assert.match(readme, /## License\s+\n\s*Apache-2\.0/u);
+  assert.match(formulaGenerator, /license "Apache-2\.0"/u);
+});
+
 test("selected public Markdown documents have no broken relative links", async () => {
   const documents = [
     "README.md",
