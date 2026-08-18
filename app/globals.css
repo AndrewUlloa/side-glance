@@ -2486,7 +2486,7 @@ a {
   width: 100%;
   align-items: center;
   justify-content: center;
-  background-image: url("/hero-surface.png");
+  background-image: var(--side-glance-hero-surface);
   background-position: center;
   background-size: cover;
 }

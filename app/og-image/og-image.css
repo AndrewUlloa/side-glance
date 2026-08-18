@@ -80,7 +80,7 @@
   background-color: #273738;
   background-image:
     linear-gradient(rgb(22 35 36 / 12%), rgb(22 35 36 / 12%)),
-    url("/hero-surface.png");
+    var(--side-glance-hero-surface);
   background-position: center;
   background-size: cover;
 }
