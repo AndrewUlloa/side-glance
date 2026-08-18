@@ -12,6 +12,11 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 - Opt-in native desktop notifications for accepted ready, attention, failure, and cancellation events, with privacy-safe multi-session labels and configurable macOS sound.
 - Notification-enabled provider hook installation, an owned OpenCode plugin, an Aider completion bridge, generic process-exit alerts, and notification readiness diagnostics.
 
+### Changed
+
+- Public deployment now requires immutable GitHub Releases, SHA-pinned Actions,
+  protected Vercel checks, and npm OIDC publishing with SemVer-derived release channels.
+
 ## [0.1.0-beta.1] — 2026-08-14
 
 ### Added

@@ -15,6 +15,8 @@ or migrate live provider configuration.
 - Source commit: `53cf9429a6af669063d9611b9a4b791358d066c3`
 - The canonical Vercel `npm run build` path passed on Node 24 and the public URL
   returned HTTP 200 with Side Glance metadata and rendered copy.
+- Vercel's Git integration creates previews for pull-request commits; the recorded
+  Production deployment's source commit is the head of `main`.
 - The obsolete public project domain was removed after the new domain passed.
 
 The prior known-good production deployment is
@@ -40,10 +42,10 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-The current host prevents Turbopack's PostCSS helper from binding its internal local
-port, so the unflagged `npm run build` attempt stops at that host restriction even
-outside the filesystem sandbox. Re-run the canonical build in CI before any remote
-deployment; do not treat the local webpack substitute as publication approval.
+The beta.2 release candidate passed the canonical Turbopack build locally and in
+CI on Node 24.18.0. Turbopack reports a non-blocking missing fallback-override
+warning for Alan Sans; compilation, type checking, static generation, and rendered
+HTML verification still complete successfully.
 
 ## Vercel Preview annotation tooling
 
@@ -72,14 +74,16 @@ the toolbar must remain unpromoted; discarding that preview is its rollback path
 
 ## External publication gates
 
-Follow [docs/releasing.md](./docs/releasing.md). A complete tagged native release
-remains blocked until the repository owner explicitly approves and completes:
+Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
+release and branch protections are active, private vulnerability reporting and
+secret scanning are enabled, and future GitHub Releases are immutable. The
+remaining beta.2 gates are:
 
-- public repository visibility plus private vulnerability reporting;
-- required reviewers on the existing `github-release` and `npm-release` environments;
-- npm trusted-publisher binding for future releases;
-- an immutable GitHub prerelease from the exact tested artifacts;
-- a separate Homebrew tap pull request after those artifact URLs exist.
+- confirm npm's trusted-publisher binding for `release.yml` and `npm-release`;
+- merge this release through protected `staging` and `main`;
+- create the matching protected annotated tag only after `main` is green;
+- let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
+- open a separate Homebrew tap pull request after the immutable artifact URLs exist.
 
 ## Controlled migration from stoplight.sh
 
