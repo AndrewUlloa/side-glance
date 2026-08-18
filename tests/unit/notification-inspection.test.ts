@@ -47,7 +47,7 @@ test("reports the OS backend separately from configured provider-native notifica
       attention: {
         enabled: true,
         notifications: true,
-        sound: "glass",
+        sound: true,
         volume: 0.65,
       },
     }),
@@ -87,6 +87,8 @@ test("reports the OS backend separately from configured provider-native notifica
     exists: true,
     fileStatus: "regular",
     status: "ready",
+    scope: "user",
+    higherPrecedenceOverridesPossible: true,
     enabled: true,
     method: "auto",
   });
@@ -98,7 +100,7 @@ test("reports the OS backend separately from configured provider-native notifica
     status: "ready",
     enabled: true,
     notifications: true,
-    sound: "glass",
+    sound: true,
     volume: 0.65,
   });
   assert.deepEqual(inspection.providers.aider, {
@@ -146,9 +148,80 @@ test("reports malformed relevant configuration as unknown without permissive JSO
   assert.equal(inspection.providers.gemini.fileStatus, "malformed");
   assert.equal(inspection.providers.gemini.exists, true);
   assert.equal(inspection.providers.gemini.status, "unknown");
+  assert.equal(inspection.providers.gemini.scope, "user");
+  assert.equal(
+    inspection.providers.gemini.higherPrecedenceOverridesPossible,
+    true,
+  );
   assert.equal(inspection.providers.opencode.fileStatus, "malformed");
   assert.equal(inspection.providers.opencode.exists, true);
   assert.equal(inspection.providers.opencode.status, "unknown");
+});
+
+test("reports OpenCode desktop notifications from the effective attention toggles", async (context) => {
+  const home = await fixtureHome(context);
+  const configDirectory = path.join(home, ".config", "opencode");
+  const configPath = path.join(configDirectory, "tui.json");
+  await mkdir(configDirectory, { recursive: true });
+
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      attention: { enabled: true, notifications: false, sound: false },
+    }),
+  );
+  const disabled = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: "darwin",
+    pathProbe: async () => false,
+  });
+  assert.equal(disabled.providers.opencode.status, "disabled");
+
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      attention: { enabled: true, notifications: false, sound: true },
+    }),
+  );
+  const soundOnly = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: "darwin",
+    pathProbe: async () => false,
+  });
+  assert.equal(soundOnly.providers.opencode.status, "ready");
+
+  await writeFile(
+    configPath,
+    JSON.stringify({ attention: { enabled: true } }),
+  );
+  const enabledByDefault = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: "darwin",
+    pathProbe: async () => false,
+  });
+  assert.equal(enabledByDefault.providers.opencode.status, "ready");
+
+  await writeFile(
+    configPath,
+    JSON.stringify({ attention: { enabled: false, notifications: true } }),
+  );
+  const masterDisabled = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: "darwin",
+    pathProbe: async () => false,
+  });
+  assert.equal(masterDisabled.providers.opencode.status, "disabled");
+
+  await writeFile(
+    configPath,
+    JSON.stringify({ attention: { enabled: true, sound: "glass" } }),
+  );
+  const invalidSound = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: "darwin",
+    pathProbe: async () => false,
+  });
+  assert.equal(invalidSound.providers.opencode.status, "unknown");
 });
 
 test("recognizes valid multiline Codex notification arrays", async (context) => {

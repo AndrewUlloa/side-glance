@@ -447,15 +447,21 @@ function configuredNotifier(
     }
     return undefined;
   }
+  return createNativeNotifier(notificationOptionsForInvocation(args));
+}
+
+export function notificationOptionsForInvocation(
+  args: readonly string[],
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): NotificationOptions {
   const sound =
-    optionalOption(args, "--notification-sound") ??
-    process.env.SIDE_GLANCE_NOTIFICATION_SOUND;
-  const label = optionalOption(args, "--label") ?? process.env.SIDE_GLANCE_LABEL;
-  const options: NotificationOptions = {
+    environment.SIDE_GLANCE_NOTIFICATION_SOUND ||
+    optionalOption(args, "--notification-sound");
+  const label = optionalOption(args, "--label") ?? environment.SIDE_GLANCE_LABEL;
+  return {
     ...(sound ? { sound } : {}),
     ...(label ? { label } : {}),
   };
-  return createNativeNotifier(options);
 }
 
 async function probeExecutable(candidate: string): Promise<boolean> {

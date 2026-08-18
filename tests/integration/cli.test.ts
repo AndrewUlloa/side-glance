@@ -582,6 +582,44 @@ test("installs notification-enabled provider hooks without changing unrelated se
   );
 });
 
+test("describes a Codex top-level notify command without claiming it is native", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-codex-notify-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "side-glance-bin");
+  await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await mkdir(path.join(home, ".codex"), { recursive: true });
+  await writeFile(
+    path.join(home, ".codex", "config.toml"),
+    'notify = ["existing-command"]\n',
+  );
+
+  const installed = await runCli(
+    [
+      "install",
+      "codex",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--notifications",
+      "--json",
+    ],
+    { stateDirectory: directory },
+  );
+
+  assert.equal(installed.code, 0, installed.stderr);
+  const warnings = JSON.parse(installed.stdout).warnings as string[];
+  assert.ok(
+    warnings.some((warning) => warning.includes("top-level notify command")),
+  );
+  assert.ok(
+    warnings.every(
+      (warning) => !warning.includes("native notifications are already configured"),
+    ),
+  );
+});
+
 test("installs and removes the owned OpenCode notification plugin through the CLI", async (context) => {
   const directory = await stateDirectory(context);
   const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-opencode-"));

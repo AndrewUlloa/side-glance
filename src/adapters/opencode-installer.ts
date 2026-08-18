@@ -293,6 +293,7 @@ import { spawn } from "node:child_process";
 const executable = ${JSON.stringify(executablePath)};
 const args = ${JSON.stringify(args)};
 const HOOK_TIMEOUT_MS = 2_000;
+const TERMINATION_GRACE_MS = 250;
 const MAX_SESSION_CACHE_ENTRIES = 1_024;
 const sessionKinds = new Map();
 
@@ -409,32 +410,50 @@ async function forward(event) {
     }
     let settled = false;
     let timeout;
+    let forceKillTimeout;
+    let finishTimeout;
     const finish = () => {
       if (settled) return;
       settled = true;
       if (timeout) clearTimeout(timeout);
+      if (forceKillTimeout) clearTimeout(forceKillTimeout);
+      if (finishTimeout) clearTimeout(finishTimeout);
       resolve();
+    };
+    const terminate = () => {
+      if (settled) return;
+      child.stdin?.destroy();
+      if (child.exitCode !== null || child.signalCode !== null) {
+        finish();
+        return;
+      }
+      child.kill("SIGTERM");
+      if (forceKillTimeout) return;
+      forceKillTimeout = setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill("SIGKILL");
+        }
+        finishTimeout = setTimeout(() => {
+          child.unref();
+          finish();
+        }, TERMINATION_GRACE_MS);
+        finishTimeout.unref?.();
+      }, TERMINATION_GRACE_MS);
+      forceKillTimeout.unref?.();
     };
     child.once("error", finish);
     child.once("close", finish);
     if (!child.stdin) {
-      child.kill("SIGTERM");
-      child.unref();
-      finish();
+      terminate();
       return;
     }
-    child.stdin.once("error", finish);
-    timeout = setTimeout(() => {
-      child.stdin.destroy();
-      child.kill("SIGTERM");
-      child.unref();
-      finish();
-    }, HOOK_TIMEOUT_MS);
+    child.stdin.once("error", terminate);
+    timeout = setTimeout(terminate, HOOK_TIMEOUT_MS);
     timeout.unref?.();
     try {
       child.stdin.end(payload);
     } catch {
-      finish();
+      terminate();
     }
   });
 }

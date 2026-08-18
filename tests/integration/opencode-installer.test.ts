@@ -486,14 +486,25 @@ test("generated plugin updates child cache without spawning for unsupported even
 test("generated plugin bounds a hung hook child and returns control to OpenCode", async (context) => {
   const home = await fixtureHome(context);
   const executablePath = path.join(home, "hung bin", "side-glance");
+  const pidPath = path.join(home, "hung-child.pid");
   await mkdir(path.dirname(executablePath), { recursive: true });
   await writeFile(
     executablePath,
-    '#!/usr/bin/env node\nprocess.on("SIGTERM", () => process.exit(0));\nsetTimeout(() => process.exit(0), 8_000);\n',
+    `#!/usr/bin/env node\nimport { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(pidPath)}, String(process.pid));\nprocess.on("SIGTERM", () => {});\nsetInterval(() => {}, 1_000);\n`,
     { mode: 0o700 },
   );
   await chmod(executablePath, 0o700);
   const plugin = await loadGeneratedPlugin(home, executablePath);
+
+  context.after(async () => {
+    const pid = Number(await readFile(pidPath, "utf8").catch(() => "0"));
+    if (!pid) return;
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // The generated plugin already reaped the timed-out child.
+    }
+  });
 
   const startedAt = Date.now();
   await plugin.event({
@@ -503,9 +514,11 @@ test("generated plugin bounds a hung hook child and returns control to OpenCode"
     },
   });
   const elapsed = Date.now() - startedAt;
+  const pid = Number(await readFile(pidPath, "utf8"));
 
   assert.ok(elapsed >= 1_500, `hook resolved too early after ${elapsed}ms`);
   assert.ok(elapsed < 4_000, `hook remained blocked for ${elapsed}ms`);
+  assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
 });
 
 test("validates sound before writing and never treats it as program text", async (context) => {

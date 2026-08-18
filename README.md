@@ -90,7 +90,7 @@ For an arbitrary one-shot command, Side Glance can truthfully notify only when t
 side-glance run --label "Release build" --notify-on-exit -- your-command
 ```
 
-`side-glance doctor --json` reports the Side Glance OS backend separately from native Codex, Gemini, OpenCode, and Aider notification readiness. Installation also returns a warning when it detects an already-active native path; enabling both can produce duplicate alerts. On macOS, Notifications settings and Focus can suppress delivery or sound; notification clicks are not guaranteed to select the originating iTerm tab or tmux pane.
+`side-glance doctor --json` reports the Side Glance OS backend separately from native Codex, OpenCode, and Aider notification readiness. Gemini readiness is explicitly scoped to the user settings file because workspace, system, environment, and CLI settings can override it. Installation also returns a warning when it detects an already-active native path; enabling both can produce duplicate alerts. A Codex top-level `notify` command is reported separately for inspection because it may perform something other than desktop notification delivery. On macOS, Notifications settings and Focus can suppress delivery or sound; notification clicks are not guaranteed to select the originating iTerm tab or tmux pane.
 
 ## Recovery contract
 

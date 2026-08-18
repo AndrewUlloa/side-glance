@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const read = (path: string) => readFile(path, "utf8");
+
+test("the OG route renders the real long-ready terminal in a 1200 by 630 composition", async () => {
+  const [page, css] = await Promise.all([
+    read("app/og-image/page.tsx"),
+    read("app/og-image/og-image.css"),
+  ]);
+
+  assert.match(page, /className="og-image-canvas"/u);
+  assert.match(page, /src="\/side-glance-mark\.svg"/u);
+  assert.match(page, /Long loops\./u);
+  assert.match(page, /Short glances\./u);
+  assert.match(page, /<InteractiveClaudeTerminal/u);
+  assert.match(page, /className="og-image-terminal" inert/u);
+  assert.match(page, /phase="completed"/u);
+  assert.match(page, /scenario="ready-long"/u);
+  assert.match(page, /terminalId="tmux_04"/u);
+  assert.match(css, /\.og-image-canvas\s*\{[^}]*width:\s*1200px/u);
+  assert.match(css, /\.og-image-canvas\s*\{[^}]*height:\s*630px/u);
+  assert.match(css, /animation:\s*none\s*!important/u);
+  assert.match(css, /transition:\s*none\s*!important/u);
+  assert.match(
+    css,
+    /\.og-image-terminal\s+\.mock-terminal\s*\{[^}]*width:\s*100%/u
+  );
+  assert.match(
+    css,
+    /\.og-image-terminal\s+\.mock-terminal\s*\{[^}]*height:\s*100%/u
+  );
+});
+
+test("social metadata publishes the captured OG image with complete dimensions and alt text", async () => {
+  const layout = await read("app/layout.tsx");
+
+  assert.match(
+    layout,
+    /title:\s*"Side Glance — Long loops\. Short glances\."/u
+  );
+  assert.match(
+    layout,
+    /description:\s*"Know which loop needs judgment\. Let the others keep running\."/u
+  );
+  assert.doesNotMatch(layout, /your terminal knows when it needs you/u);
+  assert.match(layout, /images:\s*\[\s*\{/u);
+  assert.match(layout, /url:\s*"\/og-image\.png"/u);
+  assert.match(layout, /width:\s*1200/u);
+  assert.match(layout, /height:\s*630/u);
+  assert.match(layout, /type:\s*"image\/png"/u);
+  assert.match(layout, /alt:\s*"Side Glance — Long loops\. Short glances\."/u);
+  assert.match(layout, /card:\s*"summary_large_image"/u);
+});
+
+test("the captured social asset is a 1200 by 630 PNG", async () => {
+  const image = await readFile("public/og-image.png");
+
+  assert.equal(image.subarray(1, 4).toString("ascii"), "PNG");
+  assert.equal(image.readUInt32BE(16), 1200);
+  assert.equal(image.readUInt32BE(20), 630);
+});

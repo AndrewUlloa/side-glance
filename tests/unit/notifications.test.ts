@@ -10,6 +10,7 @@ import {
   sanitizeNotificationSound,
 } from "../../src/notifications/policy.ts";
 import type { SideGlanceEvent } from "../../src/core/protocol.ts";
+import { notificationOptionsForInvocation } from "../../src/cli/index.ts";
 
 interface Execution {
   file: string;
@@ -104,6 +105,19 @@ test("normalizes, strips controls, and bounds explicit labels and sound names", 
   });
   assert.equal(request?.body, "Frontend agent");
   assert.equal(request?.sound, "Glass");
+});
+
+test("lets a wrapper-provided session sound override an installed hook default", () => {
+  assert.deepEqual(
+    notificationOptionsForInvocation(
+      ["--notification-sound", "Glass", "--label", "Installed label"],
+      {
+        SIDE_GLANCE_NOTIFICATION_SOUND: "Hero",
+        SIDE_GLANCE_LABEL: "Wrapper label",
+      },
+    ),
+    { sound: "Hero", label: "Installed label" },
+  );
 });
 
 test("uses static no-shell osascript arguments on macOS", async () => {

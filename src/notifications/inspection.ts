@@ -65,6 +65,8 @@ export interface CodexNotificationInspection
 export interface GeminiNotificationInspection
   extends ConfiguredProviderInspection {
   provider: "gemini";
+  scope: "user";
+  higherPrecedenceOverridesPossible: true;
   enabled?: boolean;
   method?: string;
 }
@@ -74,7 +76,7 @@ export interface OpenCodeNotificationInspection
   provider: "opencode";
   enabled?: boolean;
   notifications?: boolean;
-  sound?: boolean | string;
+  sound?: boolean;
   volume?: number;
 }
 
@@ -220,6 +222,10 @@ async function inspectCodex(
 async function inspectGemini(
   homeDirectory: string,
 ): Promise<GeminiNotificationInspection> {
+  const scope = {
+    scope: "user",
+    higherPrecedenceOverridesPossible: true,
+  } as const;
   const configPath = path.join(homeDirectory, ".gemini", "settings.json");
   const loaded = await readBoundedRegularFile(configPath);
   if (loaded.status !== "regular" || loaded.raw === undefined) {
@@ -229,6 +235,7 @@ async function inspectGemini(
       exists: existenceFor(loaded.status),
       fileStatus: loaded.status,
       status: statusForUnreadConfig(loaded.status),
+      ...scope,
     };
   }
   const parsed = parseJsonObject(loaded.raw);
@@ -239,6 +246,7 @@ async function inspectGemini(
       exists: true,
       fileStatus: "malformed",
       status: "unknown",
+      ...scope,
     };
   }
   const general = recordValue(parsed.general);
@@ -249,6 +257,7 @@ async function inspectGemini(
       exists: true,
       fileStatus: "regular",
       status: "not-configured",
+      ...scope,
     };
   }
   const enabled = booleanValue(general.enableNotifications);
@@ -268,6 +277,7 @@ async function inspectGemini(
         : enabled === false
           ? "disabled"
           : "not-configured",
+    ...scope,
     ...(enabled === undefined ? {} : { enabled }),
     ...(method === undefined ? {} : { method }),
   };
@@ -315,7 +325,7 @@ async function inspectOpenCode(
 
   const enabled = booleanValue(attention.enabled);
   const notifications = booleanValue(attention.notifications);
-  const sound = soundValue(attention.sound);
+  const sound = booleanValue(attention.sound);
   const volume = volumeValue(attention.volume);
   const hasInvalidRelevantValue =
     ("enabled" in attention && enabled === undefined) ||
@@ -330,7 +340,9 @@ async function inspectOpenCode(
     status: hasInvalidRelevantValue
       ? "unknown"
       : enabled === true
-        ? "ready"
+        ? notifications === false && sound === false
+          ? "disabled"
+          : "ready"
         : enabled === false
           ? "disabled"
           : "not-configured",
@@ -547,10 +559,6 @@ function boundedString(value: unknown): string | undefined {
   return typeof value === "string" && value.length <= MAX_SETTING_LENGTH
     ? value
     : undefined;
-}
-
-function soundValue(value: unknown): boolean | string | undefined {
-  return booleanValue(value) ?? boundedString(value);
 }
 
 function volumeValue(value: unknown): number | undefined {

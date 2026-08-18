@@ -78,15 +78,20 @@ async function duplicateNotificationWarnings(
     pathProbe: async () => false,
   });
   const native = readiness.providers[provider];
-  const enabled =
-    native.status === "ready" ||
-    (provider === "codex" &&
-      readiness.providers.codex.topLevelNotify === true);
-  return enabled
-    ? [
-        `${provider} native notifications are already configured; enabling Side Glance notifications may produce duplicate alerts.`,
-      ]
-    : [];
+  if (native.status === "ready") {
+    return [
+      `${provider} native notifications are already configured; enabling Side Glance notifications may produce duplicate alerts.`,
+    ];
+  }
+  if (
+    provider === "codex" &&
+    readiness.providers.codex.topLevelNotify === true
+  ) {
+    return [
+      "Codex has a top-level notify command configured; inspect that command before enabling Side Glance notifications because it may already deliver alerts.",
+    ];
+  }
+  return [];
 }
 
 function isEphemeralNpmExecution(

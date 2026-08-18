@@ -1,5 +1,7 @@
+// biome-ignore-all lint/security/noDangerouslySetInnerHtml: The fixed theme bootstrap contains no user data and must run before first paint.
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Alan_Sans, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "lenis/dist/lenis.css";
 import { AgentationToolbar } from "./components/AgentationToolbar";
 import { SmoothScroll } from "./components/SmoothScroll";
@@ -15,8 +17,27 @@ const showAgentation = shouldShowAgentation({
   vercelEnv: process.env.VERCEL_ENV,
 });
 
-const inter = Inter({
-  variable: "--font-inter",
+const themeBootstrap = `(() => {
+  let storedTheme = null;
+  try {
+    storedTheme = localStorage.getItem("side-glance-theme")
+      ?? localStorage.getItem("signal-theme");
+    if (storedTheme === "light" || storedTheme === "dark") {
+      localStorage.setItem("side-glance-theme", storedTheme);
+      localStorage.removeItem("signal-theme");
+    }
+  } catch {}
+  const theme = storedTheme === "light" || storedTheme === "dark"
+    ? storedTheme
+    : matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+})()`;
+
+const alanSans = Alan_Sans({
+  variable: "--font-alan-sans",
   subsets: ["latin"],
 });
 
@@ -27,10 +48,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Side Glance — attention for coding agents",
-  description:
-    "A local-first terminal and tmux attention layer for Claude Code, Codex, Gemini CLI, OpenCode, Aider, and any coding CLI.",
+  title: "Side Glance — Long loops. Short glances.",
+  description: "Know which loop needs judgment. Let the others keep running.",
   applicationName: "Side Glance",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Side Glance",
+  },
   keywords: [
     "coding agents",
     "terminal",
@@ -41,17 +66,32 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    title: "Side Glance — your terminal knows when it needs you",
-    description:
-      "Local-first lifecycle attention for coding-agent CLIs, with safe ordering, cleanup, and restoration.",
+    title: "Side Glance — Long loops. Short glances.",
+    description: "Know which loop needs judgment. Let the others keep running.",
     siteName: "Side Glance",
     url: "/",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        type: "image/png",
+        alt: "Side Glance — Long loops. Short glances.",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Side Glance — attention for coding agents",
-    description:
-      "A quiet thermal status layer across terminal backgrounds and tmux.",
+    title: "Side Glance — Long loops. Short glances.",
+    description: "Know which loop needs judgment. Let the others keep running.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Side Glance — Long loops. Short glances.",
+      },
+    ],
   },
   icons: {
     icon: "/favicon.svg",
@@ -60,8 +100,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  colorScheme: "dark",
-  themeColor: "#08090a",
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f6f4" },
+    { media: "(prefers-color-scheme: dark)", color: "#08090a" },
+  ],
 };
 
 export default function RootLayout({
@@ -70,8 +113,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${geistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${alanSans.variable} ${geistMono.variable}`}>
+        <Script
+          dangerouslySetInnerHTML={{ __html: themeBootstrap }}
+          id="side-glance-theme-bootstrap"
+          strategy="beforeInteractive"
+        />
         <SmoothScroll />
         {children}
         <AgentationToolbar enabled={showAgentation} />
