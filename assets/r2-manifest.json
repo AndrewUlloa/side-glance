@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "bucket": "side-glance-assets-prod",
+  "defaultOrigin": "https://assets.sideglance.ai",
+  "cacheControl": "public, max-age=31536000, immutable",
+  "assets": {
+    "heroSurface": {
+      "key": "site/hero/hero-surface.7bbea8acdd1a.webp",
+      "source": "hero-surface.webp",
+      "sha256": "7bbea8acdd1ac806a8393bf70bc6e1debd40fe965b10bf68ead3a612e4c5f22f",
+      "contentType": "image/webp",
+      "bytes": 352696,
+      "sourceBytes": 2469673,
+      "width": 1344,
+      "height": 768
+    },
+    "loadingLife01": {
+      "key": "site/loading/loading-life-01.077d306985a1.webp",
+      "source": "loading-life-01.webp",
+      "sha256": "077d306985a150d0977581f892206931e8134fa8062b8002622bfcc0e2136ee7",
+      "contentType": "image/webp",
+      "bytes": 34128,
+      "sourceBytes": 1418448,
+      "width": 1344,
+      "height": 768
+    },
+    "loadingLife02": {
+      "key": "site/loading/loading-life-02.f2c15c1e02be.webp",
+      "source": "loading-life-02.webp",
+      "sha256": "f2c15c1e02be14b704a8dee8f4d2df379c3e581b8f733850f5c53888e25750d7",
+      "contentType": "image/webp",
+      "bytes": 43304,
+      "sourceBytes": 1491496,
+      "width": 1344,
+      "height": 768
+    },
+    "loadingLife03": {
+      "key": "site/loading/loading-life-03.6be981da68b2.webp",
+      "source": "loading-life-03.webp",
+      "sha256": "6be981da68b2efb410d657e413431fda16f97278e6cea51ea22e0aef6ad03934",
+      "contentType": "image/webp",
+      "bytes": 151224,
+      "sourceBytes": 1911384,
+      "width": 1344,
+      "height": 768
+    },
+    "loadingLife04": {
+      "key": "site/loading/loading-life-04.b8aec3c5d15e.webp",
+      "source": "loading-life-04.webp",
+      "sha256": "b8aec3c5d15e384b0d2ba33682a4bee7ae846b6a99d5a3b482214c3ce27a1177",
+      "contentType": "image/webp",
+      "bytes": 57188,
+      "sourceBytes": 1569418,
+      "width": 1344,
+      "height": 768
+    },
+    "openGraph": {
+      "key": "site/social/og-image.1a56c314897c.png",
+      "source": "og-image.png",
+      "sha256": "1a56c314897ce99685ca0da6fce872a7e087a21331da0803002a8274795898b8",
+      "contentType": "image/png",
+      "bytes": 370737,
+      "sourceBytes": 370737,
+      "width": 1200,
+      "height": 630
+    }
+  }
+}

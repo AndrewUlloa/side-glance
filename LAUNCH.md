@@ -7,7 +7,8 @@ or migrate live provider configuration.
 
 ## Production deployment status
 
-- Public URL: <https://side-glance.vercel.app>
+- Primary public URL after registrar activation: <https://sideglance.ai>
+- Vercel fallback URL: <https://side-glance.vercel.app>
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
 - Production deployment: `dpl_877rCZQP8w1VVbcRTPNqVMjqT9xM`
@@ -18,6 +19,13 @@ or migrate live provider configuration.
 - Vercel's Git integration creates previews for pull-request commits; the recorded
   Production deployment's source commit is the head of `main`.
 - The obsolete public project domain was removed after the new domain passed.
+
+The Next.js application remains on Vercel. Large site images are stored in the
+`side-glance-assets-prod` Cloudflare R2 bucket and use immutable, content-addressed
+keys. `assets.sideglance.ai` is the production asset hostname. Cloudflare Web
+Analytics uses manual beacon installation because the Vercel apex records remain
+DNS-only. See [the public-asset runbook](./docs/assets.md) for the upload and
+rollback contract.
 
 The prior known-good production deployment is
 `dpl_12hgQd7peRczGnDuY4diahzdsbWE`. It remains Vercel rollback evidence; immutable

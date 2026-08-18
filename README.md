@@ -16,8 +16,9 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 
 ## Installation status
 
-Side Glance is available as a beta package and at
-[side-glance.vercel.app](https://side-glance.vercel.app). The CLI prerelease is
+Side Glance is available as a beta package. Its canonical site is
+[sideglance.ai](https://sideglance.ai); until registrar DNS activation completes,
+use the [Vercel fallback](https://side-glance.vercel.app). The CLI prerelease is
 published on npm's `beta` channel.
 
 ```bash
@@ -104,7 +105,11 @@ OSC 111 restores the terminal's configured default background; terminals do not 
 
 ## Development
 
-The CLI and interactive site share the same phase and palette model. The site uses the standard Next.js commands and deploys only to Vercel; it has no Cloudflare Worker, vinext, or Wrangler compatibility build. The required gates are:
+The CLI and interactive site share the same phase and palette model. The Next.js
+application deploys to Vercel, while substantial public media is delivered from
+Cloudflare R2 and privacy-first traffic measurement uses Cloudflare Web Analytics.
+There is no Cloudflare Worker, vinext, or Wrangler compatibility build. The
+required gates are:
 
 ```bash
 npm run test:unit
@@ -117,6 +122,7 @@ npm test
 ```
 
 See [SPEC.md](./SPEC.md), [PLAN.md](./PLAN.md), [the CI/CD runbook](./docs/cicd.md),
+[the public-asset runbook](./docs/assets.md),
 [architecture](./docs/architecture.md), [adapter protocol](./docs/adapter-protocol.md),
 and the [edge-case audit](./docs/edge-case-audit.md).
 
