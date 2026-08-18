@@ -2,6 +2,7 @@
   "name": "side-glance-repository",
   "version": "0.0.0",
   "description": "A local-first attention layer for coding-agent CLIs.",
+  "license": "Apache-2.0",
   "private": true,
   "workspaces": [
     "packages/*"

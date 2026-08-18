@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const repository = fileURLToPath(new URL("../..", import.meta.url));
 const validator = path.join(repository, "scripts/release/validate-release.mjs");
+const channelValidator = path.join(repository, "scripts/release/validate-release-channel.mjs");
 
 test("CI and release workflows pin actions and enforce the public protected-tag boundary", async () => {
   const ci = await readFile(path.join(repository, ".github/workflows/ci.yml"), "utf8");
@@ -29,7 +30,8 @@ test("CI and release workflows pin actions and enforce the public protected-tag 
   assert.doesNotMatch(ci, /-latest/u);
 
   assert.match(release, /^permissions:\s*\{\}/mu);
-  assert.match(release, /group:\s+release-\$\{\{ github\.ref_name \}\}/u);
+  assert.match(release, /group:\s+side-glance-release/u);
+  assert.doesNotMatch(release, /group:\s+release-\$\{\{ github\.ref_name \}\}/u);
   assert.match(release, /cancel-in-progress:\s+false/u);
   assert.match(release, /tags:\s*\["v\*"\]/u);
   assert.match(release, /node-version:\s+24\.18\.0/u);
@@ -49,9 +51,17 @@ test("CI and release workflows pin actions and enforce the public protected-tag 
   assert.match(release, /environment:\s+github-release/u);
   assert.match(release, /id-token:\s+write/u);
   assert.match(release, /attestations:\s+write/u);
+  assert.match(release, /registry-url:\s+https:\/\/registry\.npmjs\.org/u);
   assert.doesNotMatch(release, /NODE_AUTH_TOKEN|NPM_TOKEN|--clobber/u);
-  assert.match(release, /npm publish .*\.tgz --access public --tag beta/u);
+  assert.match(release, /NPM_TAG:\s+\$\{\{ needs\.validate\.outputs\.npm_tag \}\}/u);
+  assert.match(release, /PRERELEASE:\s+\$\{\{ needs\.validate\.outputs\.prerelease \}\}/u);
+  assert.match(release, /npm view side-glance dist-tags --json/u);
+  assert.doesNotMatch(release, /npm view "side-glance@\$NPM_TAG" version/u);
+  assert.match(release, /validate-release-channel\.mjs "\$VERSION" "\$NPM_TAG" "\$CURRENT_VERSION"/u);
+  assert.match(release, /npm publish .*\.tgz --access public --tag "\$NPM_TAG"/u);
+  assert.doesNotMatch(release, /npm publish .*\.tgz --access public --tag beta/u);
   assert.match(release, /gh release create .*--verify-tag.*--draft/u);
+  assert.match(release, /gh release verify "\$TAG" --repo "\$GITHUB_REPOSITORY"/u);
   assert.match(release, /github\.event\.repository\.visibility/u);
   assert.match(release, /github\.ref_protected/u);
 });
@@ -64,15 +74,16 @@ test("release validation accepts only Side Glance's public protected matching ve
     GITHUB_REPOSITORY: "AndrewUlloa/side-glance",
     GITHUB_EVENT_REPOSITORY_VISIBILITY: "public",
     GITHUB_REF_TYPE: "tag",
-    GITHUB_REF_NAME: "v0.1.0-beta.1",
+    GITHUB_REF_NAME: "v0.1.0-beta.2",
     GITHUB_REF_PROTECTED: "true",
     GITHUB_OUTPUT: output,
   };
 
   await command(process.execPath, [validator, repository], base);
   const fields = await readFile(output, "utf8");
-  assert.match(fields, /^version=0\.1\.0-beta\.1$/mu);
+  assert.match(fields, /^version=0\.1\.0-beta\.2$/mu);
   assert.match(fields, /^npm_tag=beta$/mu);
+  assert.match(fields, /^prerelease=true$/mu);
 
   for (const [field, value, pattern] of [
     ["GITHUB_EVENT_REPOSITORY_VISIBILITY", "private", /repository must be public/iu],
@@ -85,6 +96,53 @@ test("release validation accepts only Side Glance's public protected matching ve
       pattern,
     );
   }
+});
+
+test("release validation routes stable versions to latest and a normal GitHub release", async (context) => {
+  const temporary = await mkdtemp(path.join(tmpdir(), "side-glance-stable-release-policy-"));
+  context.after(() => rm(temporary, { recursive: true, force: true }));
+  await mkdir(path.join(temporary, "packages/cli"), { recursive: true });
+  await writeFile(path.join(temporary, "package.json"), JSON.stringify({ private: true }), "utf8");
+  await writeFile(
+    path.join(temporary, "packages/cli/package.json"),
+    JSON.stringify({
+      name: "side-glance",
+      version: "1.0.0",
+      publishConfig: { tag: "latest" },
+    }),
+    "utf8",
+  );
+  const output = path.join(temporary, "output");
+
+  await command(process.execPath, [validator, temporary], {
+    GITHUB_REPOSITORY: "AndrewUlloa/side-glance",
+    GITHUB_EVENT_REPOSITORY_VISIBILITY: "public",
+    GITHUB_REF_TYPE: "tag",
+    GITHUB_REF_NAME: "v1.0.0",
+    GITHUB_REF_PROTECTED: "true",
+    GITHUB_OUTPUT: output,
+  });
+
+  const fields = await readFile(output, "utf8");
+  assert.match(fields, /^version=1\.0\.0$/mu);
+  assert.match(fields, /^npm_tag=latest$/mu);
+  assert.match(fields, /^prerelease=false$/mu);
+});
+
+test("release channels allow retries and upgrades but reject backward dist-tag moves", async () => {
+  await command(process.execPath, [channelValidator, "0.1.0-beta.2", "beta", "0.1.0-beta.1"]);
+  await command(process.execPath, [channelValidator, "0.1.0-beta.2", "beta", "0.1.0-beta.2"]);
+  await command(process.execPath, [channelValidator, "1.0.0", "latest", "0.1.0-beta.3"]);
+  await command(process.execPath, [channelValidator, "1.0.0", "latest"]);
+
+  await assert.rejects(
+    () => command(process.execPath, [channelValidator, "0.1.0-beta.2", "beta", "0.1.0-beta.3"]),
+    /refusing to move npm beta backward/iu,
+  );
+  await assert.rejects(
+    () => command(process.execPath, [channelValidator, "1.0.0", "latest", "2.0.0"]),
+    /refusing to move npm latest backward/iu,
+  );
 });
 
 function command(executable, args, environment) {
