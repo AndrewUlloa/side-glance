@@ -1,9 +1,9 @@
 # Launch and rollback
 
-Side Glance is a beta. The source, GitHub repository, Vercel project and production
-domain, npm package, and local release contracts have been renamed. This work did
-not create a version tag or GitHub Release, update a Homebrew tap, change repository
-visibility, or migrate live provider configuration.
+Side Glance is a beta. Version `0.1.0-beta.2` is the release candidate for the
+desktop-notification work integrated on `staging`. Preparing this candidate does
+not create a version tag or GitHub Release, publish to npm, update a Homebrew tap,
+or migrate live provider configuration.
 
 ## Production deployment status
 
@@ -21,12 +21,14 @@ The prior known-good production deployment is
 `dpl_12hgQd7peRczGnDuY4diahzdsbWE`. It remains Vercel rollback evidence; immutable
 historical deployment identifiers are not rewritten during a product rename.
 
-## npm beta status
+## npm beta release candidate
 
-- Package: `side-glance@0.1.0-beta.1`
+- Candidate: `side-glance@0.1.0-beta.2`
 - Channel: `beta`
-- Integrity: `sha512-xW2t4IJEwDHRgh3uMi4FhXP9zhYCEdcvefCHVrXesWMfaOlMzx+QEgLfkaaHJkGvR0boC5bZnZq0dEwDax9szw==`
-- The published tarball contains only `LICENSE`, `README.md`,
+- Status: pending protected `main` promotion and the matching annotated tag
+- Previously published: `side-glance@0.1.0-beta.1`
+- Previous integrity: `sha512-xW2t4IJEwDHRgh3uMi4FhXP9zhYCEdcvefCHVrXesWMfaOlMzx+QEgLfkaaHJkGvR0boC5bZnZq0dEwDax9szw==`
+- The candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
 
 ## Local rename verification

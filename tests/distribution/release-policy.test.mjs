@@ -64,14 +64,14 @@ test("release validation accepts only Side Glance's public protected matching ve
     GITHUB_REPOSITORY: "AndrewUlloa/side-glance",
     GITHUB_EVENT_REPOSITORY_VISIBILITY: "public",
     GITHUB_REF_TYPE: "tag",
-    GITHUB_REF_NAME: "v0.1.0-beta.1",
+    GITHUB_REF_NAME: "v0.1.0-beta.2",
     GITHUB_REF_PROTECTED: "true",
     GITHUB_OUTPUT: output,
   };
 
   await command(process.execPath, [validator, repository], base);
   const fields = await readFile(output, "utf8");
-  assert.match(fields, /^version=0\.1\.0-beta\.1$/mu);
+  assert.match(fields, /^version=0\.1\.0-beta\.2$/mu);
   assert.match(fields, /^npm_tag=beta$/mu);
 
   for (const [field, value, pattern] of [
