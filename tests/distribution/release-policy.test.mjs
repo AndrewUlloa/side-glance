@@ -58,7 +58,11 @@ test("CI and release workflows pin actions and enforce the public protected-tag 
   assert.match(release, /npm view side-glance dist-tags --json/u);
   assert.doesNotMatch(release, /npm view "side-glance@\$NPM_TAG" version/u);
   assert.match(release, /validate-release-channel\.mjs "\$VERSION" "\$NPM_TAG" "\$CURRENT_VERSION"/u);
-  assert.match(release, /npm publish .*\.tgz --access public --tag "\$NPM_TAG"/u);
+  const npmTarballPublishPaths = [...release.matchAll(
+    /npm publish ([^\s]+\.tgz) --access public --tag "\$NPM_TAG"/gu,
+  )].map((match) => match[1]);
+  assert.deepEqual(npmTarballPublishPaths, ["./release/*.tgz", "./release/*.tgz"]);
+  assert.doesNotMatch(release, /npm publish release\/\*\.tgz/u);
   assert.doesNotMatch(release, /npm publish .*\.tgz --access public --tag beta/u);
   assert.match(release, /gh release create .*--verify-tag.*--draft/u);
   assert.match(release, /gh release verify "\$TAG" --repo "\$GITHUB_REPOSITORY"/u);
@@ -74,14 +78,14 @@ test("release validation accepts only Side Glance's public protected matching ve
     GITHUB_REPOSITORY: "AndrewUlloa/side-glance",
     GITHUB_EVENT_REPOSITORY_VISIBILITY: "public",
     GITHUB_REF_TYPE: "tag",
-    GITHUB_REF_NAME: "v0.1.0-beta.2",
+    GITHUB_REF_NAME: "v0.1.0-beta.3",
     GITHUB_REF_PROTECTED: "true",
     GITHUB_OUTPUT: output,
   };
 
   await command(process.execPath, [validator, repository], base);
   const fields = await readFile(output, "utf8");
-  assert.match(fields, /^version=0\.1\.0-beta\.2$/mu);
+  assert.match(fields, /^version=0\.1\.0-beta\.3$/mu);
   assert.match(fields, /^npm_tag=beta$/mu);
   assert.match(fields, /^prerelease=true$/mu);
 
@@ -130,8 +134,8 @@ test("release validation routes stable versions to latest and a normal GitHub re
 });
 
 test("release channels allow retries and upgrades but reject backward dist-tag moves", async () => {
-  await command(process.execPath, [channelValidator, "0.1.0-beta.2", "beta", "0.1.0-beta.1"]);
-  await command(process.execPath, [channelValidator, "0.1.0-beta.2", "beta", "0.1.0-beta.2"]);
+  await command(process.execPath, [channelValidator, "0.1.0-beta.3", "beta", "0.1.0-beta.1"]);
+  await command(process.execPath, [channelValidator, "0.1.0-beta.3", "beta", "0.1.0-beta.3"]);
   await command(process.execPath, [channelValidator, "1.0.0", "latest", "0.1.0-beta.3"]);
   await command(process.execPath, [channelValidator, "1.0.0", "latest"]);
 

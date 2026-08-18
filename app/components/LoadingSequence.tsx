@@ -11,13 +11,9 @@ import {
 } from "react";
 
 import { LINEAR_MOTION } from "../lib/motion-tokens";
+import { SITE_ASSETS } from "../lib/site-assets";
 
-const LIFE_SCENES = [
-  "/loading-life-01.png",
-  "/loading-life-02.png",
-  "/loading-life-03.png",
-  "/loading-life-04.png",
-] as const;
+const LIFE_SCENES = SITE_ASSETS.loadingLife;
 
 const SECOND_IN_MS = 1000;
 const PAGE_REVEAL_EVENT = "side-glance:loading-complete";
@@ -266,6 +262,7 @@ export function LoadingSequence() {
                     priority
                     sizes="(max-width: 760px) 50vw, 42vw"
                     src={src}
+                    unoptimized
                   />
                 </motion.figure>
               ))}

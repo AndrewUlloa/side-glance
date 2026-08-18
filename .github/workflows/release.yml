@@ -89,7 +89,7 @@ jobs:
           package-manager-cache: false
       - run: npm ci
       - run: mkdir -p release && npm pack --workspace side-glance --pack-destination release
-      - run: npm publish release/*.tgz --access public --tag "$NPM_TAG" --dry-run
+      - run: npm publish ./release/*.tgz --access public --tag "$NPM_TAG" --dry-run
         env:
           NPM_TAG: ${{ needs.validate.outputs.npm_tag }}
       - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
@@ -255,7 +255,7 @@ jobs:
             actual="$(node -e 'console.log(JSON.parse(process.argv[1]))' "$remote")"
             test "$actual" = "$expected"
           else
-            npm publish release/*.tgz --access public --tag "$NPM_TAG"
+            npm publish ./release/*.tgz --access public --tag "$NPM_TAG"
           fi
 
   finalize-release:

@@ -3,12 +3,17 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("loading sequence stages four life scenes before revealing the page", async () => {
-  const [component, page, tokens, stylesheet] = await Promise.all([
-    readFile("app/components/LoadingSequence.tsx", "utf8"),
-    readFile("app/page.tsx", "utf8"),
-    readFile("app/lib/motion-tokens.ts", "utf8"),
-    readFile("app/globals.css", "utf8"),
-  ]);
+  const [component, page, tokens, stylesheet, manifestSource] =
+    await Promise.all([
+      readFile("app/components/LoadingSequence.tsx", "utf8"),
+      readFile("app/page.tsx", "utf8"),
+      readFile("app/lib/motion-tokens.ts", "utf8"),
+      readFile("app/globals.css", "utf8"),
+      readFile("assets/r2-manifest.json", "utf8"),
+    ]);
+  const manifest = JSON.parse(manifestSource) as {
+    assets: Record<string, { key: string }>;
+  };
 
   assert.match(page, /<LoadingSequence\s*\/>/u);
   assert.match(component, /AnimatePresence/u);
@@ -19,8 +24,13 @@ test("loading sequence stages four life scenes before revealing the page", async
   assert.doesNotMatch(component, /loading-sequence-count/u);
   assert.match(stylesheet, /data-loading-stage="images"/u);
 
-  const lifeScenes = component.match(/\/loading-life-0[1-4]\.png/gu) ?? [];
-  assert.equal(lifeScenes.length, 4);
+  assert.match(component, /SITE_ASSETS\.loadingLife/u);
+  assert.equal(
+    Object.values(manifest.assets).filter((asset) =>
+      asset.key.startsWith("site/loading/loading-life-")
+    ).length,
+    4
+  );
 
   assert.match(tokens, /loaderImageStagger:\s*0\.16/u);
   assert.match(tokens, /loaderImageLift:\s*24/u);

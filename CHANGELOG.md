@@ -4,7 +4,19 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
-## [0.1.0-beta.2] — 2026-08-17
+## [0.1.0-beta.3] — 2026-08-18
+
+### Fixed
+
+- Pass npm package tarballs as explicit relative paths so npm 11 does not
+  interpret `release/*.tgz` as a GitHub repository shorthand during dry-run or
+  trusted publication.
+
+## [0.1.0-beta.2] — 2026-08-18 (unpublished)
+
+The protected beta.2 tag remains an audit record of a release attempt that
+stopped at the npm dry-run before any npm package or GitHub Release was
+published. Beta.3 contains the same product changes plus the release-path fix.
 
 ### Added
 
@@ -30,6 +42,7 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.2...HEAD
-[0.1.0-beta.2]: https://www.npmjs.com/package/side-glance/v/0.1.0-beta.2
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.3...HEAD
+[0.1.0-beta.3]: https://www.npmjs.com/package/side-glance/v/0.1.0-beta.3
+[0.1.0-beta.2]: https://github.com/AndrewUlloa/side-glance/tree/v0.1.0-beta.2
 [0.1.0-beta.1]: https://www.npmjs.com/package/side-glance/v/0.1.0-beta.1
