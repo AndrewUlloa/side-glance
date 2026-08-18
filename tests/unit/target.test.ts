@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { PassThrough } from "node:stream";
 import test from "node:test";
 
 import {
   discoverOptionalTerminalTarget,
   discoverTerminalTarget,
+  type TargetDiscoveryOptions,
 } from "../../src/core/target.ts";
 
 test("prefers an explicit wrapper surface and carries verified channels", async () => {
@@ -53,6 +55,40 @@ test("derives a stable surface from the controlling tty without a shell", async 
       tty: "/dev/ttys007",
     },
   );
+});
+
+test("discovers the controlling tty with parent stdin and bounded subprocess channels", async () => {
+  const stdout = new PassThrough();
+  let closeListener: ((code: number | null) => void) | undefined;
+  const options = {
+    environment: {},
+    spawnProcess: (command, arguments_, spawnOptions) => {
+      assert.equal(command, "tty");
+      assert.deepEqual(arguments_, []);
+      assert.deepEqual(spawnOptions.stdio, [
+        process.stdin,
+        "pipe",
+        "ignore",
+      ]);
+      queueMicrotask(() => {
+        stdout.end("/dev/ttys003\n");
+        closeListener?.(0);
+      });
+      return {
+        stdout,
+        kill: () => true,
+        onClose: (listener: (code: number | null) => void) => {
+          closeListener = listener;
+        },
+        onError: () => undefined,
+      };
+    },
+  } satisfies TargetDiscoveryOptions;
+
+  assert.deepEqual(await discoverTerminalTarget(options), {
+    surfaceId: "tty:/dev/ttys003",
+    tty: "/dev/ttys003",
+  });
 });
 
 test("rejects invalid explicit device and pane identities", async () => {
