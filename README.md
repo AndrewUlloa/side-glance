@@ -131,4 +131,4 @@ the Homebrew tap, and live provider migration remain explicit release gates.
 
 ## License
 
-MIT
+Apache-2.0

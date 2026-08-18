@@ -16,6 +16,8 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 - Public deployment now requires immutable GitHub Releases, SHA-pinned Actions,
   protected Vercel checks, and npm OIDC publishing with SemVer-derived release channels.
+- Future releases are licensed under Apache-2.0, adding an explicit patent grant;
+  the already-published beta.1 release remains available under its original MIT terms.
 
 ## [0.1.0-beta.1] — 2026-08-14
 

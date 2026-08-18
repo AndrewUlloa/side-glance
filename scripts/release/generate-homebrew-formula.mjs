@@ -111,7 +111,7 @@ class SideGlance < Formula
   desc "Local-first attention cues for coding-agent terminal sessions"
   homepage "https://github.com/${REPOSITORY}"
   version "${version}"
-  license "MIT"
+  license "Apache-2.0"
 
   on_macos do
     on_arm do

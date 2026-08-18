@@ -59,6 +59,10 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     cwd: repository,
     env: process.env,
   });
+  assert.equal(
+    await readFile(path.join(extracted, "LICENSE"), "utf8"),
+    await readFile(path.join(repository, "LICENSE"), "utf8"),
+  );
   const executable = path.join(extracted, "side-glance");
   const strippedEnvironment = {
     ...process.env,

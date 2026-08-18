@@ -174,8 +174,13 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     await readFile(path.join(prefix, "lib/node_modules/side-glance/package.json"), "utf8"),
   );
   assert.deepEqual(manifest.dependencies ?? {}, {});
+  assert.equal(manifest.license, "Apache-2.0");
   assert.equal(manifest.publishConfig.tag, packageVersion.includes("-") ? "beta" : "latest");
   assert.equal(manifest.private, undefined);
+  assert.equal(
+    await readFile(path.join(prefix, "lib/node_modules/side-glance/LICENSE"), "utf8"),
+    await readFile(path.join(repository, "LICENSE"), "utf8"),
+  );
   assert.deepEqual(manifest.bin, {
     "side-glance": "dist/side-glance.mjs",
   });
