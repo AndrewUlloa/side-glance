@@ -29,7 +29,18 @@ test(
         encoding: "utf8",
       });
 
-    await tmux("-f", "/dev/null", "new-session", "-d", "-s", "side-glance", "-n", "editor");
+    await tmux(
+      "-f",
+      "/dev/null",
+      "new-session",
+      "-d",
+      "-s",
+      "side-glance",
+      "-n",
+      "editor",
+      "/bin/sleep",
+      "60",
+    );
     context.after(() => tmux("kill-server").catch(() => undefined));
     await tmux(
       "set-option",

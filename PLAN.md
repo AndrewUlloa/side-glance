@@ -612,7 +612,7 @@ None blocking. Public package publication and live config mutation remain explic
 - [x] Semantic duplicate and native-notification warnings are proven
 - [x] Support tiers match live evidence
 
-- [ ] **Task 56: Add non-color markers and Terminal.app fallback**
+- [x] **Task 56: Add non-color markers and Terminal.app fallback**
   - **Description:** Render distinct bounded tmux markers and expose an explicitly opt-in,
     sanitized terminal title capability with honest Terminal.app diagnostics.
   - **Acceptance:** completed and failed differ without color; default emits no title;
@@ -643,7 +643,7 @@ None blocking. Public package publication and live config mutation remain explic
   - **Files:** package lock/manifest, policy tests/docs/workflow as required
   - **Size:** M
 
-- [ ] **Task 59: Complete full verification, browser matrix, and five-axis review**
+- [x] **Task 59: Complete full verification, browser matrix, and five-axis review**
   - **Description:** Run every repository gate, browser requirement, package/standalone
     smoke, security review, and create the final review artifact.
   - **Acceptance:** no unresolved Critical/required findings; every unsupported manual

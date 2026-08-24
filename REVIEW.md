@@ -1,10 +1,105 @@
 # Release review
 
-Date: 2026-08-14
-Branch: `codex/core-controller`  
-Status: beta package and renamed production site published; native release deferred
+Date: 2026-08-24
 
-## Desktop notification review — 2026-08-17
+Branch: `codex/beta-release-readiness`
+
+Status: local release candidate passes; live validation and publication remain gated
+
+## Beta release-readiness verdict
+
+No unresolved Critical or required source finding remains in the reviewed branch.
+Thermal units and adaptation, physical tmux ownership, surface migration, stale-session
+recovery, provider acknowledgements and timeouts, notification dedupe/finality,
+capability diagnostics, OpenCode/Aider boundaries, non-color terminal markers, title
+fallback, dependency advisories, and public claims all have observable regression
+coverage.
+
+The candidate is not published or deployed from this branch. The remaining required
+actions are deliberately external:
+
+1. Apply the reviewed [main ruleset payload](./.github/rulesets/protect-main.json) to
+   live ruleset `20776489`; the read-only comparison found only the missing
+   `require-staging-head` context.
+2. With explicit approval, fire one real macOS notification with sound and visually
+   check native Terminal.app. Exact PTY bytes and a real isolated tmux server pass, but
+   a headless session cannot prove what Notification Center or Terminal.app displays.
+3. Push this branch, merge it into protected `staging`, refresh PR #37 from `staging`
+   to `main`, and require new protected CI/Vercel results.
+4. Only from the exact green `main` commit, create the annotated beta.3 tag and allow
+   the protected workflow to publish npm and the immutable GitHub prerelease. The
+   Homebrew tap remains a separate post-release pull request.
+
+The custom domain is optional for this candidate. The verified, content-addressed R2
+development origin is the selected temporary asset origin; Cloudflare documents the
+managed `r2.dev` endpoint as rate-limited and unsuitable for sustained production
+traffic, so `assets.sideglance.ai` remains the recommended later cutover after DNS and
+TLS verification.
+
+## Five-axis review
+
+| Axis | Result | Evidence |
+|---|---|---|
+| Correctness | Pass locally | Epoch-millisecond 5/60/300-second cases, EWMA alpha 0.4, 300–450-second adaptive maximum, phase parity, multi-pane ownership, migration, orphan reconciliation, provider retries, semantic dedupe, terminal bytes, and packaged execution pass. |
+| Readability and simplicity | Pass | One canonical visual policy drives the controller and preview; provider capability fields are explicit; wrapper/title/notification opt-ins are named and documented; support tiers are consistent across public surfaces. |
+| Architecture | Pass | Reducer, store, lease arbitration, renderers, provider adapters, notifier side effects, and site projection remain separate. Physical tmux windows—not pane IDs—own render state, and provider IDs remain distinct from wrapper ownership. |
+| Security and privacy | Pass locally | Hook stdout cannot expose global state; configuration and TTY paths are bounded/no-follow; child processes use argv without a shell; labels/sounds/titles are sanitized; full and production-only npm audits report zero vulnerabilities. |
+| Performance and resilience | Pass | Hooks are bounded to provider-specific seconds, teardown is shorter and non-fatal, replay/session/surface caches are capped, stale leases reconcile after 30 minutes, R2 assets are immutable, and reduced-motion/offline browser paths remain usable. |
+
+The original `idle_prompt` heat escalation was reviewed and not restored. The approved
+canonical contract intentionally renders every request for input as fixed amber
+Waiting; adaptive thermal heat applies only to completed-turn duration. Reintroducing
+an idle-specific thermal phase would be a separate product/protocol change.
+
+## Verification evidence
+
+- Node `24.18.0`; unit `46/46`; integration `70/70` plus one opt-in live tmux test
+  `1/1`; core coverage `91.06%` lines, `78.41%` branches, `95.45%` functions.
+- Distribution `19/19`; site `36/36`; rendered HTML `2/2`; lint and typecheck pass.
+  The full `npm test` command and canonical Turbopack build pass. The only build note
+  is the known non-blocking Alan Sans fallback-metrics warning.
+- The four-file dependency-free npm tarball installs and executes in an isolated
+  prefix. The extracted standalone macOS arm64 archive runs without Node on `PATH`;
+  release runners still own Linux and Intel-macOS artifact proof.
+- The updated dependency tree is valid. Full and production-only `npm audit` both
+  report zero findings after compatible Babel, brace-expansion, esbuild, and js-yaml
+  fixes.
+- Real Chromium at `1440×1000` and `390×844`: meaningful content, zero horizontal
+  overflow, no framework overlay, empty console/page-error logs, keyboard focus order,
+  lifecycle selection, 16px mobile input, stable reduced-motion state, usable core UI
+  during an offline R2 image failure, and a `1200×630` social preview all pass.
+- All six declared R2 objects return HTTP 200 with exact type, size, and immutable
+  cache control. `side-glance.vercel.app` returns HTTP 200. `sideglance.ai` and
+  `assets.sideglance.ai` do not resolve and are not claimed as live.
+- A real PTY discovered its owned character device, painted Working plus the opt-in
+  title, emitted OSC 111 and an empty title on exit, and persisted an inactive surface.
+  A real isolated tmux server round-tripped local and inherited window options.
+- Terminal.app, Claude Code `2.1.228`, and Codex `0.149.0-alpha.4.3` are installed.
+  iTerm, Ghostty, Gemini, OpenCode, OpenCode 2, and Aider are absent. Actual `doctor`
+  reports no Side Glance hooks installed, Codex native notifications ready while
+  unfocused, and Side Glance's macOS `osascript` backend available.
+- Live GitHub read-only checks confirm public visibility, active main/staging/tag
+  rulesets, tag-scoped npm/GitHub-release environments, private vulnerability
+  reporting, Dependabot security updates, secret scanning with push protection, and
+  immutable releases. Only the main required-check list is missing
+  `require-staging-head`.
+
+## Unsupported or unverified boundaries
+
+- No real notification was fired and no live provider configuration was changed.
+- Terminal.app OSC 11 remains visually unverified; the opt-in phase title is the
+  documented fallback. iTerm and Ghostty were not installed for a visual matrix.
+- Gemini, OpenCode, and Aider remain experimental fixture/contract evidence. Claude
+  and Codex are contract-audited but were not mutated or run through live hooks.
+- Windows, Alpine/musl, Linux notification sound, click-to-originating-pane routing,
+  Developer ID signing/notarization, public release artifacts, and Homebrew install or
+  upgrade remain unsupported or externally gated.
+- Focus, per-app notification preferences, and installed macOS sound availability can
+  suppress an otherwise valid notification request.
+
+## Historical audits (superseded by the 2026-08-24 review)
+
+### Desktop notification review — 2026-08-17
 
 | Axis | Result | Evidence |
 |---|---|---|
@@ -35,7 +130,7 @@ explicitly user-settings scoped because higher-precedence configuration may
 override it; live Gemini, OpenCode, and Aider binaries remain outside local
 contract-test evidence.
 
-## Side Glance rename review
+### Side Glance rename review — 2026-08-14
 
 | Axis | Result | Evidence |
 |---|---|---|
@@ -72,14 +167,14 @@ is an execution-host limitation, not a source or type failure.
 | Smooth scrolling | Pass in production | Lenis 1.3.26 is MIT-licensed with no runtime dependencies and a clean production audit. The official `lenis/react` root adapter and stylesheet use one automatic RAF loop, smooth trusted anchor clicks, stop prior navigation inertia, preserve native touch, and honor reduced motion with immediate anchor navigation. Desktop and 390×844 browser checks show `html.lenis`, no horizontal overflow, and no runtime errors. |
 | Preview annotation tooling | Pass locally and on Preview | Agentation 3.0.2 remains preview-only. Protected Preview `dpl_ADsEBwQPnQuvUgNif7WeGpYsknd9` returns authenticated HTTP 200 and embeds `AgentationToolbar { enabled: true }`. The renamed production deployment `dpl_877rCZQP8w1VVbcRTPNqVMjqT9xM` has no production Agentation runtime. No endpoint, MCP mutation, or remote sync is configured. |
 
-## Required findings
+### Historical required findings
 
 1. Complete the remaining owner-only public-repository, environment-reviewer, vulnerability-reporting, and npm trusted-publisher setup in [docs/releasing.md](./docs/releasing.md). Initial npm ownership is complete.
 2. Run all native release runners and the real Homebrew tap install/upgrade path before calling those channels supported.
 3. Keep macOS signing language limited to ad-hoc signing unless Developer ID signing and notarization are added.
 4. Production dependencies audit clean. Four audit findings remain in development-only build/lint dependencies and are outside the deployed Vercel runtime.
 
-## Explicit non-guarantees
+### Historical explicit non-guarantees
 
 - No synchronous cleanup claim after `SIGKILL`, power loss, or terminal-emulator death.
 - OSC 111 restores the configured default, not an unknowable arbitrary prior OSC 11 value.

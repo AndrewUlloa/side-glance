@@ -248,10 +248,10 @@ configuration.
 
 Success means:
 
-- accepted `turn.completed`, `attention.waiting`, `turn.failed`, and
-  `turn.cancelled` events each request one desktop notification; session start, turn
-  start, acknowledgement, teardown, duplicate event IDs, stale timestamps,
-  generations, and turn IDs request none;
+- accepted native/wrapper-final `turn.completed`, `attention.waiting`, `turn.failed`,
+  and `turn.cancelled` events each request one desktop notification; pre-final
+  provider completions, session start, turn start, acknowledgement, teardown,
+  duplicate event IDs, stale timestamps, generations, and turn IDs request none;
 - notification delivery is independent of visual surface ownership and terminal target
   discovery, so a lower-priority or targetless session still reports its own accepted
   attention event;
@@ -280,7 +280,8 @@ Success means:
 - `doctor` reports Side Glance's native OS backend and separately reports provider-native
   notification readiness for Codex, Gemini, OpenCode, and Aider without mutating live
   configuration;
-- provider hook stdout remains one valid JSON object with no raw terminal bytes;
+- provider hook stdout remains provider-specific and minimal with no raw terminal
+  bytes or global state: Claude is silent, while Codex and Gemini receive `{}`;
   provider-native notification commands/settings are preserved byte-for-byte unless a
   future explicit provider-owned operation is separately specified; and
 - unit/integration/distribution tests cover notification bytes/arguments, privacy,
