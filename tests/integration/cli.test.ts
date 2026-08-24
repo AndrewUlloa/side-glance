@@ -268,9 +268,9 @@ test("doctor and preview are deterministic and do not require a live terminal", 
   assert.equal(preview.code, 0, preview.stderr);
   assert.deepEqual(JSON.parse(preview.stdout), {
     phase: "waiting",
-    urgency: 500,
-    wash: "3a2f16",
-    accent: "e0a726",
+    urgency: 0,
+    wash: "4d3510",
+    accent: "f0a726",
   });
 });
 

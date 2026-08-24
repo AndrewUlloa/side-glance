@@ -107,21 +107,22 @@ function event(
 
 test("renders lifecycle states and derives completion heat from turn runtime", async (context) => {
   const { controller, renderer } = await controllerFixture(context);
+  const turnStartedAt = 1_786_536_000_000;
 
   await controller.submit(
-    event("claude", "one", "start", "turn.started", 1_000, {
+    event("claude", "one", "start", "turn.started", turnStartedAt, {
       generation: 1,
       turnId: "turn-1",
     }),
   );
   await controller.submit(
-    event("claude", "one", "wait", "attention.waiting", 1_010, {
+    event("claude", "one", "wait", "attention.waiting", turnStartedAt + 10_000, {
       generation: 1,
       turnId: "turn-1",
     }),
   );
   const state = await controller.submit(
-    event("claude", "one", "done", "turn.completed", 1_060, {
+    event("claude", "one", "done", "turn.completed", turnStartedAt + 60_000, {
       generation: 1,
       turnId: "turn-1",
     }),

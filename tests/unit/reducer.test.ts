@@ -49,8 +49,48 @@ test("moves a native session through working, waiting, and completed", () => {
     confidence: "native",
     target: baseEvent.target,
     startedAt: 1_000,
+    completedAt: 1_000,
     updatedAt: 1_000,
   });
+});
+
+test("learns reply latency with a per-session EWMA after completed turns", () => {
+  const epoch = 1_786_536_000_000;
+  let state = createSideGlanceState();
+
+  for (let turn = 0; turn < 3; turn += 1) {
+    const startedAt = epoch + turn * 75_000;
+    state = reduceSideGlanceEvent(
+      state,
+      event(`start-${turn}`, "turn.started", {
+        occurredAt: startedAt,
+        generation: turn + 1,
+        turnId: `turn-${turn}`,
+      }),
+    );
+    state = reduceSideGlanceEvent(
+      state,
+      event(`done-${turn}`, "turn.completed", {
+        occurredAt: startedAt + 60_000,
+        generation: turn + 1,
+        turnId: `turn-${turn}`,
+      }),
+    );
+  }
+
+  state = reduceSideGlanceEvent(
+    state,
+    event("start-3", "turn.started", {
+      occurredAt: epoch + 225_000,
+      generation: 4,
+      turnId: "turn-3",
+    }),
+  );
+
+  const session = state.sessions["claude:session-a"];
+  assert.equal(session?.responseEwmaSeconds, 37.68);
+  assert.equal(session?.completedAt, undefined);
+  assert.equal(session?.startedAt, epoch + 225_000);
 });
 
 test("ignores an older generation after a newer turn starts", () => {

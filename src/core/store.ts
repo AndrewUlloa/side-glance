@@ -449,6 +449,16 @@ function isSideGlanceSessionState(value: unknown): value is SideGlanceSessionSta
   }
   if (!Number.isFinite(value.updatedAt)) return false;
   if (value.startedAt !== undefined && !Number.isFinite(value.startedAt)) return false;
+  if (value.completedAt !== undefined && !Number.isFinite(value.completedAt)) {
+    return false;
+  }
+  if (
+    value.responseEwmaSeconds !== undefined &&
+    (!Number.isFinite(value.responseEwmaSeconds) ||
+      Number(value.responseEwmaSeconds) < 0)
+  ) {
+    return false;
+  }
   if (value.turnId !== undefined && typeof value.turnId !== "string") return false;
   if (value.reason !== undefined && typeof value.reason !== "string") return false;
   if (value.target !== undefined && !isSideGlanceTarget(value.target)) return false;

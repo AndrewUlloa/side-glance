@@ -1,6 +1,5 @@
 import { resolveSurface } from "./leases.ts";
 import { compactSideGlanceState } from "./compact.ts";
-import { urgencyFromElapsed } from "./policy.ts";
 import type {
   SideGlanceEvent,
   SideGlanceSessionState,
@@ -11,19 +10,14 @@ import type {
 } from "./protocol.ts";
 import { reduceSideGlanceEvent } from "./reducer.ts";
 import type { FileSideGlanceStore } from "./store.ts";
-import { DEFAULT_SIDE_GLANCE_THEME } from "./theme.ts";
+import { visualForPhase, type SurfaceVisual } from "./visual.ts";
 import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
 import {
   shouldNotifyForEvent,
   type EventNotifier,
 } from "../notifications/policy.ts";
 
-export interface SurfaceVisual {
-  wash: string;
-  accent: string;
-  urgency: number;
-  suppressed: boolean;
-}
+export type { SurfaceVisual } from "./visual.ts";
 
 export interface SurfaceRenderResult {
   terminalPainted: boolean;
@@ -125,36 +119,16 @@ export class SideGlanceController {
 }
 
 function visualForSession(session: SideGlanceSessionState): SurfaceVisual {
-  switch (session.phase) {
-    case "working":
-      return {
-        wash: DEFAULT_SIDE_GLANCE_THEME.workingWash,
-        accent: DEFAULT_SIDE_GLANCE_THEME.workingAccent,
-        urgency: 0,
-        suppressed: false,
-      };
-    case "waiting":
-      return {
-        wash: DEFAULT_SIDE_GLANCE_THEME.waitingWash,
-        accent: DEFAULT_SIDE_GLANCE_THEME.waitingAccent,
-        urgency: 0,
-        suppressed: false,
-      };
-    case "completed": {
-      const elapsed =
-        session.startedAt === undefined
-          ? 90
-          : Math.max(0, session.updatedAt - session.startedAt);
-      return urgencyFromElapsed(elapsed, 120);
-    }
-    case "failed":
-      return {
-        wash: DEFAULT_SIDE_GLANCE_THEME.washStops.at(-1) ?? "732018",
-        accent: DEFAULT_SIDE_GLANCE_THEME.tmuxStops.at(-1) ?? "f33533",
-        urgency: 1_000,
-        suppressed: false,
-      };
-    case "inactive":
-      throw new Error("Inactive sessions cannot own a rendered surface.");
+  if (session.phase === "inactive") {
+    throw new Error("Inactive sessions cannot own a rendered surface.");
   }
+  const elapsedSeconds =
+    session.phase === "completed" && session.startedAt !== undefined
+      ? Math.max(0, session.updatedAt - session.startedAt) / 1_000
+      : 90;
+  return visualForPhase(
+    session.phase,
+    elapsedSeconds,
+    session.responseEwmaSeconds ?? 120,
+  );
 }

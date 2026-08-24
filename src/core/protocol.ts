@@ -61,6 +61,8 @@ export interface SideGlanceSessionState {
   confidence: SideGlanceConfidence;
   target?: SideGlanceTarget;
   startedAt?: number;
+  completedAt?: number;
+  responseEwmaSeconds?: number;
   updatedAt: number;
 }
 

@@ -485,7 +485,7 @@ None blocking. Public package publication and live config mutation remain explic
 
 ## Phase 15: Beta release-readiness remediation
 
-- [ ] **Task 46: Lock thermal units and adaptive history with regression tests**
+- [x] **Task 46: Lock thermal units and adaptive history with regression tests**
   - **Description:** Add observable tests using real epoch-millisecond events plus EWMA
     samples before changing controller or reducer behavior.
   - **Acceptance:** 5/60/300-second events fail against the old 1,000× behavior; EWMA
@@ -497,7 +497,7 @@ None blocking. Public package publication and live config mutation remain explic
     `tests/integration/controller-rendering.test.ts`, `tests/integration/store.test.ts`
   - **Size:** M
 
-- [ ] **Task 47: Implement typed adaptive thermal state**
+- [x] **Task 47: Implement typed adaptive thermal state**
   - **Description:** Convert milliseconds once, persist compatible completion/response
     timing fields, and feed the learned EWMA into completed visuals.
   - **Acceptance:** malformed history is safe; old schema-v1 files load; stale events do
@@ -508,7 +508,7 @@ None blocking. Public package publication and live config mutation remain explic
     `src/core/store.ts`, thermal tests
   - **Size:** M
 
-- [ ] **Task 48: Make preview and site phase visuals canonical**
+- [x] **Task 48: Make preview and site phase visuals canonical**
   - **Description:** Export one pure visual policy for CLI preview/controller use and
     mirror its observable contract in the site model and copy.
   - **Acceptance:** all four preview phases match runtime; site says `Turn ran`; completed
@@ -521,9 +521,9 @@ None blocking. Public package publication and live config mutation remain explic
 
 ### Checkpoint: thermal correctness
 
-- [ ] Focused tests prove epoch-millisecond correctness and adaptive history
-- [ ] CLI preview, controller output, and website states agree
-- [ ] Unit, integration, site, lint, and typecheck gates are green
+- [x] Focused tests prove epoch-millisecond correctness and adaptive history
+- [x] CLI preview, controller output, and website states agree
+- [x] Focused unit, integration, site, lint, typecheck, and production-build gates are green
 
 - [ ] **Task 49: Model tmux by physical render ownership**
   - **Description:** Resolve a pane to its window before lease arbitration and persist one

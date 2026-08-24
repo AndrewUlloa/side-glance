@@ -12,7 +12,7 @@ import { adaptOpenCodeEvent } from "../adapters/opencode.ts";
 import { inspectProviderHooks } from "../adapters/installers.ts";
 import type { AdapterContext, AdapterResult } from "../adapters/types.ts";
 import { SideGlanceController } from "../core/controller.ts";
-import { urgencyFromElapsed } from "../core/policy.ts";
+import { visualForPhase } from "../core/visual.ts";
 import { sessionKey, type SideGlancePhase } from "../core/protocol.ts";
 import { FileSideGlanceStore } from "../core/store.ts";
 import {
@@ -197,8 +197,13 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       }
       const elapsed = parseNonNegativeNumber(parseOption(args, "--elapsed"), "elapsed");
       requireOnlyOptions(args.slice(1), ["--phase", "--elapsed", "--json"], "preview");
-      const thermal = urgencyFromElapsed(elapsed, 120);
-      writeJson({ phase, urgency: thermal.urgency, wash: thermal.wash, accent: thermal.accent });
+      const visual = visualForPhase(phase, elapsed, 120);
+      writeJson({
+        phase,
+        urgency: visual.urgency,
+        wash: visual.wash,
+        accent: visual.accent,
+      });
       return 0;
     }
     case "reset": {
