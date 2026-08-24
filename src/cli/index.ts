@@ -27,6 +27,7 @@ import type {
   NotificationOptions,
 } from "../notifications/policy.ts";
 import { runInstallCommand } from "./install.ts";
+import { inspectProviderCapabilities } from "./doctor.ts";
 import { runSupervised } from "./run.ts";
 import { SIDE_GLANCE_VERSION } from "../version.ts";
 
@@ -182,6 +183,14 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           desktopSession: desktopSessionAvailable(),
         },
       });
+      const providerInspections = Object.fromEntries(inspections);
+      const capabilities = await inspectProviderCapabilities({
+        homeDirectory,
+        environment: process.env,
+        pathProbe: probeExecutable,
+        hooks: providerInspections,
+        notifications: notificationReadiness,
+      });
       writeJson({
         stateDirectory,
         node: { version: process.versions.node, supported: majorVersion >= 22 },
@@ -189,8 +198,9 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           tty: Boolean(process.stdout.isTTY),
           tmux: Boolean(process.env.TMUX),
         },
-        providers: Object.fromEntries(inspections),
+        providers: providerInspections,
         notifications: notificationReadiness,
+        capabilities,
       });
       return 0;
     }

@@ -585,7 +585,7 @@ None blocking. Public package publication and live config mutation remain explic
   - **Files:** provider adapters, `src/adapters/installers.ts`, adapter/installer tests
   - **Size:** M per provider slice
 
-- [ ] **Task 54: Expand doctor into a truthful capability matrix**
+- [x] **Task 54: Expand doctor into a truthful capability matrix**
   - **Description:** Separate binary, native alerts, adapter contract, integration,
     stable-surface, override, and live-verification status.
   - **Acceptance:** Codex defaults, OpenCode environment overrides, Aider bridge state,

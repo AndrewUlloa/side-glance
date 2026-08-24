@@ -14,6 +14,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  inspectProviderHooks,
   installProviderHooks,
   uninstallProviderHooks,
   type InstallableProvider,
@@ -124,6 +125,15 @@ test("installs optional notification flags into every managed hook", async (cont
       command.endsWith(" --notification-sound 'Glass'"),
     ),
   );
+  const inspection = await inspectProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+  });
+  assert.equal(inspection.integrationStatus, "installed");
+  assert.equal(inspection.managedHooks.length, inspection.expectedEvents);
+  assert.ok(inspection.managedHooks.every((hook) => hook.notifications));
+  assert.ok(inspection.managedHooks.every((hook) => hook.soundConfigured));
+  assert.ok(inspection.managedHooks.every((hook) => hook.timeout !== null));
 });
 
 test("installs provider-specific bounded hook timeouts", async (context) => {

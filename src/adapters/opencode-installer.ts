@@ -35,6 +35,14 @@ export interface OpenCodePluginInstallerResult {
   installedHooks: number;
 }
 
+export interface OpenCodePluginInspection {
+  provider: "opencode";
+  configPath: string;
+  status: "installed" | "legacy" | "not-installed" | "unrelated";
+  installed: boolean;
+  api: "v1-stable";
+}
+
 type TargetKind = "absent" | "current" | "legacy" | "unrelated";
 
 interface LoadedTarget {
@@ -100,6 +108,38 @@ export async function uninstallOpenCodePlugin(
   await verifyTargetUnchanged(configPath, loaded);
   await unlink(configPath);
   return result(configPath, true, 0);
+}
+
+export async function inspectOpenCodePlugin(
+  homeDirectory: string,
+): Promise<OpenCodePluginInspection> {
+  const configPath = openCodePluginPath(homeDirectory);
+  const directoryStatus = await inspectPluginDirectory(homeDirectory);
+  if (directoryStatus === "absent") {
+    return {
+      provider: "opencode",
+      configPath,
+      status: "not-installed",
+      installed: false,
+      api: "v1-stable",
+    };
+  }
+  const loaded = await loadTarget(configPath);
+  const status =
+    loaded.kind === "current"
+      ? "installed"
+      : loaded.kind === "legacy"
+        ? "legacy"
+        : loaded.kind === "unrelated"
+          ? "unrelated"
+          : "not-installed";
+  return {
+    provider: "opencode",
+    configPath,
+    status,
+    installed: loaded.kind === "current",
+    api: "v1-stable",
+  };
 }
 
 async function validateInstallOptions(

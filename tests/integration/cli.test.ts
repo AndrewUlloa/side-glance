@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -338,7 +346,8 @@ test("doctor inspects Claude and Codex plans without mutating existing configura
   assert.equal(report.providers.codex.notifyConfigured, true);
   assert.equal(report.providers.codex.sideGlanceHooks, 0);
   assert.equal(report.notifications.providers.codex.topLevelNotify, true);
-  assert.equal(report.notifications.providers.codex.status, "not-configured");
+  assert.equal(report.notifications.providers.codex.status, "ready");
+  assert.equal(report.notifications.providers.codex.effectiveDefault, true);
   assert.ok(["available", "unavailable", "unsupported"].includes(
     report.notifications.sideGlance.status,
   ));
@@ -348,6 +357,75 @@ test("doctor inspects Claude and Codex plans without mutating existing configura
     ),
     before,
   );
+});
+
+test("doctor separates provider capabilities without claiming live verification", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-capabilities-home-"));
+  const bin = path.join(home, "bin");
+  context.after(() => rm(home, { recursive: true, force: true }));
+  await mkdir(bin, { recursive: true });
+  for (const name of ["claude", "codex", "gemini", "opencode", "aider"]) {
+    const executable = path.join(bin, name);
+    await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+    await chmod(executable, 0o700);
+  }
+  await writeFile(
+    path.join(home, ".aider.conf.yml"),
+    "notifications-command: 'side-glance notify --source aider --kind completed --json'\n",
+  );
+
+  const result = await runCli(["doctor", "--home", home, "--json"], {
+    stateDirectory: directory,
+    env: {
+      PATH: bin,
+      OPENCODE_CONFIG_DIR: path.join(home, "opencode-override"),
+    },
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.deepEqual(Object.keys(report.capabilities.providers), [
+    "claude",
+    "codex",
+    "gemini",
+    "opencode",
+    "aider",
+  ]);
+  assert.equal(report.capabilities.providers.claude.binary.present, true);
+  assert.equal(
+    report.capabilities.providers.claude.adapterContract.status,
+    "contract-audited",
+  );
+  assert.equal(
+    report.capabilities.providers.gemini.adapterContract.status,
+    "experimental",
+  );
+  assert.equal(
+    report.capabilities.providers.codex.nativeNotifications.status,
+    "ready",
+  );
+  assert.equal(
+    report.capabilities.providers.aider.integration.status,
+    "configured",
+  );
+  assert.equal(
+    report.capabilities.providers.aider.integration.source,
+    "user-config",
+  );
+  assert.deepEqual(
+    report.capabilities.providers.opencode.overrides.detected,
+    ["OPENCODE_CONFIG_DIR"],
+  );
+  assert.equal(
+    report.capabilities.providers.opencode.stableSurface.status,
+    "wrapper-required",
+  );
+  for (const capability of Object.values(
+    report.capabilities.providers,
+  ) as Array<{ liveVerification: { status: string } }>) {
+    assert.equal(capability.liveVerification.status, "not-run");
+  }
 });
 
 test("doctor reports malformed provider notification settings instead of aborting", async (context) => {
