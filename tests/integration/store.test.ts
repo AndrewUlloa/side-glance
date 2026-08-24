@@ -165,7 +165,11 @@ test("reclaims a stale lock only after proving its owner is gone", async (contex
     { mode: 0o600 },
   );
 
-  const recovered = await cautiousStore.update((state) => state);
+  const recoveryStore = new FileSideGlanceStore({
+    directory,
+    staleLockMs: 1,
+  });
+  const recovered = await recoveryStore.update((state) => state);
   assert.equal(recovered.schemaVersion, 1);
   assert.equal((await readdir(directory)).includes(".side-glance-state.lock"), false);
 });
