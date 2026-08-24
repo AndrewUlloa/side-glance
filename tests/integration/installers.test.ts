@@ -14,6 +14,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  inspectProviderHooks,
   installProviderHooks,
   uninstallProviderHooks,
   type InstallableProvider,
@@ -124,6 +125,69 @@ test("installs optional notification flags into every managed hook", async (cont
       command.endsWith(" --notification-sound 'Glass'"),
     ),
   );
+  const inspection = await inspectProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+  });
+  assert.equal(inspection.integrationStatus, "installed");
+  assert.equal(inspection.managedHooks.length, inspection.expectedEvents);
+  assert.ok(inspection.managedHooks.every((hook) => hook.notifications));
+  assert.ok(inspection.managedHooks.every((hook) => hook.soundConfigured));
+  assert.ok(inspection.managedHooks.every((hook) => hook.timeout !== null));
+});
+
+test("reports partial integration when duplicate hooks hide missing events", async (context) => {
+  const home = await fixtureHome(context);
+  const targetPath = configPath(home, "claude");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(
+    targetPath,
+    JSON.stringify({
+      hooks: {
+        Stop: Array.from({ length: 7 }, () => ({
+          hooks: [
+            {
+              type: "command",
+              command:
+                "SIDE_GLANCE_MANAGED_HOOK=1 '/usr/local/bin/side-glance' hook --provider claude --json",
+            },
+          ],
+        })),
+      },
+    }),
+  );
+
+  const inspection = await inspectProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+  });
+
+  assert.equal(inspection.managedHooks.length, inspection.expectedEvents);
+  assert.deepEqual(
+    [...new Set(inspection.managedHooks.map((hook) => hook.event))],
+    ["Stop"],
+  );
+  assert.equal(inspection.integrationStatus, "partial");
+});
+
+test("installs provider-specific bounded hook timeouts", async (context) => {
+  const expectations = {
+    claude: { ordinary: 10, teardown: 3 },
+    codex: { ordinary: 10, teardown: 3 },
+    gemini: { ordinary: 10_000, teardown: 3_000 },
+  } as const;
+
+  for (const provider of ["claude", "codex", "gemini"] as const) {
+    const home = await fixtureHome(context);
+    const executablePath = await executableFixture(home);
+    await installProviderHooks({ provider, homeDirectory: home, executablePath });
+    const installed = JSON.parse(await readFile(configPath(home, provider), "utf8"));
+    const commandFor = (eventName: string) =>
+      installed.hooks[eventName].at(-1).hooks.at(-1);
+
+    assert.equal(commandFor("SessionStart").timeout, expectations[provider].ordinary);
+    assert.equal(commandFor("SessionEnd").timeout, expectations[provider].teardown);
+  }
 });
 
 test("rejects unsafe notification sound values without changing provider config", async (context) => {

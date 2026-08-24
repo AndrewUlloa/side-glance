@@ -151,7 +151,7 @@ export function SideGlancePlayground() {
 
       <div className="range-control">
         <div className="range-label">
-          <label htmlFor="elapsed-range">Ready for</label>
+          <label htmlFor="elapsed-range">Turn ran</label>
           <output htmlFor="elapsed-range">{elapsed}s</output>
         </div>
         <input

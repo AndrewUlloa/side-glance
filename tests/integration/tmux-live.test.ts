@@ -29,7 +29,18 @@ test(
         encoding: "utf8",
       });
 
-    await tmux("-f", "/dev/null", "new-session", "-d", "-s", "side-glance", "-n", "editor");
+    await tmux(
+      "-f",
+      "/dev/null",
+      "new-session",
+      "-d",
+      "-s",
+      "side-glance",
+      "-n",
+      "editor",
+      "/bin/sleep",
+      "60",
+    );
     context.after(() => tmux("kill-server").catch(() => undefined));
     await tmux(
       "set-option",
@@ -58,7 +69,7 @@ test(
     const runner = createTmuxRunner({ executable, socketPath });
     const snapshot = await captureTmuxSnapshot(runner, paneOutput.trim());
 
-    await applyTmuxPaint(runner, snapshot, "f0a726");
+    await applyTmuxPaint(runner, snapshot, "f0a726", "waiting");
     await restoreTmuxSnapshot(runner, snapshot);
 
     const { stdout: style } = await tmux(

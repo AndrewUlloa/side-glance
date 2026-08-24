@@ -13,7 +13,9 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   const vercelIgnore = await readFile(".vercelignore", "utf8");
   const packageLock = await readFile("package-lock.json", "utf8");
   const layout = await readFile("app/layout.tsx", "utf8");
+  const siteAssets = await readFile("app/lib/site-assets.ts", "utf8");
   const nextConfig = await readFile("next.config.ts", "utf8");
+  const cicd = await readFile("docs/cicd.md", "utf8");
   const launch = await readFile("LAUNCH.md", "utf8");
   const readme = await readFile("README.md", "utf8");
 
@@ -63,10 +65,17 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
     packageLock,
     /node_modules\/(?:@cloudflare|@vinext|drizzle-kit|drizzle-orm|vinext|wrangler)(?:\/|")/u
   );
-  assert.match(layout, /VERCEL_PROJECT_PRODUCTION_URL/u);
+  assert.match(layout, /SIDE_GLANCE_SITE_URL/u);
+  assert.doesNotMatch(layout, /VERCEL_PROJECT_PRODUCTION_URL/u);
   assert.doesNotMatch(layout, /terminal-signal\.pages\.dev/u);
-  assert.match(layout, /https:\/\/side-glance\.vercel\.app/u);
+  assert.match(siteAssets, /https:\/\/side-glance\.vercel\.app/u);
   assert.doesNotMatch(readme, /https:\/\/terminal-signal\.vercel\.app/u);
+  assert.match(
+    readme,
+    /\[Vercel deployment\]\(https:\/\/side-glance\.vercel\.app\)/u
+  );
+  assert.match(launch, /DNS does not resolve for `sideglance\.ai`/u);
+  assert.match(cicd, /https:\/\/sideglance\.ai/u);
   assert.match(launch, /https:\/\/side-glance\.vercel\.app/u);
   assert.match(launch, /dpl_877rCZQP8w1VVbcRTPNqVMjqT9xM/u);
   assert.match(launch, /dpl_12hgQd7peRczGnDuY4diahzdsbWE/u);

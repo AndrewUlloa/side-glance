@@ -1,4 +1,5 @@
 import type {
+  SideGlancePhase,
   SideGlanceSessionState,
   SideGlanceSurfaceState,
   SideGlanceTarget,
@@ -18,17 +19,23 @@ import {
   type TmuxSnapshot,
 } from "./tmux.ts";
 
-export function createDefaultSurfaceRenderer(): SurfaceRenderer {
+export interface DefaultSurfaceRendererOptions {
+  terminalTitle?: boolean;
+}
+
+export function createDefaultSurfaceRenderer(
+  options: DefaultSurfaceRendererOptions = {},
+): SurfaceRenderer {
   return {
     async paint(
       target: SideGlanceTarget,
-      _session: SideGlanceSessionState,
+      session: SideGlanceSessionState,
       visual: SurfaceVisual,
       previous?: SideGlanceSurfaceState,
     ): Promise<SurfaceRenderResult> {
       if (visual.suppressed) {
         if (previous) await resetSurface(target, previous);
-        return { terminalPainted: false };
+        return { terminalPainted: false, terminalTitlePainted: false };
       }
 
       const channels = surfaceChannels(target);
@@ -36,22 +43,63 @@ export function createDefaultSurfaceRenderer(): SurfaceRenderer {
       if (channels.tmux && target.tmuxPane) {
         const runner = createTmuxRunner();
         tmuxSnapshot ??= await captureTmuxSnapshot(runner, target.tmuxPane);
-        await applyTmuxPaint(runner, asTmuxSnapshot(tmuxSnapshot), visual.accent);
+        await applyTmuxPaint(
+          runner,
+          asTmuxSnapshot(tmuxSnapshot),
+          visual.accent,
+          session.phase,
+        );
       }
-      if (!channels.terminal && previous?.terminalPainted && target.tty) {
-        await renderTerminal(target.tty, "reset");
+      if (
+        !channels.terminal &&
+        target.tty &&
+        (previous?.terminalPainted || previous?.terminalTitlePainted)
+      ) {
+        await renderTerminal(target.tty, {
+          reset: {
+            background: previous.terminalPainted,
+            title: previous.terminalTitlePainted,
+          },
+        });
       }
       if (channels.terminal && target.tty) {
-        await renderTerminal(target.tty, { wash: visual.wash });
+        if (previous?.terminalTitlePainted && !options.terminalTitle) {
+          await renderTerminal(target.tty, { reset: { title: true } });
+        }
+        await renderTerminal(target.tty, {
+          wash: visual.wash,
+          ...(options.terminalTitle
+            ? {
+                title: terminalTitleForPhase(session.phase),
+                allowTitle: true,
+              }
+            : {}),
+        });
       }
 
       return {
         terminalPainted: channels.terminal,
+        terminalTitlePainted: channels.terminal && options.terminalTitle === true,
         ...(tmuxSnapshot ? { tmuxSnapshot } : {}),
       };
     },
     reset: resetSurface,
   };
+}
+
+export function terminalTitleForPhase(phase: SideGlancePhase): string {
+  switch (phase) {
+    case "working":
+      return "Side Glance · Working";
+    case "waiting":
+      return "Side Glance · Waiting";
+    case "completed":
+      return "Side Glance · Ready";
+    case "failed":
+      return "Side Glance · Failed";
+    case "inactive":
+      return "Side Glance · Inactive";
+  }
 }
 
 export function surfaceChannels(target: SideGlanceTarget): {
@@ -69,9 +117,17 @@ async function resetSurface(
   target: SideGlanceTarget,
   previous: SideGlanceSurfaceState,
 ): Promise<void> {
-  if (target.tty && previous.terminalPainted) {
+  if (
+    target.tty &&
+    (previous.terminalPainted || previous.terminalTitlePainted)
+  ) {
     try {
-      await renderTerminal(target.tty, "reset");
+      await renderTerminal(target.tty, {
+        reset: {
+          background: previous.terminalPainted,
+          title: previous.terminalTitlePainted,
+        },
+      });
     } catch (error) {
       if (!isGoneSurfaceError(error)) throw error;
     }

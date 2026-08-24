@@ -59,6 +59,7 @@ export interface CodexNotificationInspection
   notifications?: boolean | string[];
   method?: string;
   condition?: string;
+  effectiveDefault?: boolean;
   topLevelNotify: boolean | null;
 }
 
@@ -193,13 +194,25 @@ async function inspectCodex(
   const configPath = path.join(homeDirectory, ".codex", "config.toml");
   const loaded = await readBoundedRegularFile(configPath);
   if (loaded.status !== "regular" || loaded.raw === undefined) {
+    if (loaded.status === "absent") {
+      return {
+        provider: "codex",
+        configPath,
+        exists: false,
+        fileStatus: "absent",
+        status: "ready",
+        condition: "unfocused",
+        effectiveDefault: true,
+        topLevelNotify: false,
+      };
+    }
     return {
       provider: "codex",
       configPath,
       exists: existenceFor(loaded.status),
       fileStatus: loaded.status,
       status: statusForUnreadConfig(loaded.status),
-      topLevelNotify: loaded.status === "absent" ? false : null,
+      topLevelNotify: null,
     };
   }
 
@@ -215,6 +228,7 @@ async function inspectCodex(
       : { notifications: parsed.notifications }),
     ...(parsed.method === undefined ? {} : { method: parsed.method }),
     ...(parsed.condition === undefined ? {} : { condition: parsed.condition }),
+    ...(parsed.effectiveDefault ? { effectiveDefault: true } : {}),
     topLevelNotify: parsed.topLevelNotify,
   };
 }
@@ -372,6 +386,7 @@ function parseCodexNotificationSettings(raw: string): {
   notifications?: boolean | string[];
   method?: string;
   condition?: string;
+  effectiveDefault: boolean;
   topLevelNotify: boolean;
 } {
   let section = "";
@@ -433,11 +448,16 @@ function parseCodexNotificationSettings(raw: string): {
         ? "ready"
         : disabled
           ? "disabled"
-          : "not-configured",
+          : "ready",
     malformed: relevantInvalid,
     ...(notifications === undefined ? {} : { notifications }),
     ...(method === undefined ? {} : { method }),
-    ...(condition === undefined ? {} : { condition }),
+    ...(condition === undefined
+      ? notifications === undefined && !relevantInvalid
+        ? { condition: "unfocused" }
+        : {}
+      : { condition }),
+    effectiveDefault: notifications === undefined && !relevantInvalid,
     topLevelNotify,
   };
 }

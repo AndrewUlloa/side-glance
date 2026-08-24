@@ -5,10 +5,11 @@ import test from "node:test";
 const read = (path: string) => readFile(path, "utf8").catch(() => "");
 
 test("the lifecycle legend controls the live terminal and hugs its buttons", async () => {
-  const [page, showcase, terminal, css] = await Promise.all([
+  const [page, showcase, terminal, playground, css] = await Promise.all([
     read("app/page.tsx"),
     read("app/components/TerminalShowcase.tsx"),
     read("app/components/InteractiveClaudeTerminal.tsx"),
+    read("app/components/SideGlancePlayground.tsx"),
     read("app/globals.css"),
   ]);
 
@@ -54,6 +55,9 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(terminal, /visualForPhase\(phase, elapsedSeconds\)/u);
   assert.match(terminal, /data-phase=\{phase\}/u);
   assert.match(terminal, /--terminal-current-wash": `#\$\{visual\.wash\}`/u);
+
+  assert.match(playground, />Turn ran</u);
+  assert.doesNotMatch(playground, />Ready for</u);
 
   assert.match(
     css,

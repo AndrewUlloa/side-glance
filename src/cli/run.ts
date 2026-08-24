@@ -5,6 +5,7 @@ import { SideGlanceController } from "../core/controller.ts";
 import type { SideGlanceTarget } from "../core/protocol.ts";
 import { FileSideGlanceStore } from "../core/store.ts";
 import { discoverTerminalTarget } from "../core/target.ts";
+import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
 import { createNativeNotifier } from "../notifications/native.ts";
 import {
   sanitizeNotificationLabel,
@@ -41,7 +42,12 @@ export async function runSupervised(
     directory: stateDirectory,
     ...(legacyStateDirectory ? { legacyDirectory: legacyStateDirectory } : {}),
   });
-  const controller = new SideGlanceController(store);
+  const controller = new SideGlanceController(
+    store,
+    createDefaultSurfaceRenderer({
+      terminalTitle: wrapperOptions.terminalTitle,
+    }),
+  );
   const notifier = configuredExitNotifier(wrapperOptions);
   await controller.submit({
     v: 1,
@@ -67,6 +73,9 @@ export async function runSupervised(
         : {}),
       ...(wrapperOptions.notificationSound
         ? { SIDE_GLANCE_NOTIFICATION_SOUND: wrapperOptions.notificationSound }
+        : {}),
+      ...(wrapperOptions.terminalTitle
+        ? { SIDE_GLANCE_TERMINAL_TITLE: "1" }
         : {}),
     });
   } catch (error) {
@@ -171,7 +180,7 @@ async function submitInheritedEnds(
   for (const session of Object.values(state.sessions)) {
     if (
       session.source === "generic" ||
-      session.sessionId !== sessionId ||
+      session.wrapperSessionId !== sessionId ||
       session.phase === "inactive"
     ) {
       continue;
@@ -180,7 +189,7 @@ async function submitInheritedEnds(
       v: 1,
       eventId: randomUUID(),
       source: session.source,
-      sessionId,
+      sessionId: session.sessionId,
       kind: "session.ended",
       occurredAt: Math.max(Date.now(), session.updatedAt + 1),
       generation: session.generation,
@@ -198,12 +207,17 @@ interface WrapperOptions {
     tmuxPane?: string;
   };
   notifyOnExit: boolean;
+  terminalTitle: boolean;
   notificationSound?: string;
   label?: string;
 }
 
 function parseWrapperOptions(args: readonly string[]): WrapperOptions {
-  const values: WrapperOptions = { target: {}, notifyOnExit: false };
+  const values: WrapperOptions = {
+    target: {},
+    notifyOnExit: false,
+    terminalTitle: false,
+  };
   const targetNames = {
     "--surface": "surfaceId",
     "--tty": "tty",
@@ -217,12 +231,13 @@ function parseWrapperOptions(args: readonly string[]): WrapperOptions {
   const seen = new Set<string>();
   for (let index = 0; index < args.length; index += 1) {
     const name = args[index];
-    if (name === "--notify-on-exit") {
+    if (name === "--notify-on-exit" || name === "--terminal-title") {
       if (seen.has(name)) {
         throw new Error(`run received duplicate option: ${name}.`);
       }
       seen.add(name);
-      values.notifyOnExit = true;
+      if (name === "--notify-on-exit") values.notifyOnExit = true;
+      else values.terminalTitle = true;
       continue;
     }
     const key = valueNames[name as keyof typeof valueNames];

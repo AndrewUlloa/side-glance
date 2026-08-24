@@ -101,6 +101,43 @@ test("writes private state atomically and quarantines malformed state", async (c
   assert.doesNotThrow(() => JSON.parse(persistedReset));
 });
 
+test("quarantines non-numeric adaptive timing history", async (context) => {
+  const directory = await temporaryDirectory();
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const statePath = path.join(directory, "side-glance-state.json");
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  await writeFile(
+    statePath,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      sessions: {
+        "claude:session-a": {
+          source: "claude",
+          sessionId: "session-a",
+          phase: "completed",
+          generation: 1,
+          confidence: "native",
+          startedAt: 1_786_536_000_000,
+          completedAt: 1_786_536_060_000,
+          responseEwmaSeconds: null,
+          updatedAt: 1_786_536_060_000,
+        },
+      },
+      surfaces: {},
+      seenEventIds: [],
+    })}\n`,
+    { mode: 0o600 },
+  );
+
+  const state = await new FileSideGlanceStore({ directory }).read();
+  assert.deepEqual(state.sessions, {});
+  assert.ok(
+    (await readdir(directory)).some((name) =>
+      name.startsWith("side-glance-state.corrupt-"),
+    ),
+  );
+});
+
 test("reclaims a stale lock only after proving its owner is gone", async (context) => {
   const directory = await temporaryDirectory();
   context.after(() => rm(directory, { recursive: true, force: true }));
@@ -128,7 +165,11 @@ test("reclaims a stale lock only after proving its owner is gone", async (contex
     { mode: 0o600 },
   );
 
-  const recovered = await cautiousStore.update((state) => state);
+  const recoveryStore = new FileSideGlanceStore({
+    directory,
+    staleLockMs: 1,
+  });
+  const recovered = await recoveryStore.update((state) => state);
   assert.equal(recovered.schemaVersion, 1);
   assert.equal((await readdir(directory)).includes(".side-glance-state.lock"), false);
 });

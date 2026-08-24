@@ -1,13 +1,34 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import path from "node:path";
+import type { Readable, Stream } from "node:stream";
 import { promisify } from "node:util";
 
 import type { SideGlanceTarget } from "./protocol.ts";
 
 const execFileAsync = promisify(execFile);
 
+interface TtyProcess {
+  kill: (signal: NodeJS.Signals) => boolean;
+  onClose: (listener: (code: number | null) => void) => void;
+  onError: (listener: (error: Error) => void) => void;
+  stdout: Readable;
+}
+
+interface TtySpawnOptions {
+  stdio: [Stream, "pipe", "ignore"];
+}
+
+type SpawnTtyProcess = (
+  command: string,
+  arguments_: string[],
+  options: TtySpawnOptions,
+) => TtyProcess;
+
 export interface TargetDiscoveryOptions {
   environment?: Readonly<Record<string, string | undefined>>;
   resolveTty?: () => Promise<string | undefined>;
+  resolveTmuxWindow?: (paneId: string) => Promise<string | undefined>;
+  spawnProcess?: SpawnTtyProcess;
   surfaceId?: string;
   tty?: string;
   tmuxPane?: string;
@@ -57,13 +78,25 @@ async function discoverTarget(
     explicitTty ??
     (explicitSurface || tmuxPane
       ? undefined
-      : await (options.resolveTty ?? resolveControllingTty)());
+      : await (options.resolveTty ??
+          (() => resolveControllingTty(options.spawnProcess)))());
   if (tty) validateTtyPath(tty);
 
   let surfaceId = explicitSurface;
   if (!surfaceId && tmuxPane && environment.TMUX) {
     validateText(environment.TMUX, "tmux server identity", 1_024);
-    surfaceId = `tmux:${environment.TMUX},${tmuxPane}`;
+    const serverIdentity = parseTmuxServerIdentity(environment.TMUX);
+    const windowId = serverIdentity
+      ? await (options.resolveTmuxWindow ??
+          ((paneId: string) => resolveTmuxWindowId(paneId, environment)))(tmuxPane)
+      : undefined;
+    if (windowId !== undefined && !/^@\d+$/u.test(windowId)) {
+      throw new Error("tmux window identity must use the canonical @number form.");
+    }
+    surfaceId =
+      windowId && serverIdentity
+        ? `tmux:${serverIdentity.surfaceIdentity},${windowId}`
+        : undefined;
   }
   surfaceId ??= tty ? `tty:${tty}` : undefined;
   if (!surfaceId) return undefined;
@@ -75,18 +108,109 @@ async function discoverTarget(
   };
 }
 
-async function resolveControllingTty(): Promise<string | undefined> {
+async function resolveTmuxWindowId(
+  paneId: string,
+  environment: Readonly<Record<string, string | undefined>>,
+): Promise<string | undefined> {
+  const tmuxIdentity = environment.TMUX;
+  const socketPath = tmuxIdentity
+    ? parseTmuxServerIdentity(tmuxIdentity)?.socketPath
+    : undefined;
+  if (!socketPath || !path.isAbsolute(socketPath) || socketPath.includes("\u0000")) {
+    return undefined;
+  }
+
   try {
-    const { stdout } = await execFileAsync("tty", [], {
-      encoding: "utf8",
-      maxBuffer: 4_096,
-      timeout: 2_000,
-    });
-    const tty = stdout.trim();
-    return tty.startsWith("/dev/") ? tty : undefined;
+    const { stdout } = await execFileAsync(
+      "tmux",
+      ["-S", socketPath, "display-message", "-p", "-t", paneId, "#{window_id}"],
+      {
+        encoding: "utf8",
+        env: { ...process.env, ...environment },
+        maxBuffer: 4_096,
+        timeout: 2_000,
+      },
+    );
+    const windowId = stdout.trim();
+    return /^@\d+$/u.test(windowId) ? windowId : undefined;
   } catch {
     return undefined;
   }
+}
+
+function parseTmuxServerIdentity(
+  tmuxIdentity: string,
+): { socketPath: string; surfaceIdentity: string } | undefined {
+  const match = /^(.*),([1-9]\d*),(?:0|[1-9]\d*)$/u.exec(tmuxIdentity);
+  const socketPath = match?.[1];
+  const serverPid = match?.[2];
+  if (!socketPath || !serverPid || !path.isAbsolute(socketPath)) return undefined;
+  return { socketPath, surfaceIdentity: `${socketPath},${serverPid}` };
+}
+
+async function resolveControllingTty(
+  spawnProcess: SpawnTtyProcess = defaultSpawnTtyProcess,
+): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    let child: TtyProcess;
+    try {
+      child = spawnProcess("tty", [], {
+        stdio: [process.stdin, "pipe", "ignore"],
+      });
+    } catch {
+      resolve(undefined);
+      return;
+    }
+
+    let output = "";
+    let settled = false;
+    function finish(value: string | undefined): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      resolve(value);
+    }
+
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM");
+      finish(undefined);
+    }, 2_000);
+    timeout.unref();
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      if (output.length + chunk.length > 4_096) {
+        child.kill("SIGTERM");
+        finish(undefined);
+        return;
+      }
+      output += chunk;
+    });
+    child.onError(() => finish(undefined));
+    child.onClose((code) => {
+      const tty = output.trim();
+      finish(code === 0 && tty.startsWith("/dev/") ? tty : undefined);
+    });
+  });
+}
+
+function defaultSpawnTtyProcess(
+  command: string,
+  arguments_: string[],
+  options: TtySpawnOptions,
+): TtyProcess {
+  const child = spawn(command, arguments_, options);
+  if (!child.stdout) throw new Error("tty stdout was unavailable.");
+  return {
+    stdout: child.stdout,
+    kill: (signal) => child.kill(signal),
+    onClose: (listener) => {
+      child.once("close", (code) => listener(code));
+    },
+    onError: (listener) => {
+      child.once("error", listener);
+    },
+  };
 }
 
 function validateTtyPath(value: string): void {

@@ -45,6 +45,14 @@ export interface ProviderInspection {
   expectedEvents: number;
   existingHookGroups: number;
   sideGlanceHooks: number;
+  integrationStatus: "installed" | "partial" | "not-installed";
+  managedHooks: Array<{
+    event: string;
+    notifications: boolean;
+    soundConfigured: boolean;
+    timeout: number | null;
+    timeoutUnit: "seconds" | "milliseconds";
+  }>;
   notifyConfigured?: boolean;
 }
 
@@ -99,16 +107,49 @@ export async function inspectProviderHooks(options: {
   const loaded = await readConfiguration(configPath);
   const hooks = readHooks(loaded.value);
   const groups = Object.values(hooks).flat();
+  const managedHooks = Object.entries(hooks).flatMap(([event, eventGroups]) =>
+    eventGroups.flatMap((group) =>
+      group.hooks.flatMap((hook) => {
+        if (!isManagedCommand(hook.command, options.provider)) return [];
+        return [
+          {
+            event,
+            notifications: hook.command?.includes(" --notifications") ?? false,
+            soundConfigured:
+              hook.command?.includes(" --notification-sound ") ?? false,
+            timeout:
+              typeof hook.timeout === "number" &&
+              Number.isFinite(hook.timeout) &&
+              hook.timeout > 0
+                ? hook.timeout
+                : null,
+            timeoutUnit:
+              options.provider === "gemini"
+                ? ("milliseconds" as const)
+                : ("seconds" as const),
+          },
+        ];
+      }),
+    ),
+  );
+  const providerEvents = PROVIDER_EVENTS[options.provider];
+  const expectedEvents = providerEvents.length;
+  const managedEvents = new Set(managedHooks.map(({ event }) => event));
   const inspection: ProviderInspection = {
     provider: options.provider,
     configPath,
     exists: loaded.exists,
     valid: true,
-    expectedEvents: PROVIDER_EVENTS[options.provider].length,
+    expectedEvents,
     existingHookGroups: groups.length,
-    sideGlanceHooks: groups
-      .flatMap((group) => group.hooks)
-      .filter((hook) => isManagedCommand(hook.command, options.provider)).length,
+    sideGlanceHooks: managedHooks.length,
+    integrationStatus:
+      providerEvents.every((event) => managedEvents.has(event))
+        ? "installed"
+        : managedHooks.length > 0
+          ? "partial"
+          : "not-installed",
+    managedHooks,
   };
   if (options.provider === "codex") {
     inspection.notifyConfigured = await inspectCodexNotify(homeDirectory);
@@ -136,7 +177,7 @@ export async function installProviderHooks(
       options.provider,
     );
     withoutManagedHandlers.push({
-      hooks: [{ type: "command", command }],
+      hooks: [managedHook(options.provider, eventName, command)],
     });
     hooks[eventName] = withoutManagedHandlers;
   }
@@ -159,6 +200,27 @@ export async function installProviderHooks(
     ...result(options.provider, validated.configPath, true),
     ...(backupPath ? { backupPath } : {}),
     installedHooks: PROVIDER_EVENTS[options.provider].length,
+  };
+}
+
+function managedHook(
+  provider: InstallableProvider,
+  eventName: string,
+  command: string,
+): HookCommand {
+  const teardown = eventName === "SessionEnd";
+  return {
+    type: "command",
+    command,
+    // Claude and Codex express hook timeouts in seconds; Gemini uses milliseconds.
+    timeout:
+      provider === "gemini"
+        ? teardown
+          ? 3_000
+          : 10_000
+        : teardown
+          ? 3
+          : 10,
   };
 }
 

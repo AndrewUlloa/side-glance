@@ -1,10 +1,23 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+
+import { inspectProviderCapabilities } from "../../src/cli/doctor.ts";
+import { inspectNotificationReadiness } from "../../src/notifications/inspection.ts";
 
 const cliPath = fileURLToPath(new URL("../../src/cli/entry.ts", import.meta.url));
 
@@ -96,7 +109,7 @@ async function stateDirectory(context: test.TestContext): Promise<string> {
   return directory;
 }
 
-test("accepts a normalized event and reports status without prompt content", async (context) => {
+test("acknowledges a normalized event minimally and reports status without prompt content", async (context) => {
   const directory = await stateDirectory(context);
   const payload = {
     v: 1,
@@ -116,7 +129,7 @@ test("accepts a normalized event and reports status without prompt content", asy
     input: JSON.stringify(payload),
   });
   assert.equal(submitted.code, 0, submitted.stderr);
-  assert.equal(JSON.parse(submitted.stdout).sessions["claude:session-1"].phase, "working");
+  assert.equal(submitted.stdout, "{}\n");
 
   const status = await runCli(["status", "--json"], {
     stateDirectory: directory,
@@ -141,12 +154,16 @@ test("adapts a provider-native hook payload through the executable", async (cont
   );
 
   assert.equal(result.code, 0, result.stderr);
-  const session = JSON.parse(result.stdout).sessions[
+  assert.equal(result.stdout, "");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const session = JSON.parse(status.stdout).sessions[
     "claude:claude-native-session"
   ];
   assert.equal(session.phase, "working");
   assert.equal(session.target.surfaceId, "test:hook");
-  assert.equal(result.stdout.includes("private prompt"), false);
+  assert.equal(status.stdout.includes("private prompt"), false);
 });
 
 test("accepts targetless notification hooks without writing terminal control bytes", async (context) => {
@@ -180,7 +197,11 @@ test("accepts targetless notification hooks without writing terminal control byt
     ),
     false,
   );
-  const state = JSON.parse(result.stdout);
+  assert.equal(result.stdout, "");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const state = JSON.parse(status.stdout);
   assert.equal(state.sessions["claude:claude-targetless"].phase, "completed");
   assert.equal(state.sessions["claude:claude-targetless"].target, undefined);
 });
@@ -209,9 +230,24 @@ test("exposes a targetless Aider notification bridge with inherited session iden
   );
 
   assert.equal(result.code, 0, result.stderr);
-  const state = JSON.parse(result.stdout);
+  assert.equal(result.stdout, "{}\n");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const state = JSON.parse(status.stdout);
   assert.equal(state.sessions["aider:aider-wrapper-session"].phase, "completed");
   assert.equal(result.stdout.includes("Docs worker"), false);
+
+  const undocumentedHook = await runCli(
+    ["hook", "--provider", "aider", "--notifications", "--json"],
+    {
+      stateDirectory: directory,
+      input: JSON.stringify({ event: "response-complete" }),
+      env: { SIDE_GLANCE_NOTIFICATION_BACKEND: "none" },
+    },
+  );
+  assert.equal(undocumentedHook.code, 1);
+  assert.match(undocumentedHook.stderr, /Unsupported hook provider: aider/u);
 });
 
 test("uses the wrapper-provided surface for an installed hook command", async (context) => {
@@ -226,11 +262,101 @@ test("uses the wrapper-provided surface for an installed hook command", async (c
   });
 
   assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout, "");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
   assert.equal(
-    JSON.parse(result.stdout).sessions["claude:claude-installed-hook"].target
+    JSON.parse(status.stdout).sessions["claude:claude-installed-hook"].target
       .surfaceId,
     "test:wrapper-surface",
   );
+});
+
+test("emits only an empty JSON acknowledgement for Gemini hooks", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(
+    ["hook", "--provider", "gemini", "--surface", "test:gemini", "--json"],
+    {
+      stateDirectory: directory,
+      input: JSON.stringify({
+        hook_event_name: "BeforeAgent",
+        session_id: "gemini-session",
+      }),
+    },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout, "{}\n");
+  assert.equal(result.stdout.includes("session"), false);
+});
+
+test("accepts terminal title as a boolean lifecycle option", async (context) => {
+  const directory = await stateDirectory(context);
+  const eventPayload = {
+    v: 1,
+    eventId: "title-event",
+    source: "generic",
+    sessionId: "title-event-session",
+    kind: "turn.started",
+    occurredAt: 1_000,
+    confidence: "wrapper",
+    target: { surfaceId: "test:title-event" },
+  };
+  const invocations = [
+    runCli(["event", "--terminal-title", "--json"], {
+      stateDirectory: directory,
+      input: JSON.stringify(eventPayload),
+    }),
+    runCli(
+      [
+        "hook",
+        "--provider",
+        "gemini",
+        "--surface",
+        "test:title-hook",
+        "--terminal-title",
+        "--json",
+      ],
+      {
+        stateDirectory: directory,
+        input: JSON.stringify({
+          hook_event_name: "BeforeAgent",
+          session_id: "title-hook-session",
+        }),
+      },
+    ),
+    runCli(
+      [
+        "notify",
+        "--source",
+        "aider",
+        "--kind",
+        "completed",
+        "--session",
+        "title-notify-session",
+        "--surface",
+        "test:title-notify",
+        "--terminal-title",
+        "--json",
+      ],
+      {
+        stateDirectory: directory,
+        env: { SIDE_GLANCE_NOTIFICATION_BACKEND: "none" },
+      },
+    ),
+  ];
+
+  for (const result of await Promise.all(invocations)) {
+    assert.equal(result.code, 0, result.stderr);
+  }
+
+  const unknown = await runCli(
+    ["event", "--terminal-title", "--unknown", "--json"],
+    { stateDirectory: directory, input: JSON.stringify(eventPayload) },
+  );
+  assert.equal(unknown.code, 1);
+  assert.match(unknown.stderr, /unknown option/u);
 });
 
 test("rejects malformed event JSON without creating executable state", async (context) => {
@@ -268,9 +394,9 @@ test("doctor and preview are deterministic and do not require a live terminal", 
   assert.equal(preview.code, 0, preview.stderr);
   assert.deepEqual(JSON.parse(preview.stdout), {
     phase: "waiting",
-    urgency: 500,
-    wash: "3a2f16",
-    accent: "e0a726",
+    urgency: 0,
+    wash: "4d3510",
+    accent: "f0a726",
   });
 });
 
@@ -308,7 +434,8 @@ test("doctor inspects Claude and Codex plans without mutating existing configura
   assert.equal(report.providers.codex.notifyConfigured, true);
   assert.equal(report.providers.codex.sideGlanceHooks, 0);
   assert.equal(report.notifications.providers.codex.topLevelNotify, true);
-  assert.equal(report.notifications.providers.codex.status, "not-configured");
+  assert.equal(report.notifications.providers.codex.status, "ready");
+  assert.equal(report.notifications.providers.codex.effectiveDefault, true);
   assert.ok(["available", "unavailable", "unsupported"].includes(
     report.notifications.sideGlance.status,
   ));
@@ -318,6 +445,179 @@ test("doctor inspects Claude and Codex plans without mutating existing configura
     ),
     before,
   );
+});
+
+test("doctor separates provider capabilities without claiming live verification", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-capabilities-home-"));
+  const bin = path.join(home, "bin");
+  context.after(() => rm(home, { recursive: true, force: true }));
+  await mkdir(bin, { recursive: true });
+  for (const name of ["claude", "codex", "gemini", "opencode", "aider"]) {
+    const executable = path.join(bin, name);
+    await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+    await chmod(executable, 0o700);
+  }
+  await writeFile(
+    path.join(home, ".aider.conf.yml"),
+    "notifications-command: 'side-glance notify --source aider --kind completed --json'\n",
+  );
+
+  const result = await runCli(["doctor", "--home", home, "--json"], {
+    stateDirectory: directory,
+    env: {
+      PATH: bin,
+      OPENCODE_CONFIG_DIR: path.join(home, "opencode-override"),
+    },
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.deepEqual(Object.keys(report.capabilities.providers), [
+    "claude",
+    "codex",
+    "gemini",
+    "opencode",
+    "aider",
+  ]);
+  assert.equal(report.capabilities.providers.claude.binary.present, true);
+  assert.equal(
+    report.capabilities.providers.claude.adapterContract.status,
+    "contract-audited",
+  );
+  assert.equal(
+    report.capabilities.providers.gemini.adapterContract.status,
+    "experimental",
+  );
+  assert.equal(
+    report.capabilities.providers.codex.nativeNotifications.status,
+    "ready",
+  );
+  assert.equal(
+    report.capabilities.providers.aider.integration.status,
+    "configured",
+  );
+  assert.equal(
+    report.capabilities.providers.aider.integration.source,
+    "user-config",
+  );
+  assert.deepEqual(
+    report.capabilities.providers.opencode.overrides.detected,
+    ["OPENCODE_CONFIG_DIR"],
+  );
+  assert.equal(
+    report.capabilities.providers.opencode.stableSurface.status,
+    "wrapper-required",
+  );
+  for (const capability of Object.values(
+    report.capabilities.providers,
+  ) as Array<{ liveVerification: { status: string } }>) {
+    assert.equal(capability.liveVerification.status, "not-run");
+  }
+});
+
+test("doctor reads Aider config through one verified no-follow handle", async (context) => {
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-aider-handle-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const configPath = path.join(home, ".aider.conf.yml");
+  const source = Buffer.from(
+    "notifications-command: side-glance notify --source aider --kind completed --json\n",
+  );
+  const operations: string[] = [];
+  let openedPath: string | undefined;
+  let openedFlags: number | undefined;
+  const notifications = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: process.platform,
+    pathProbe: async () => false,
+    backendHints: { desktopSession: false },
+  });
+
+  const inspection = await inspectProviderCapabilities({
+    homeDirectory: home,
+    environment: {},
+    pathProbe: async () => false,
+    hooks: {},
+    notifications,
+    openAiderConfig: async (filePath: string, flags: number) => {
+      operations.push("open");
+      openedPath = filePath;
+      openedFlags = flags;
+      return {
+        async stat() {
+          operations.push("stat");
+          return { isFile: () => true, size: source.byteLength };
+        },
+        async read(
+          buffer: Uint8Array,
+          offset: number,
+          length: number,
+          position: number,
+        ) {
+          operations.push("read");
+          const bytesRead = Math.max(
+            0,
+            Math.min(length, source.byteLength - position),
+          );
+          buffer.set(source.subarray(position, position + bytesRead), offset);
+          return { bytesRead };
+        },
+        async close() {
+          operations.push("close");
+        },
+      };
+    },
+  });
+
+  assert.equal(
+    (
+      inspection.providers.aider as {
+        integration: { status: string };
+      }
+    ).integration.status,
+    "configured",
+  );
+  assert.equal(openedPath, configPath);
+  assert.equal(openedFlags, constants.O_RDONLY | constants.O_NOFOLLOW);
+  assert.equal(operations[0], "open");
+  assert.equal(operations[1], "stat");
+  assert.ok(operations.slice(2, -1).every((operation) => operation === "read"));
+  assert.equal(operations.at(-1), "close");
+});
+
+test("doctor fails closed for symlinked and oversized Aider config", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-aider-symlink-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const outside = path.join(home, "outside.yml");
+  const configPath = path.join(home, ".aider.conf.yml");
+  await writeFile(
+    outside,
+    "notifications-command: /usr/local/bin/unrelated-alert\n",
+  );
+  await symlink(outside, configPath);
+
+  const symlinked = await runCli(["doctor", "--home", home, "--json"], {
+    stateDirectory: directory,
+  });
+
+  assert.equal(symlinked.code, 0, symlinked.stderr);
+  const symlinkedIntegration = JSON.parse(symlinked.stdout).capabilities
+    .providers.aider.integration;
+  assert.equal(symlinkedIntegration.status, "unknown");
+  assert.equal(symlinkedIntegration.source, "user-config");
+
+  await rm(configPath);
+  await writeFile(configPath, "x".repeat(1_048_577));
+  const oversized = await runCli(["doctor", "--home", home, "--json"], {
+    stateDirectory: directory,
+  });
+
+  assert.equal(oversized.code, 0, oversized.stderr);
+  const oversizedIntegration = JSON.parse(oversized.stdout).capabilities
+    .providers.aider.integration;
+  assert.equal(oversizedIntegration.status, "unknown");
+  assert.equal(oversizedIntegration.source, "user-config");
 });
 
 test("doctor reports malformed provider notification settings instead of aborting", async (context) => {
@@ -373,10 +673,11 @@ test("supervised run passes stable surface and session identity to provider hook
       "run",
       "--surface",
       "test:inherited-surface",
+      "--terminal-title",
       "--",
       process.execPath,
       "-e",
-      "process.stdout.write(JSON.stringify({surface: process.env.SIDE_GLANCE_SURFACE_ID, session: process.env.SIDE_GLANCE_SESSION_ID}))",
+      "process.stdout.write(JSON.stringify({surface: process.env.SIDE_GLANCE_SURFACE_ID, session: process.env.SIDE_GLANCE_SESSION_ID, terminalTitle: process.env.SIDE_GLANCE_TERMINAL_TITLE}))",
     ],
     { stateDirectory: directory },
   );
@@ -385,6 +686,22 @@ test("supervised run passes stable surface and session identity to provider hook
   const environment = JSON.parse(result.stdout);
   assert.equal(environment.surface, "test:inherited-surface");
   assert.match(environment.session, /^wrapper-/u);
+  assert.equal(environment.terminalTitle, "1");
+});
+
+test("doctor warns that Terminal.app background support needs manual verification", async (context) => {
+  const directory = await stateDirectory(context);
+  const doctor = await runCli(["doctor", "--json"], {
+    stateDirectory: directory,
+    env: { TERM_PROGRAM: "Apple_Terminal" },
+  });
+
+  assert.equal(doctor.code, 0, doctor.stderr);
+  const terminal = JSON.parse(doctor.stdout).terminal;
+  assert.equal(terminal.emulator, "terminal.app");
+  assert.equal(terminal.background.status, "manual-verification-required");
+  assert.equal(terminal.titleFallback.optInFlag, "--terminal-title");
+  assert.ok(terminal.warnings.some((warning: string) => warning.includes("OSC 11")));
 });
 
 test("supervised run can take its surface from the wrapper environment", async (context) => {
@@ -492,6 +809,48 @@ test("supervised run releases an Aider bridge session that inherited its wrapper
     true,
   );
   assert.equal(state.surfaces["test:aider-wrapper-cleanup"].phase, "inactive");
+});
+
+test("supervised run releases a provider-native session associated with its wrapper", async (context) => {
+  const directory = await stateDirectory(context);
+  const childProgram = [
+    'import { spawnSync } from "node:child_process";',
+    `const child = spawnSync(process.execPath, [${JSON.stringify(cliPath)}, "hook", "--provider", "claude", "--json"], {`,
+    "env: process.env,",
+    'encoding: "utf8",',
+    'input: JSON.stringify({hook_event_name: "Stop", session_id: "native-claude-session"}),',
+    "});",
+    'process.stdout.write(child.stdout ?? "");',
+    'process.stderr.write(child.stderr ?? "");',
+    "process.exit(child.status ?? 1);",
+  ].join("");
+  const result = await runCli(
+    [
+      "run",
+      "--surface",
+      "test:native-wrapper-cleanup",
+      "--",
+      process.execPath,
+      "--input-type=module",
+      "-e",
+      childProgram,
+    ],
+    { stateDirectory: directory },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  const state = JSON.parse(
+    await readFile(path.join(directory, "side-glance-state.json"), "utf8"),
+  );
+  assert.match(
+    state.sessions["claude:native-claude-session"].wrapperSessionId,
+    /^wrapper-/u,
+  );
+  assert.equal(state.sessions["claude:native-claude-session"].phase, "inactive");
+  assert.equal(
+    state.sessions["claude:native-claude-session"].reason,
+    "exit:0",
+  );
 });
 
 test("exposes transactional provider install and uninstall commands", async (context) => {
@@ -614,9 +973,7 @@ test("describes a Codex top-level notify command without claiming it is native",
     warnings.some((warning) => warning.includes("top-level notify command")),
   );
   assert.ok(
-    warnings.every(
-      (warning) => !warning.includes("native notifications are already configured"),
-    ),
+    warnings.some((warning) => warning.includes("enabled by default")),
   );
 });
 
@@ -626,6 +983,11 @@ test("installs and removes the owned OpenCode notification plugin through the CL
   context.after(() => rm(home, { recursive: true, force: true }));
   const executable = path.join(home, "side-glance-bin");
   await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  const providerBin = path.join(home, "bin");
+  await mkdir(providerBin, { recursive: true });
+  await writeFile(path.join(providerBin, "opencode"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
 
   const installed = await runCli(
     [
@@ -640,7 +1002,7 @@ test("installs and removes the owned OpenCode notification plugin through the CL
       "Glass",
       "--json",
     ],
-    { stateDirectory: directory },
+    { stateDirectory: directory, env: { PATH: providerBin } },
   );
   assert.equal(installed.code, 0, installed.stderr);
   const result = JSON.parse(installed.stdout);
@@ -663,6 +1025,117 @@ test("installs and removes the owned OpenCode notification plugin through the CL
   assert.equal(removed.code, 0, removed.stderr);
   assert.equal(JSON.parse(removed.stdout).installedHooks, 0);
   await assert.rejects(() => readFile(result.configPath), /ENOENT/u);
+});
+
+test("rejects an executable directory masquerading as OpenCode on PATH", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-opencode-path-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "side-glance-bin");
+  const providerBin = path.join(home, "bin");
+  await mkdir(path.join(providerBin, "opencode"), { recursive: true });
+  await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+
+  const result = await runCli(
+    [
+      "install",
+      "opencode",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { stateDirectory: directory, env: { PATH: providerBin } },
+  );
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /stable v1|regular executable|not found/i);
+  await assert.rejects(
+    () =>
+      readFile(
+        path.join(home, ".config", "opencode", "plugins", "side-glance.js"),
+        "utf8",
+      ),
+    /ENOENT/u,
+  );
+});
+
+test("installs colors-only OpenCode v1 support and rejects v2-only runtimes", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-opencode-api-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "side-glance-bin");
+  const providerBin = path.join(home, "bin");
+  await mkdir(providerBin, { recursive: true });
+  await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await writeFile(path.join(providerBin, "opencode"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
+
+  const installed = await runCli(
+    [
+      "install",
+      "opencode",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { stateDirectory: directory, env: { PATH: providerBin } },
+  );
+  assert.equal(installed.code, 0, installed.stderr);
+  const pluginPath = JSON.parse(installed.stdout).configPath;
+  const plugin = await readFile(pluginPath, "utf8");
+  assert.match(plugin, /\["hook","--provider","opencode","--json"\]/u);
+  assert.doesNotMatch(plugin, /--notifications/u);
+
+  await rm(pluginPath);
+  await rm(path.join(providerBin, "opencode"));
+  await writeFile(path.join(providerBin, "opencode2"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
+  const incompatible = await runCli(
+    [
+      "install",
+      "opencode",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { stateDirectory: directory, env: { PATH: providerBin } },
+  );
+  assert.equal(incompatible.code, 1);
+  assert.match(incompatible.stderr, /OpenCode 2|v2|stable v1/i);
+  await assert.rejects(() => readFile(pluginPath), /ENOENT/u);
+
+  await rm(path.join(providerBin, "opencode2"));
+  await writeFile(path.join(providerBin, "opencode"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
+  const overridden = await runCli(
+    [
+      "install",
+      "opencode",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    {
+      stateDirectory: directory,
+      env: {
+        PATH: providerBin,
+        OPENCODE_CONFIG_DIR: path.join(home, "custom-opencode"),
+      },
+    },
+  );
+  assert.equal(overridden.code, 1);
+  assert.match(overridden.stderr, /configuration overrides|OPENCODE_CONFIG_DIR/u);
 });
 
 test("refuses permanent provider activation from an ephemeral npm execution", async (context) => {
@@ -766,7 +1239,11 @@ test("reset releases only the selected session", async (context) => {
     { stateDirectory: directory },
   );
   assert.equal(reset.code, 0, reset.stderr);
-  const sessions = JSON.parse(reset.stdout).sessions;
+  assert.equal(reset.stdout, "{}\n");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const sessions = JSON.parse(status.stdout).sessions;
   assert.equal(sessions["generic:one"].phase, "inactive");
   assert.equal(sessions["generic:two"].phase, "working");
 });
@@ -798,7 +1275,11 @@ test("reset --all releases every tracked session after abnormal teardown", async
   });
 
   assert.equal(reset.code, 0, reset.stderr);
-  const state = JSON.parse(reset.stdout);
+  assert.equal(reset.stdout, "{}\n");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const state = JSON.parse(status.stdout);
   assert.ok(Object.values(state.sessions).every(
     (session) => (session as { phase: string }).phase === "inactive",
   ));

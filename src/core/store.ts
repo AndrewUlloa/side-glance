@@ -449,8 +449,30 @@ function isSideGlanceSessionState(value: unknown): value is SideGlanceSessionSta
   }
   if (!Number.isFinite(value.updatedAt)) return false;
   if (value.startedAt !== undefined && !Number.isFinite(value.startedAt)) return false;
+  if (value.completedAt !== undefined && !Number.isFinite(value.completedAt)) {
+    return false;
+  }
+  if (
+    value.responseEwmaSeconds !== undefined &&
+    (!Number.isFinite(value.responseEwmaSeconds) ||
+      Number(value.responseEwmaSeconds) < 0)
+  ) {
+    return false;
+  }
   if (value.turnId !== undefined && typeof value.turnId !== "string") return false;
+  if (
+    value.wrapperSessionId !== undefined &&
+    typeof value.wrapperSessionId !== "string"
+  ) {
+    return false;
+  }
   if (value.reason !== undefined && typeof value.reason !== "string") return false;
+  if (
+    value.leaseExpiresAt !== undefined &&
+    !Number.isFinite(value.leaseExpiresAt)
+  ) {
+    return false;
+  }
   if (value.target !== undefined && !isSideGlanceTarget(value.target)) return false;
   return true;
 }
@@ -474,6 +496,12 @@ function isSideGlanceSurfaceState(value: unknown): value is SideGlanceSurfaceSta
     return false;
   }
   if (!Number.isFinite(value.updatedAt) || typeof value.terminalPainted !== "boolean") {
+    return false;
+  }
+  if (
+    value.terminalTitlePainted !== undefined &&
+    typeof value.terminalTitlePainted !== "boolean"
+  ) {
     return false;
   }
   if (value.ownerKey !== undefined && typeof value.ownerKey !== "string") {

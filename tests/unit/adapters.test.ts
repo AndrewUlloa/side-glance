@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { adaptAiderNotification } from "../../src/adapters/aider.ts";
 import { adaptClaudeHook } from "../../src/adapters/claude.ts";
 import { adaptCodexHook } from "../../src/adapters/codex.ts";
 import { adaptGeminiHook } from "../../src/adapters/gemini.ts";
@@ -89,6 +88,23 @@ test("maps current Codex hooks and preserves turn IDs without replacing notify",
   assert.equal(JSON.stringify(started).includes("private"), false);
 });
 
+test("retains wrapper ownership when a provider supplies its own session ID", () => {
+  const adapted = adaptClaudeHook(
+    {
+      hook_event_name: "UserPromptSubmit",
+      session_id: "native-claude-session",
+    },
+    {
+      ...context,
+      fallbackSessionId: "wrapper-session",
+      wrapperSessionId: "wrapper-session",
+    },
+  );
+
+  assert.equal(adapted?.sessionId, "native-claude-session");
+  assert.equal(adapted?.wrapperSessionId, "wrapper-session");
+});
+
 test("maps synchronous Gemini agent and permission hooks", () => {
   assert.equal(
     adaptGeminiHook(
@@ -97,13 +113,12 @@ test("maps synchronous Gemini agent and permission hooks", () => {
     )?.kind,
     "turn.started",
   );
-  assert.equal(
-    adaptGeminiHook(
-      { hook_event_name: "AfterAgent", session_id: "gemini-session" },
-      context,
-    )?.kind,
-    "turn.completed",
+  const completed = adaptGeminiHook(
+    { hook_event_name: "AfterAgent", session_id: "gemini-session" },
+    context,
   );
+  assert.equal(completed?.kind, "turn.completed");
+  assert.equal(completed?.confidence, "heuristic");
   assert.equal(
     adaptGeminiHook(
       {
@@ -114,6 +129,23 @@ test("maps synchronous Gemini agent and permission hooks", () => {
       context,
     )?.kind,
     "attention.waiting",
+  );
+});
+
+test("marks provider completion hooks as pre-final", () => {
+  assert.equal(
+    adaptClaudeHook(
+      { hook_event_name: "Stop", session_id: "claude-session" },
+      context,
+    )?.confidence,
+    "heuristic",
+  );
+  assert.equal(
+    adaptCodexHook(
+      { hook_event_name: "Stop", session_id: "codex-session" },
+      context,
+    )?.confidence,
+    "heuristic",
   );
 });
 
@@ -135,22 +167,6 @@ test("maps OpenCode session, error, and permission events", () => {
     event("session.idle", {
       info: { id: "child-session", parentID: "opencode-session" },
     }),
-    undefined,
-  );
-});
-
-test("keeps Aider explicitly completion-only and requires wrapper identity", () => {
-  const completed = adaptAiderNotification(
-    { event: "response-complete", message: "private response" },
-    { ...context, fallbackSessionId: "aider-wrapper-session" },
-  );
-
-  assert.equal(completed?.kind, "turn.completed");
-  assert.equal(completed?.confidence, "notification");
-  assert.equal(completed?.sessionId, "aider-wrapper-session");
-  assert.equal(JSON.stringify(completed).includes("private response"), false);
-  assert.equal(
-    adaptAiderNotification({ event: "unknown" }, context),
     undefined,
   );
 });

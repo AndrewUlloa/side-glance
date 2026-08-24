@@ -61,7 +61,7 @@ test("restores local tmux styles and formats byte-for-byte", async () => {
   const runner = new FakeTmuxRunner(original);
   const snapshot = await captureTmuxSnapshot(runner, "%3");
 
-  await applyTmuxPaint(runner, snapshot, "f0a726");
+  await applyTmuxPaint(runner, snapshot, "f0a726", "waiting");
   assert.notDeepEqual(Object.fromEntries(runner.local), original);
 
   await restoreTmuxSnapshot(runner, snapshot);
@@ -73,7 +73,7 @@ test("returns inherited options to inheritance instead of copying values", async
   const snapshot = await captureTmuxSnapshot(runner, "%3");
 
   assert.ok(snapshot.options.every((option) => option.local === false));
-  await applyTmuxPaint(runner, snapshot, "009d89");
+  await applyTmuxPaint(runner, snapshot, "009d89", "working");
   assert.equal(runner.local.size, 4);
 
   await restoreTmuxSnapshot(runner, snapshot);
@@ -97,6 +97,7 @@ test("rejects pane, window, and color injection", async () => {
         runner,
         { windowId: "@7; run-shell owned", options: [] },
         "009d89",
+        "working",
       ),
     /window/i,
   );
@@ -106,7 +107,22 @@ test("rejects pane, window, and color injection", async () => {
         runner,
         { windowId: "@7", options: [] },
         "009d89;run-shell owned",
+        "working",
       ),
     /color/i,
   );
+});
+
+test("uses distinct bounded phase markers independent of color", async () => {
+  const runner = new FakeTmuxRunner();
+  const snapshot = await captureTmuxSnapshot(runner, "%3");
+
+  await applyTmuxPaint(runner, snapshot, "f33533", "completed");
+  const completed = runner.local.get("window-status-current-format");
+  await applyTmuxPaint(runner, snapshot, "f33533", "failed");
+  const failed = runner.local.get("window-status-current-format");
+
+  assert.match(completed ?? "", /✓/u);
+  assert.match(failed ?? "", /×/u);
+  assert.notEqual(completed, failed);
 });

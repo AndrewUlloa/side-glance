@@ -8,6 +8,7 @@ import {
   notificationRequestForEvent,
   sanitizeNotificationLabel,
   sanitizeNotificationSound,
+  shouldNotifyForEvent,
 } from "../../src/notifications/policy.ts";
 import type { SideGlanceEvent } from "../../src/core/protocol.ts";
 import { notificationOptionsForInvocation } from "../../src/cli/index.ts";
@@ -88,6 +89,15 @@ test("maps only attention events to bounded privacy-safe notification requests",
     notificationRequestForEvent(event("turn.cancelled"))?.title,
     "Side Glance · Claude · Cancelled",
   );
+});
+
+test("does not claim Ready for a provider completion that may still be blocked or retried", () => {
+  const completion = event("turn.completed", {
+    confidence: "heuristic",
+  });
+
+  assert.equal(shouldNotifyForEvent(completion), false);
+  assert.equal(notificationRequestForEvent(completion), undefined);
 });
 
 test("normalizes, strips controls, and bounds explicit labels and sound names", () => {

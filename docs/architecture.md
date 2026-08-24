@@ -20,7 +20,7 @@ provider hook or supervised child
 
 Provider adapters translate lifecycle metadata only. The controller holds the store lock while it reduces an event, resolves the winning session for the affected surface, renders that decision, and atomically persists the resulting session and renderer snapshot. That transaction prevents a delayed hook from painting after a newer state has already committed.
 
-Desktop notification delivery is an event side effect, not another surface lease. After a waiting, completed, failed, or cancelled event commits, the controller passes that originating event to the notifier. This means targetless hooks and non-owning sessions still alert, while reducer-rejected duplicates and stale events do not. Notification backend failure is swallowed after persistence and cannot roll back lifecycle state.
+Desktop notification delivery is an event side effect, not another surface lease. After an eligible waiting, final completed, failed, or cancelled event commits, the controller passes that originating event to the notifier. Pre-final heuristic completions are persisted and rendered but do not claim a final Ready alert. This means targetless hooks and non-owning sessions still alert, while semantic duplicates, reducer-rejected events, and stale events do not. Notification backend failure is swallowed after persistence and cannot roll back lifecycle state.
 
 ## Ordering and ownership
 
