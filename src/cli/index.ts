@@ -4,7 +4,6 @@ import { access } from "node:fs/promises";
 import { homedir } from "node:os";
 import path, { delimiter } from "node:path";
 
-import { adaptAiderNotification } from "../adapters/aider.ts";
 import { adaptClaudeHook } from "../adapters/claude.ts";
 import { adaptCodexHook } from "../adapters/codex.ts";
 import { adaptGeminiHook } from "../adapters/gemini.ts";
@@ -12,7 +11,7 @@ import { adaptOpenCodeEvent } from "../adapters/opencode.ts";
 import { inspectProviderHooks } from "../adapters/installers.ts";
 import type { AdapterContext, AdapterResult } from "../adapters/types.ts";
 import { SideGlanceController } from "../core/controller.ts";
-import { urgencyFromElapsed } from "../core/policy.ts";
+import { visualForPhase } from "../core/visual.ts";
 import { sessionKey, type SideGlancePhase } from "../core/protocol.ts";
 import { FileSideGlanceStore } from "../core/store.ts";
 import {
@@ -27,8 +26,11 @@ import type {
   NotificationOptions,
 } from "../notifications/policy.ts";
 import { runInstallCommand } from "./install.ts";
+import { inspectProviderCapabilities } from "./doctor.ts";
 import { runSupervised } from "./run.ts";
 import { SIDE_GLANCE_VERSION } from "../version.ts";
+import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
+import { inspectTerminalCapabilities } from "./doctor.ts";
 
 const MAX_STDIN_BYTES = 1_048_576;
 
@@ -52,14 +54,19 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     case "event": {
       requireOnlyOptions(
         args.slice(1),
-        ["--notifications", "--notification-sound", "--label", "--json"],
+        [
+          "--notifications",
+          "--notification-sound",
+          "--label",
+          "--terminal-title",
+          "--json",
+        ],
         "event",
-        ["--notifications", "--json"],
+        ["--notifications", "--terminal-title", "--json"],
       );
       const event = parseSideGlanceEvent(JSON.parse(await readBoundedStdin()));
-      writeJson(
-        await controllerWithNotifications(store, args).submit(event),
-      );
+      await controllerWithNotifications(store, args).submit(event);
+      writeJson({});
       return 0;
     }
     case "hook": {
@@ -83,37 +90,41 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           "--notifications",
           "--notification-sound",
           "--label",
+          "--terminal-title",
           "--json",
         ],
         "hook",
-        ["--notifications", "--json"],
+        ["--notifications", "--terminal-title", "--json"],
       );
       const sessionIndex = args.indexOf("--session");
       const fallbackSessionId =
         sessionIndex === -1
           ? process.env.SIDE_GLANCE_SESSION_ID ?? process.env.SIGNAL_SESSION_ID
           : args[sessionIndex + 1];
+      const wrapperSessionId =
+        process.env.SIDE_GLANCE_SESSION_ID ?? process.env.SIGNAL_SESSION_ID;
       const context: AdapterContext = {
         eventId: randomUUID(),
         occurredAt: Date.now(),
         ...(target ? { target } : {}),
         ...(fallbackSessionId ? { fallbackSessionId } : {}),
+        ...(wrapperSessionId ? { wrapperSessionId } : {}),
       };
       const rawPayload: unknown = JSON.parse(await readBoundedStdin());
       const event = adaptProviderHook(provider, rawPayload, context);
       if (!event) {
-        writeJson({ accepted: false });
+        writeHookAcknowledgement(provider);
         return 0;
       }
-      writeJson(await controllerWithNotifications(store, args).submit(event));
+      await controllerWithNotifications(store, args).submit(event);
+      writeHookAcknowledgement(provider);
       return 0;
     }
     case "notify": {
       const source = parseSideGlanceSource(parseOption(args, "--source"));
-      const sessionId =
-        optionalOption(args, "--session") ??
-        process.env.SIDE_GLANCE_SESSION_ID ??
-        process.env.SIGNAL_SESSION_ID;
+      const wrapperSessionId =
+        process.env.SIDE_GLANCE_SESSION_ID ?? process.env.SIGNAL_SESSION_ID;
+      const sessionId = optionalOption(args, "--session") ?? wrapperSessionId;
       if (!sessionId) {
         throw new Error(
           "notify requires --session or a wrapper-provided SIDE_GLANCE_SESSION_ID.",
@@ -133,9 +144,11 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           "--surface",
           "--notification-sound",
           "--label",
+          "--terminal-title",
           "--json",
         ],
         "notify",
+        ["--terminal-title", "--json"],
       );
       const event = parseSideGlanceEvent({
         v: 1,
@@ -144,12 +157,12 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         sessionId,
         kind,
         occurredAt: Date.now(),
+        ...(wrapperSessionId ? { wrapperSessionId } : {}),
         confidence: "notification",
         ...(target ? { target } : {}),
       });
-      writeJson(
-        await controllerWithNotifications(store, args, true).submit(event),
-      );
+      await controllerWithNotifications(store, args, true).submit(event);
+      writeJson({});
       return 0;
     }
     case "install":
@@ -178,15 +191,29 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           desktopSession: desktopSessionAvailable(),
         },
       });
+      const providerInspections = Object.fromEntries(inspections);
+      const capabilities = await inspectProviderCapabilities({
+        homeDirectory,
+        environment: process.env,
+        pathProbe: probeExecutable,
+        hooks: providerInspections,
+        notifications: notificationReadiness,
+      });
       writeJson({
         stateDirectory,
         node: { version: process.versions.node, supported: majorVersion >= 22 },
         terminal: {
           tty: Boolean(process.stdout.isTTY),
           tmux: Boolean(process.env.TMUX),
+          ...inspectTerminalCapabilities({
+            platform: process.platform,
+            environment: process.env,
+            tmux: Boolean(process.env.TMUX),
+          }),
         },
-        providers: Object.fromEntries(inspections),
+        providers: providerInspections,
         notifications: notificationReadiness,
+        capabilities,
       });
       return 0;
     }
@@ -197,8 +224,13 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       }
       const elapsed = parseNonNegativeNumber(parseOption(args, "--elapsed"), "elapsed");
       requireOnlyOptions(args.slice(1), ["--phase", "--elapsed", "--json"], "preview");
-      const thermal = urgencyFromElapsed(elapsed, 120);
-      writeJson({ phase, urgency: thermal.urgency, wash: thermal.wash, accent: thermal.accent });
+      const visual = visualForPhase(phase, elapsed, 120);
+      writeJson({
+        phase,
+        urgency: visual.urgency,
+        wash: visual.wash,
+        accent: visual.accent,
+      });
       return 0;
     }
     case "reset": {
@@ -221,7 +253,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
             ...(session.target ? { target: session.target } : {}),
           });
         }
-        writeJson(current);
+        writeJson({});
         return 0;
       }
       const source = parseSideGlanceSource(parseOption(args, "--source"));
@@ -230,7 +262,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       const current = await store.read();
       const session = current.sessions[sessionKey(source, sessionId)];
       if (!session) throw new Error("reset session was not found.");
-      const reset = await new SideGlanceController(store).submit({
+      await new SideGlanceController(store).submit({
         v: 1,
         eventId: randomUUID(),
         source,
@@ -242,7 +274,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         confidence: "wrapper",
         ...(session.target ? { target: session.target } : {}),
       });
-      writeJson(reset);
+      writeJson({});
       return 0;
     }
     case "run": {
@@ -261,6 +293,10 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         "usage: side-glance <event|hook|notify|status|doctor|preview|reset|run|install|uninstall> [options]",
       );
   }
+}
+
+function writeHookAcknowledgement(provider: string): void {
+  if (provider === "codex" || provider === "gemini") writeJson({});
 }
 
 function helpText(): string {
@@ -283,6 +319,7 @@ Options:
   --notification-sound <name>  Use an installed sound name (default: Glass)
   --label <text>                Distinguish concurrent sessions privately
   --notify-on-exit              Notify when a supervised process exits
+  --terminal-title              Opt into a sanitized lifecycle title fallback
   -h, --help                    Show this help
   -v, --version                 Show the installed version
 `;
@@ -427,7 +464,11 @@ function controllerWithNotifications(
 ): SideGlanceController {
   return new SideGlanceController(
     store,
-    undefined,
+    createDefaultSurfaceRenderer({
+      terminalTitle:
+        args.includes("--terminal-title") ||
+        process.env.SIDE_GLANCE_TERMINAL_TITLE === "1",
+    }),
     configuredNotifier(args, enabled),
   );
 }
@@ -508,8 +549,6 @@ function adaptProviderHook(
       return adaptGeminiHook(payload, context);
     case "opencode":
       return adaptOpenCodeEvent(payload, context);
-    case "aider":
-      return adaptAiderNotification(payload, context);
     default:
       throw new Error(`Unsupported hook provider: ${provider}.`);
   }

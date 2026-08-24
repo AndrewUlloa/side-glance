@@ -284,7 +284,9 @@ test("fails closed on symlinked and oversized configuration without writing file
     backend: null,
   });
   assert.equal(inspection.providers.codex.fileStatus, "absent");
-  assert.equal(inspection.providers.codex.status, "not-configured");
+  assert.equal(inspection.providers.codex.status, "ready");
+  assert.equal(inspection.providers.codex.effectiveDefault, true);
+  assert.equal(inspection.providers.codex.condition, "unfocused");
   assert.equal(inspection.providers.codex.topLevelNotify, false);
   assert.equal(inspection.providers.gemini.fileStatus, "symlink");
   assert.equal(inspection.providers.gemini.status, "unknown");

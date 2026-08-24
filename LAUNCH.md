@@ -7,8 +7,8 @@ or migrate live provider configuration.
 
 ## Production deployment status
 
-- Primary public URL after registrar activation: <https://sideglance.ai>
-- Vercel fallback URL: <https://side-glance.vercel.app>
+- Current public URL: <https://side-glance.vercel.app> (HTTP 200 verified 2026-08-24)
+- Custom apex status: not configured; DNS does not resolve for `sideglance.ai`
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
 - Production deployment: `dpl_877rCZQP8w1VVbcRTPNqVMjqT9xM`
@@ -18,14 +18,15 @@ or migrate live provider configuration.
   returned HTTP 200 with Side Glance metadata and rendered copy.
 - Vercel's Git integration creates previews for pull-request commits; the recorded
   Production deployment's source commit is the head of `main`.
-- The obsolete public project domain was removed after the new domain passed.
+- No custom apex has replaced the verified Vercel project alias yet.
 
 The Next.js application remains on Vercel. Large site images are stored in the
 `side-glance-assets-prod` Cloudflare R2 bucket and use immutable, content-addressed
-keys. `assets.sideglance.ai` is the production asset hostname. Cloudflare Web
-Analytics uses manual beacon installation because the Vercel apex records remain
-DNS-only. See [the public-asset runbook](./docs/assets.md) for the upload and
-rollback contract.
+keys. The verified current origin is
+`https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev`; all six manifest objects
+returned HTTP 200 with the declared content type, length, and immutable cache header
+on 2026-08-24. `assets.sideglance.ai` is not connected and must remain conditional.
+See [the public-asset runbook](./docs/assets.md) for the cutover contract.
 
 The prior known-good production deployment is
 `dpl_12hgQd7peRczGnDuY4diahzdsbWE`. It remains Vercel rollback evidence; immutable
@@ -35,7 +36,7 @@ historical deployment identifiers are not rewritten during a product rename.
 
 - Candidate: `side-glance@0.1.0-beta.3`
 - Channel: `beta`
-- Status: pending protected `main` promotion and the matching annotated tag
+- Status: unpublished; pending protected `main` promotion and matching annotated tag
 - Previously published: `side-glance@0.1.0-beta.1`
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
   dry-run; no npm package or GitHub Release was published.
@@ -53,11 +54,11 @@ mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
 The beta.2 source passed the canonical Turbopack build locally and in CI on Node
-24.18.0. Beta.3 retains that product source, changes the release path, and has
-repeated every local gate; protected CI must still pass before tagging. Turbopack
-reports a non-blocking missing fallback-override warning for Alan Sans;
-compilation, type checking, static generation, and rendered HTML verification
-still complete successfully.
+24.18.0. Beta.3 retains that product source and changes the release path. The
+release-readiness remediation must repeat every local gate and protected CI must
+pass before tagging. Turbopack has previously reported a non-blocking missing
+fallback-override warning for Alan Sans; compilation, type checking, static
+generation, and rendered HTML verification still completed successfully.
 
 ## Vercel Preview annotation tooling
 
@@ -77,12 +78,12 @@ the toolbar must remain unpromoted; discarding that preview is its rollback path
 
 ## Notification activation preflight
 
-1. Run `side-glance doctor --json` and inspect the Side Glance OS backend separately from Codex, Gemini, OpenCode, and Aider native readiness.
+1. Run `side-glance doctor --json` and inspect every capability column; configured is not live-verified.
 2. Choose one notification path per provider unless duplicate alerts are intentional. Install results warn when an active native path is detected.
 3. Enable a trial provider with `side-glance install <provider> --notifications --notification-sound Glass --json`; do not point hooks at `npx`.
-4. For several iTerm sessions, launch each through `side-glance run --label "<private label>" -- <provider>`; without a label, confirm the privacy-safe digests are distinguishable enough for the workflow.
+4. In Terminal.app, iTerm, Ghostty, or another terminal, launch each session through `side-glance run --label "<private label>" -- <provider>`; add `--terminal-title` only when the phase-only fallback is wanted.
 5. For Aider, use its static callback through the supervised wrapper; for arbitrary one-shot commands, use only the truthful `run --notify-on-exit` path.
-6. Manually verify OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
+6. Manually verify terminal channels plus OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
 
 ## External publication gates
 
@@ -91,10 +92,39 @@ release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
 remaining beta.3 gates are:
 
+- apply the reviewed `.github/rulesets/protect-main.json` payload to live ruleset
+  `20776489`; the 2026-08-24 read-only comparison found only the missing
+  `require-staging-head` context;
 - merge this release through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;
 - let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
+- verify `beta` points to beta.3, then remove the stale beta.1 `latest` tag through
+  an approved interactive npm session; trusted-publishing OIDC cannot perform
+  dist-tag mutations;
 - open a separate Homebrew tap pull request after the immutable artifact URLs exist.
+
+## Prepared pull request sequence
+
+The feature PR into `staging` should be titled **Harden beta release readiness** and
+summarize these independently reviewable outcomes:
+
+- correct epoch-millisecond thermal timing, EWMA adaptation, and preview/site parity;
+- physical tmux ownership, surface migration, and stale-wrapper reconciliation;
+- provider-safe acknowledgements, bounded hooks, semantic notification dedupe, and
+  truthful provider completion/support tiers;
+- non-color terminal markers, opt-in titles, Terminal.app diagnostics, zero-advisory
+  dependencies, current artifact attestations, and verified deployment claims.
+
+Its verification section should record the exact `REVIEW.md` results, including the
+opt-in live tmux pass, real-browser matrix, zero npm audits, absent provider binaries,
+and the still-unfired real desktop notification. It must target `staging`.
+
+After that PR is green and merged, update PR #37's title to **Promote Side Glance
+0.1.0-beta.3**. Replace its R2-only description with the complete release-readiness
+summary, temporary verified `r2.dev` origin, unresolved custom-domain status, full
+protected-check results, and explicit notification/Terminal.app boundaries. Keep it
+draft until the live main ruleset requires `require-staging-head`; then mark it ready
+for the final `staging` → `main` review.
 
 ## Controlled migration from stoplight.sh
 

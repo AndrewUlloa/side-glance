@@ -1,8 +1,10 @@
 # Public site assets
 
 Side Glance keeps the Next.js application on Vercel and serves substantial public
-media from the `side-glance-assets-prod` Cloudflare R2 bucket. The production
-origin is `https://assets.sideglance.ai`. Fonts, JavaScript, CSS, the favicon, and
+media from the `side-glance-assets-prod` Cloudflare R2 bucket. The currently
+verified candidate origin is
+`https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev`. The custom hostname
+`assets.sideglance.ai` is not connected. Fonts, JavaScript, CSS, the favicon, and
 sub-kilobyte interface SVGs remain with the Vercel application.
 
 ## Compression contract
@@ -37,8 +39,8 @@ Cache-Control: public, max-age=31536000, immutable
 
 ## Runtime configuration
 
-The application defaults to `https://assets.sideglance.ai`. A temporary preview
-origin can be selected at build time with:
+The application defaults to the verified R2 development URL until custom DNS and
+TLS pass the cutover checklist. Another origin can be selected at build time with:
 
 ```text
 NEXT_PUBLIC_ASSET_ORIGIN=https://preview-asset-origin.example
@@ -58,12 +60,17 @@ NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN=<site-token>
 
 ## Domain cutover
 
-After `sideglance.ai` is active in the same Cloudflare account as the bucket:
+After the `sideglance.ai` zone is active in the same Cloudflare account as the bucket:
 
 1. Connect `assets.sideglance.ai` to `side-glance-assets-prod` with minimum TLS 1.2.
 2. Verify every manifest URL and its `Cache-Control` and `Content-Type` headers.
 3. Warm an asset twice and confirm a Cloudflare cache hit on the custom domain.
-4. Disable the temporary `r2.dev` public URL.
+4. Change the manifest default and Vercel environment only after the custom-domain
+   verification is recorded.
+5. Keep the temporary `r2.dev` public URL enabled while any retained Vercel
+   deployment still references it. Disable it only after every retained rollback
+   target has either been retired or rebuilt and verified against the custom
+   domain.
 
 The apex and `www` records remain DNS-only records pointing to Vercel. Do not put
 Cloudflare's HTTP reverse proxy in front of the Next.js application.

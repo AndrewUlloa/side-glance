@@ -107,21 +107,22 @@ function event(
 
 test("renders lifecycle states and derives completion heat from turn runtime", async (context) => {
   const { controller, renderer } = await controllerFixture(context);
+  const turnStartedAt = 1_786_536_000_000;
 
   await controller.submit(
-    event("claude", "one", "start", "turn.started", 1_000, {
+    event("claude", "one", "start", "turn.started", turnStartedAt, {
       generation: 1,
       turnId: "turn-1",
     }),
   );
   await controller.submit(
-    event("claude", "one", "wait", "attention.waiting", 1_010, {
+    event("claude", "one", "wait", "attention.waiting", turnStartedAt + 10_000, {
       generation: 1,
       turnId: "turn-1",
     }),
   );
   const state = await controller.submit(
-    event("claude", "one", "done", "turn.completed", 1_060, {
+    event("claude", "one", "done", "turn.completed", turnStartedAt + 60_000, {
       generation: 1,
       turnId: "turn-1",
     }),
@@ -199,6 +200,96 @@ test("never renders a stale event and recomputes shared ownership before reset",
   assert.equal(final.surfaces["tty:/dev/ttys001"]?.phase, "inactive");
 });
 
+test("releases the previous surface before painting a migrated session", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  const surfaceA = { surfaceId: "logical:A" };
+  const surfaceB = { surfaceId: "logical:B" };
+
+  await controller.submit(
+    event("claude", "moving", "start-a", "turn.started", 1_000, {
+      generation: 1,
+      turnId: "turn-a",
+      target: surfaceA,
+    }),
+  );
+  const state = await controller.submit(
+    event("claude", "moving", "start-b", "turn.started", 2_000, {
+      generation: 2,
+      turnId: "turn-b",
+      target: surfaceB,
+    }),
+  );
+
+  assert.deepEqual(renderer.resets, [surfaceA]);
+  assert.equal(state.surfaces["logical:A"]?.phase, "inactive");
+  assert.equal(state.surfaces["logical:A"]?.ownerKey, undefined);
+  assert.equal(state.surfaces["logical:B"]?.phase, "working");
+  assert.equal(state.surfaces["logical:B"]?.ownerKey, "claude:moving");
+});
+
+test("keeps one physical tmux window owned across pane releases", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  const surfaceId = "tmux:/private/tmp/tmux-501/default,123,0,@7";
+  const paneThree = { surfaceId, tmuxPane: "%3" };
+  const paneFour = { surfaceId, tmuxPane: "%4" };
+
+  await controller.submit(
+    event("claude", "pane-three", "three-start", "turn.started", 1_000, {
+      target: paneThree,
+    }),
+  );
+  await controller.submit(
+    event("codex", "pane-four", "four-wait", "attention.waiting", 2_000, {
+      target: paneFour,
+    }),
+  );
+  const afterFirstRelease = await controller.submit(
+    event("claude", "pane-three", "three-end", "session.ended", 3_000, {
+      target: paneThree,
+    }),
+  );
+
+  assert.equal(renderer.resets.length, 0);
+  assert.equal(afterFirstRelease.surfaces[surfaceId]?.ownerKey, "codex:pane-four");
+  assert.equal(afterFirstRelease.surfaces[surfaceId]?.target.tmuxPane, "%4");
+
+  const final = await controller.submit(
+    event("codex", "pane-four", "four-end", "session.ended", 4_000, {
+      target: paneFour,
+    }),
+  );
+  assert.equal(renderer.resets.length, 1);
+  assert.equal(final.surfaces[surfaceId]?.phase, "inactive");
+});
+
+test("reconciles an expired attention owner before selecting a new session", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  const target = { surfaceId: "logical:recovered" };
+  const leaseTtlMs = 30 * 60 * 1_000;
+
+  await controller.submit(
+    event("claude", "orphan", "orphan-failed", "turn.failed", 1_000, {
+      generation: 1,
+      target,
+    }),
+  );
+  const state = await controller.submit(
+    event(
+      "codex",
+      "replacement",
+      "replacement-start",
+      "turn.started",
+      1_000 + leaseTtlMs + 1,
+      { generation: 1, target },
+    ),
+  );
+
+  assert.equal(state.sessions["claude:orphan"]?.phase, "inactive");
+  assert.equal(state.sessions["claude:orphan"]?.reason, "reconciled-stale");
+  assert.equal(state.surfaces[target.surfaceId]?.ownerKey, "codex:replacement");
+  assert.equal(renderer.paints.at(-1)?.session.sessionId, "replacement");
+});
+
 test("bounds inactive surface history after repeated terminal churn", async (context) => {
   const { controller } = await controllerFixture(context);
   let state;
@@ -271,6 +362,70 @@ test("notifies once for accepted attention events using the originating event", 
   );
   await controller.submit(cancelled);
   assert.strictEqual(notifier.events.at(-1), cancelled);
+});
+
+test("dedupes semantic wait notifications across provider transport events", async (context) => {
+  const notifier = new RecordingNotifier();
+  const { controller } = await controllerFixture(context, notifier);
+
+  const firstWait = event(
+    "claude",
+    "permission",
+    "permission-request",
+    "attention.waiting",
+    1_000,
+  );
+  await controller.submit(firstWait);
+  await controller.submit(
+    event(
+      "claude",
+      "permission",
+      "delayed-permission-notification",
+      "attention.waiting",
+      8_000,
+    ),
+  );
+  await controller.submit(
+    event(
+      "claude",
+      "permission",
+      "permission-acknowledged",
+      "attention.acknowledged",
+      9_000,
+    ),
+  );
+  const secondWait = event(
+    "claude",
+    "permission",
+    "second-permission-request",
+    "attention.waiting",
+    10_000,
+  );
+  await controller.submit(secondWait);
+
+  assert.deepEqual(notifier.events, [firstWait, secondWait]);
+});
+
+test("does not notify Ready from pre-final provider completion hooks", async (context) => {
+  const notifier = new RecordingNotifier();
+  const { controller } = await controllerFixture(context, notifier);
+
+  await controller.submit(
+    event("claude", "retrying", "start", "turn.started", 1_000),
+  );
+  const provisional = event(
+    "claude",
+    "retrying",
+    "stop-hook",
+    "turn.completed",
+    2_000,
+    { confidence: "heuristic" },
+  );
+  const state = await controller.submit(provisional);
+
+  assert.equal(state.sessions["claude:retrying"].phase, "completed");
+  assert.equal(state.sessions["claude:retrying"].confidence, "heuristic");
+  assert.deepEqual(notifier.events, []);
 });
 
 test("does not notify for duplicates, stale events, starts, acknowledgements, or teardown", async (context) => {

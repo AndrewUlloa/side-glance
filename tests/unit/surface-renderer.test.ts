@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   createDefaultSurfaceRenderer,
   surfaceChannels,
+  terminalTitleForPhase,
 } from "../../src/renderers/surface.ts";
 
 test("uses tmux status instead of a whole-client terminal wash inside tmux", () => {
@@ -15,6 +16,13 @@ test("uses tmux status instead of a whole-client terminal wash inside tmux", () 
     }),
     { terminal: false, tmux: true },
   );
+});
+
+test("uses a bounded phase-only terminal title when explicitly enabled", () => {
+  assert.equal(terminalTitleForPhase("working"), "Side Glance · Working");
+  assert.equal(terminalTitleForPhase("completed"), "Side Glance · Ready");
+  assert.equal(terminalTitleForPhase("waiting"), "Side Glance · Waiting");
+  assert.equal(terminalTitleForPhase("failed"), "Side Glance · Failed");
 });
 
 test("uses the terminal wash only for a verified non-tmux TTY", () => {

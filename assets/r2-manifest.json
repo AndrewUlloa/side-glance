@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "bucket": "side-glance-assets-prod",
-  "defaultOrigin": "https://assets.sideglance.ai",
+  "defaultOrigin": "https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev",
   "cacheControl": "public, max-age=31536000, immutable",
   "assets": {
     "heroSurface": {

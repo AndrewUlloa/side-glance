@@ -41,7 +41,7 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
     scripts: Record<string, string>;
   };
 
-  assert.match(siteAssets, /https:\/\/sideglance\.ai/u);
+  assert.match(siteAssets, /https:\/\/side-glance\.vercel\.app/u);
   assert.match(siteAssets, /NEXT_PUBLIC_ASSET_ORIGIN/u);
   assert.match(siteAssets, /r2-manifest\.json/u);
   assert.match(layout, /SITE_ASSETS\.openGraph/u);
@@ -54,7 +54,10 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
   assert.match(ogStyles, /var\(--side-glance-hero-surface\)/u);
   assert.doesNotMatch(ogStyles, /url\("\/hero-surface\.png"\)/u);
   assert.equal(manifest.bucket, "side-glance-assets-prod");
-  assert.equal(manifest.defaultOrigin, "https://assets.sideglance.ai");
+  assert.equal(
+    manifest.defaultOrigin,
+    "https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev"
+  );
   assert.equal(manifest.cacheControl, "public, max-age=31536000, immutable");
   assert.equal(Object.keys(manifest.assets).length, 6);
   let totalBytes = 0;

@@ -1,7 +1,11 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import path from "node:path";
 import type { Readable, Stream } from "node:stream";
+import { promisify } from "node:util";
 
 import type { SideGlanceTarget } from "./protocol.ts";
+
+const execFileAsync = promisify(execFile);
 
 interface TtyProcess {
   kill: (signal: NodeJS.Signals) => boolean;
@@ -23,6 +27,7 @@ type SpawnTtyProcess = (
 export interface TargetDiscoveryOptions {
   environment?: Readonly<Record<string, string | undefined>>;
   resolveTty?: () => Promise<string | undefined>;
+  resolveTmuxWindow?: (paneId: string) => Promise<string | undefined>;
   spawnProcess?: SpawnTtyProcess;
   surfaceId?: string;
   tty?: string;
@@ -80,7 +85,18 @@ async function discoverTarget(
   let surfaceId = explicitSurface;
   if (!surfaceId && tmuxPane && environment.TMUX) {
     validateText(environment.TMUX, "tmux server identity", 1_024);
-    surfaceId = `tmux:${environment.TMUX},${tmuxPane}`;
+    const serverIdentity = parseTmuxServerIdentity(environment.TMUX);
+    const windowId = serverIdentity
+      ? await (options.resolveTmuxWindow ??
+          ((paneId: string) => resolveTmuxWindowId(paneId, environment)))(tmuxPane)
+      : undefined;
+    if (windowId !== undefined && !/^@\d+$/u.test(windowId)) {
+      throw new Error("tmux window identity must use the canonical @number form.");
+    }
+    surfaceId =
+      windowId && serverIdentity
+        ? `tmux:${serverIdentity.surfaceIdentity},${windowId}`
+        : undefined;
   }
   surfaceId ??= tty ? `tty:${tty}` : undefined;
   if (!surfaceId) return undefined;
@@ -90,6 +106,46 @@ async function discoverTarget(
     ...(tty ? { tty } : {}),
     ...(tmuxPane ? { tmuxPane } : {}),
   };
+}
+
+async function resolveTmuxWindowId(
+  paneId: string,
+  environment: Readonly<Record<string, string | undefined>>,
+): Promise<string | undefined> {
+  const tmuxIdentity = environment.TMUX;
+  const socketPath = tmuxIdentity
+    ? parseTmuxServerIdentity(tmuxIdentity)?.socketPath
+    : undefined;
+  if (!socketPath || !path.isAbsolute(socketPath) || socketPath.includes("\u0000")) {
+    return undefined;
+  }
+
+  try {
+    const { stdout } = await execFileAsync(
+      "tmux",
+      ["-S", socketPath, "display-message", "-p", "-t", paneId, "#{window_id}"],
+      {
+        encoding: "utf8",
+        env: { ...process.env, ...environment },
+        maxBuffer: 4_096,
+        timeout: 2_000,
+      },
+    );
+    const windowId = stdout.trim();
+    return /^@\d+$/u.test(windowId) ? windowId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function parseTmuxServerIdentity(
+  tmuxIdentity: string,
+): { socketPath: string; surfaceIdentity: string } | undefined {
+  const match = /^(.*),([1-9]\d*),(?:0|[1-9]\d*)$/u.exec(tmuxIdentity);
+  const socketPath = match?.[1];
+  const serverPid = match?.[2];
+  if (!socketPath || !serverPid || !path.isAbsolute(socketPath)) return undefined;
+  return { socketPath, surfaceIdentity: `${socketPath},${serverPid}` };
 }
 
 async function resolveControllingTty(

@@ -53,6 +53,9 @@ export function buildAdapterEvent(options: {
       ? { generation: options.context.generation }
       : {}),
     ...(options.turnId ? { turnId: options.turnId } : {}),
+    ...(options.context.wrapperSessionId
+      ? { wrapperSessionId: options.context.wrapperSessionId }
+      : {}),
     ...(options.reason ? { reason: options.reason } : {}),
     confidence: options.confidence ?? "native",
     ...(options.context.target ? { target: options.context.target } : {}),

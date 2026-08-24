@@ -29,6 +29,7 @@ export function adaptCodexHook(
     sessionId: providerSessionId(payload, context, "Codex"),
     kind,
     context,
+    ...(hookName === "Stop" ? { confidence: "heuristic" as const } : {}),
     ...(stringValue(payload.turn_id)
       ? { turnId: stringValue(payload.turn_id) }
       : {}),

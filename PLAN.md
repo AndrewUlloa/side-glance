@@ -483,6 +483,213 @@ protocol + reducer
 
 None blocking. Public package publication and live config mutation remain explicit approval gates.
 
+## Phase 15: Beta release-readiness remediation
+
+- [x] **Task 46: Lock thermal units and adaptive history with regression tests**
+  - **Description:** Add observable tests using real epoch-millisecond events plus EWMA
+    samples before changing controller or reducer behavior.
+  - **Acceptance:** 5/60/300-second events fail against the old 1,000× behavior; EWMA
+    tests require alpha `0.4` and the 300–450-second maximum range.
+  - **Verify:** focused policy, reducer, controller, and store tests show RED for the
+    intended behavior rather than fixture or syntax failures.
+  - **Depends on:** Requester approval of the Beta Release Readiness Contract
+  - **Files:** `tests/unit/policy.test.ts`, `tests/unit/reducer.test.ts`,
+    `tests/integration/controller-rendering.test.ts`, `tests/integration/store.test.ts`
+  - **Size:** M
+
+- [x] **Task 47: Implement typed adaptive thermal state**
+  - **Description:** Convert milliseconds once, persist compatible completion/response
+    timing fields, and feed the learned EWMA into completed visuals.
+  - **Acceptance:** malformed history is safe; old schema-v1 files load; stale events do
+    not modify history; focused thermal tests pass.
+  - **Verify:** focused GREEN tests, unit suite, typecheck.
+  - **Depends on:** Task 46
+  - **Files:** `src/core/protocol.ts`, `src/core/reducer.ts`, `src/core/controller.ts`,
+    `src/core/store.ts`, thermal tests
+  - **Size:** M
+
+- [x] **Task 48: Make preview and site phase visuals canonical**
+  - **Description:** Export one pure visual policy for CLI preview/controller use and
+    mirror its observable contract in the site model and copy.
+  - **Acceptance:** all four preview phases match runtime; site says `Turn ran`; completed
+    and failed retain distinct semantic labels.
+  - **Verify:** focused CLI and site RED/GREEN tests, lint, typecheck.
+  - **Depends on:** Task 47
+  - **Files:** `src/core/controller.ts`, `src/cli/index.ts`,
+    `app/components/playground-model.ts`, `app/components/SideGlancePlayground.tsx`, tests
+  - **Size:** M
+
+### Checkpoint: thermal correctness
+
+- [x] Focused tests prove epoch-millisecond correctness and adaptive history
+- [x] CLI preview, controller output, and website states agree
+- [x] Focused unit, integration, site, lint, typecheck, and production-build gates are green
+
+- [x] **Task 49: Model tmux by physical render ownership**
+  - **Description:** Resolve a pane to its window before lease arbitration and persist one
+    original snapshot for the shared physical window.
+  - **Acceptance:** two panes in one window cannot wipe/resurrect each other; different
+    windows remain independent; reset restores the original options once.
+  - **Verify:** focused renderer/controller tests plus isolated live tmux test.
+  - **Depends on:** Task 48
+  - **Files:** `src/core/target.ts`, `src/core/protocol.ts`, `src/core/leases.ts`,
+    `src/renderers/tmux.ts`, tmux tests
+  - **Size:** M
+
+- [x] **Task 50: Release previous surfaces on session migration**
+  - **Description:** Recompute both old and new surfaces atomically when an accepted event
+    changes target identity.
+  - **Acceptance:** old surface restores or promotes its remaining owner before new paint;
+    stale generations cannot clear either surface.
+  - **Verify:** focused controller RED/GREEN tests and lease regressions.
+  - **Depends on:** Task 49
+  - **Files:** `src/core/controller.ts`, `src/core/leases.ts`,
+    `tests/integration/controller-rendering.test.ts`, `tests/unit/leases.test.ts`
+  - **Size:** M
+
+- [x] **Task 51: Add bounded orphan reconciliation**
+  - **Description:** Associate provider sessions with wrapper identity, track freshness,
+    and reconcile abandoned active leases without claiming guaranteed signal cleanup.
+  - **Acceptance:** wrapper exit closes inherited provider IDs; expired leases cannot
+    outrank a newer owner; reconciliation is generation-safe and idempotent.
+  - **Verify:** fake-clock reducer/store tests and killed-child CLI integration test.
+  - **Depends on:** Task 50
+  - **Files:** `src/core/protocol.ts`, `src/core/compact.ts`, `src/cli/run.ts`,
+    `tests/integration/cli.test.ts`, `tests/unit/reducer.test.ts`
+  - **Size:** M
+
+### Checkpoint: ownership and recovery
+
+- [x] Multi-pane and migration tests prove physical ownership
+- [x] Orphan recovery is bounded and generation-safe
+- [x] Reset remains session-scoped; rollback documentation is queued with public claims
+
+- [x] **Task 52: Minimize provider hook stdout and semantic dedupe**
+  - **Description:** Return provider-safe acknowledgements and derive stable semantic
+    notification identities across repeated provider hook invocations.
+  - **Acceptance:** hook stdout never contains sessions/surfaces; one Claude permission
+    wait produces one alert; `status` retains full local state.
+  - **Verify:** focused CLI/privacy and notifier RED/GREEN tests.
+  - **Depends on:** Task 51
+  - **Files:** `src/cli/index.ts`, `src/notifications/policy.ts`,
+    `src/core/protocol.ts`, CLI/notification tests
+  - **Size:** M
+
+- [x] **Task 53: Encode honest provider completion and timeout contracts**
+  - **Description:** Add bounded managed-hook timeouts, distinguish pre-final confidence,
+    and prevent known retry/block paths from claiming native-final completion.
+  - **Acceptance:** hung hooks return within the documented budget; fixture retries do not
+    issue an early Ready notification; teardown remains non-fatal.
+  - **Verify:** provider fixture tests and timeout integration tests.
+  - **Depends on:** Task 52
+  - **Files:** provider adapters, `src/adapters/installers.ts`, adapter/installer tests
+  - **Size:** M per provider slice
+
+- [x] **Task 54: Expand doctor into a truthful capability matrix**
+  - **Description:** Separate binary, native alerts, adapter contract, integration,
+    stable-surface, override, and live-verification status.
+  - **Acceptance:** Codex defaults, OpenCode environment overrides, Aider bridge state,
+    hook flags/timeouts, and wrapper requirement are reported without writes.
+  - **Verify:** temp-home and environment-matrix RED/GREEN tests.
+  - **Depends on:** Task 53
+  - **Files:** `src/notifications/inspection.ts`, `src/cli/index.ts`,
+    `src/cli/install.ts`, inspection/CLI tests
+  - **Size:** M
+
+- [x] **Task 55: Bound OpenCode and Aider support honestly**
+  - **Description:** Permit colors-only stable OpenCode integration, reject incompatible
+    plugin APIs actionably, and make Aider's static bridge the only documented contract.
+  - **Acceptance:** install/uninstall remains reversible; unsupported versions fail
+    closed; no undocumented Aider JSON producer is claimed.
+  - **Verify:** installer fixtures, packaged CLI smoke, documentation contract tests.
+  - **Depends on:** Task 54
+  - **Files:** OpenCode/Aider adapters/installers and their tests/docs
+  - **Size:** M per provider slice
+
+### Checkpoint: provider safety
+
+- [x] Provider hooks cannot leak global state or block for default multi-minute budgets
+- [x] Semantic duplicate and native-notification warnings are proven
+- [x] Support tiers match live evidence
+
+- [x] **Task 56: Add non-color markers and Terminal.app fallback**
+  - **Description:** Render distinct bounded tmux markers and expose an explicitly opt-in,
+    sanitized terminal title capability with honest Terminal.app diagnostics.
+  - **Acceptance:** completed and failed differ without color; default emits no title;
+    reset restores only Side Glance-owned channels.
+  - **Verify:** exact terminal-byte tests, tmux option tests, manual terminal matrix.
+  - **Depends on:** Tasks 49 and 54
+  - **Files:** renderers, CLI options/doctor, renderer tests
+  - **Size:** M
+
+- [x] **Task 57: Align public claims and release narrative**
+  - **Description:** Update site, both READMEs, protocol/edge-case docs, changelog, and PR
+    narrative to match the verified package and provider tiers.
+  - **Acceptance:** install instructions use `@beta`; no custom-domain or live-provider
+    claim exceeds evidence; beta.3 date remains unreleased until publication.
+  - **Verify:** documentation scans, site/distribution tests, link checks.
+  - **Depends on:** Tasks 48, 51, 55, 56
+  - **Files:** documentation and site copy in bounded slices
+  - **Size:** M per slice
+
+- [x] **Task 58: Close dependency and repository-policy readiness**
+  - **Description:** Land compatible development-tool security updates and prepare the
+    exact live ruleset/environment changes for explicit approval.
+  - **Acceptance:** production audit remains zero; no high development advisory remains
+    where a compatible fix exists; policy tests require `require-staging-head`.
+  - **Verify:** `npm audit`, full build/tests, distribution policy tests, live read-only
+    ruleset comparison.
+  - **Depends on:** Task 57
+  - **Files:** package lock/manifest, policy tests/docs/workflow as required
+  - **Size:** M
+
+- [x] **Task 59: Complete full verification, browser matrix, and five-axis review**
+  - **Description:** Run every repository gate, browser requirement, package/standalone
+    smoke, security review, and create the final review artifact.
+  - **Acceptance:** no unresolved Critical/required findings; every unsupported manual
+    platform is recorded rather than inferred.
+  - **Verify:** all `CLAUDE.md` commands and `REVIEW.md` evidence.
+  - **Depends on:** Tasks 46–58
+  - **Files:** `REVIEW.md`, verification evidence only
+  - **Size:** M
+
+- [ ] **Task 60: Prepare and execute the approved release path**
+  - **Description:** Write rollback/monitoring notes, choose verified custom-domain or
+    temporary R2 production origin, update the live main ruleset, refresh PR #37, merge,
+    tag, publish, verify dist-tags/artifacts, and create the Homebrew tap only at the
+    requester's approved external gates.
+  - **Acceptance:** deployed site/assets, npm beta, GitHub release, checksums,
+    attestations, and standalone binaries agree on one immutable commit/version.
+  - **Verify:** `LAUNCH.md`, production HTTP/browser/package smoke, release workflow and
+    first-hour observation.
+  - **Depends on:** Task 59 and explicit approval for each external mutation
+  - **Files:** `LAUNCH.md`, PR/release metadata
+  - **Size:** M
+
+## Phase 15 dependency graph
+
+```text
+thermal tests -> adaptive state -> preview/site parity
+                                  |
+                                  v
+tmux ownership -> migration -> reconciliation
+                                  |
+                                  v
+hook privacy/dedupe -> provider finality/timeouts -> doctor -> OpenCode/Aider tiers
+          |                                                |
+          +-----------------> markers/Terminal fallback <--+
+                                                           |
+                                                           v
+claims -> dependencies/policy -> full review -> approved release
+```
+
+## Phase 15 sign-off
+
+- [x] Requester approved the complete remediation scope with “work on all of this.”
+- [x] Every task has observable acceptance and verification.
+- [x] Tasks are ordered behind shared contracts and bounded to M-sized slices.
+- [x] External publication and live configuration remain explicit Ask First gates.
+
 ## Sign-off
 
 - [x] Every task has acceptance + verify

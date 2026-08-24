@@ -51,6 +51,16 @@ test("CI and release workflows pin actions and enforce the public protected-tag 
   assert.match(release, /environment:\s+github-release/u);
   assert.match(release, /id-token:\s+write/u);
   assert.match(release, /attestations:\s+write/u);
+  assert.doesNotMatch(release, /actions\/attest-build-provenance/u);
+  assert.equal(
+    [
+      ...release.matchAll(
+        /uses:\s+actions\/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4\.2\.1/gu,
+      ),
+    ].length,
+    2,
+  );
+  assert.equal([...release.matchAll(/artifact-metadata:\s+write/gu)].length, 2);
   assert.match(release, /registry-url:\s+https:\/\/registry\.npmjs\.org/u);
   assert.doesNotMatch(release, /NODE_AUTH_TOKEN|NPM_TOKEN|--clobber/u);
   assert.match(release, /NPM_TAG:\s+\$\{\{ needs\.validate\.outputs\.npm_tag \}\}/u);

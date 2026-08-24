@@ -79,7 +79,12 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     ["preview", "--phase", "waiting", "--elapsed", "60", "--json"],
     { cwd: extracted, env: strippedEnvironment },
   );
-  assert.equal(JSON.parse(preview.stdout).urgency, 500);
+  assert.deepEqual(JSON.parse(preview.stdout), {
+    phase: "waiting",
+    urgency: 0,
+    wash: "4d3510",
+    accent: "f0a726",
+  });
 });
 
 test("refuses a different embedded Node release runtime", async () => {

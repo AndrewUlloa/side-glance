@@ -1,5 +1,7 @@
+import { constants } from "node:fs";
+import { access, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import path from "node:path";
+import path, { delimiter } from "node:path";
 
 import {
   installProviderHooks,
@@ -33,8 +35,8 @@ export async function runInstallCommand(
   if (notificationSound !== undefined && !notifications) {
     throw new Error("--notification-sound requires --notifications.");
   }
-  if (provider === "opencode" && action === "install" && !notifications) {
-    throw new Error("OpenCode installation requires explicit --notifications opt-in.");
+  if (provider === "opencode" && action === "install") {
+    await requireStableOpenCodeV1(process.env);
   }
 
   const result =
@@ -43,6 +45,7 @@ export async function runInstallCommand(
           ? installOpenCodePlugin({
               homeDirectory,
               executablePath,
+              ...(notifications ? { notifications: true } : {}),
               ...(notificationSound ? { notificationSound } : {}),
             })
           : uninstallOpenCodePlugin({ homeDirectory, executablePath }))
@@ -67,6 +70,48 @@ export async function runInstallCommand(
   return 0;
 }
 
+async function requireStableOpenCodeV1(
+  environment: Readonly<Record<string, string | undefined>>,
+): Promise<void> {
+  if (environment.OPENCODE_CONFIG || environment.OPENCODE_CONFIG_DIR) {
+    throw new Error(
+      "OpenCode configuration overrides are active. Side Glance only installs into the stable v1 global plugin directory; clear OPENCODE_CONFIG and OPENCODE_CONFIG_DIR for installation, then verify the effective configuration with `side-glance doctor --json`.",
+    );
+  }
+  const [v1, v2] = await Promise.all([
+    executableOnPath("opencode", environment),
+    executableOnPath("opencode2", environment),
+  ]);
+  if (v1) return;
+  if (v2) {
+    throw new Error(
+      "OpenCode 2 beta uses an incompatible v2 plugin API. Side Glance currently supports the stable OpenCode v1 `opencode` binary only; keep v1 installed or wait for explicit v2 support.",
+    );
+  }
+  throw new Error(
+    "OpenCode stable v1 was not found on PATH, so its plugin API cannot be verified. Install the `opencode` binary before running this command.",
+  );
+}
+
+async function executableOnPath(
+  command: string,
+  environment: Readonly<Record<string, string | undefined>>,
+): Promise<boolean> {
+  for (const directory of (environment.PATH ?? "").split(delimiter)) {
+    if (!directory) continue;
+    try {
+      const candidate = path.join(directory, command);
+      const metadata = await stat(candidate);
+      if (!metadata.isFile()) continue;
+      await access(candidate, constants.X_OK);
+      return true;
+    } catch {
+      // Continue through PATH without executing an untrusted provider binary.
+    }
+  }
+  return false;
+}
+
 async function duplicateNotificationWarnings(
   provider: CliInstallableProvider,
   homeDirectory: string,
@@ -78,20 +123,23 @@ async function duplicateNotificationWarnings(
     pathProbe: async () => false,
   });
   const native = readiness.providers[provider];
+  const warnings: string[] = [];
   if (native.status === "ready") {
-    return [
-      `${provider} native notifications are already configured; enabling Side Glance notifications may produce duplicate alerts.`,
-    ];
+    warnings.push(
+      provider === "codex" && readiness.providers.codex.effectiveDefault
+        ? "Codex native notifications are enabled by default when the terminal is unfocused; enabling Side Glance notifications may produce duplicate alerts."
+        : `${provider} native notifications are already configured; enabling Side Glance notifications may produce duplicate alerts.`,
+    );
   }
   if (
     provider === "codex" &&
     readiness.providers.codex.topLevelNotify === true
   ) {
-    return [
+    warnings.push(
       "Codex has a top-level notify command configured; inspect that command before enabling Side Glance notifications because it may already deliver alerts.",
-    ];
+    );
   }
-  return [];
+  return warnings;
 }
 
 function isEphemeralNpmExecution(

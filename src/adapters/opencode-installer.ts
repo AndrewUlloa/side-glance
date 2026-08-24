@@ -24,6 +24,7 @@ const MAX_PLUGIN_BYTES = 1_048_576;
 export interface OpenCodePluginInstallerOptions {
   homeDirectory: string;
   executablePath: string;
+  notifications?: boolean;
   notificationSound?: string;
 }
 
@@ -33,6 +34,14 @@ export interface OpenCodePluginInstallerResult {
   changed: boolean;
   backupPath?: string;
   installedHooks: number;
+}
+
+export interface OpenCodePluginInspection {
+  provider: "opencode";
+  configPath: string;
+  status: "installed" | "legacy" | "not-installed" | "unrelated";
+  installed: boolean;
+  api: "v1-stable";
 }
 
 type TargetKind = "absent" | "current" | "legacy" | "unrelated";
@@ -69,7 +78,11 @@ export async function installOpenCodePlugin(
     );
   }
 
-  const source = pluginSource(validated.executablePath, validated.sound);
+  const source = pluginSource(
+    validated.executablePath,
+    options.notifications === true,
+    validated.sound,
+  );
   if (loaded.kind === "current" && loaded.source === source) {
     return result(validated.configPath, false, 1);
   }
@@ -102,6 +115,38 @@ export async function uninstallOpenCodePlugin(
   return result(configPath, true, 0);
 }
 
+export async function inspectOpenCodePlugin(
+  homeDirectory: string,
+): Promise<OpenCodePluginInspection> {
+  const configPath = openCodePluginPath(homeDirectory);
+  const directoryStatus = await inspectPluginDirectory(homeDirectory);
+  if (directoryStatus === "absent") {
+    return {
+      provider: "opencode",
+      configPath,
+      status: "not-installed",
+      installed: false,
+      api: "v1-stable",
+    };
+  }
+  const loaded = await loadTarget(configPath);
+  const status =
+    loaded.kind === "current"
+      ? "installed"
+      : loaded.kind === "legacy"
+        ? "legacy"
+        : loaded.kind === "unrelated"
+          ? "unrelated"
+          : "not-installed";
+  return {
+    provider: "opencode",
+    configPath,
+    status,
+    installed: loaded.kind === "current",
+    api: "v1-stable",
+  };
+}
+
 async function validateInstallOptions(
   options: OpenCodePluginInstallerOptions,
 ): Promise<{
@@ -123,6 +168,9 @@ async function validateInstallOptions(
     options.notificationSound === undefined
       ? undefined
       : validateNotificationSound(options.notificationSound);
+  if (sound !== undefined && !options.notifications) {
+    throw new Error("Notification sound requires notifications to be enabled.");
+  }
   return {
     homeDirectory: path.resolve(options.homeDirectory),
     executablePath,
@@ -277,12 +325,16 @@ function assertCurrentManifest(source: string): void {
   }
 }
 
-function pluginSource(executablePath: string, sound: string | undefined): string {
+function pluginSource(
+  executablePath: string,
+  notifications: boolean,
+  sound: string | undefined,
+): string {
   const args = [
     "hook",
     "--provider",
     "opencode",
-    "--notifications",
+    ...(notifications ? ["--notifications"] : []),
     ...(sound ? ["--notification-sound", sound] : []),
     "--json",
   ];

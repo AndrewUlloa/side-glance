@@ -80,17 +80,26 @@ function releaseManifest() {
 }
 
 async function verifyWithHomebrewWhenAvailable(formulaPath) {
+  const environment = {
+    ...process.env,
+    HOMEBREW_CACHE: path.join(path.dirname(formulaPath), "homebrew-cache"),
+    HOMEBREW_NO_ANALYTICS: "1",
+    HOMEBREW_NO_AUTO_UPDATE: "1",
+  };
   try {
-    await command("brew", ["--version"]);
+    await command("brew", ["--version"], environment);
   } catch {
     return;
   }
-  await command("brew", ["style", formulaPath]);
+  await command("brew", ["style", formulaPath], environment);
 }
 
-function command(executable, args) {
+function command(executable, args, environment = process.env) {
   return new Promise((resolve, reject) => {
-    const child = spawn(executable, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(executable, args, {
+      env: environment,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");

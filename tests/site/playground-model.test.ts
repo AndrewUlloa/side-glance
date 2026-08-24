@@ -23,7 +23,7 @@ test("uses the shared core theme for working and waiting states", () => {
   });
 });
 
-test("uses the real thermal policy for unattended completion", () => {
+test("uses the real thermal policy for completed turn duration", () => {
   assert.deepEqual(visualForPhase("completed", 60), {
     phase: "completed",
     label: "Ready",

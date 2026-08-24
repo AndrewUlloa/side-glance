@@ -148,8 +148,9 @@ test("installs one private OpenCode plugin idempotently without touching native 
   assert.match(installed, new RegExp(JSON.stringify(executablePath).replaceAll("\\", "\\\\"), "u"));
   assert.match(
     installed,
-    /\["hook","--provider","opencode","--notifications","--json"\]/u,
+    /\["hook","--provider","opencode","--json"\]/u,
   );
+  assert.doesNotMatch(installed, /--notifications/u);
   assert.doesNotMatch(installed, /\$`|exec\(|execFile\(|shell:\s*true/u);
 });
 
@@ -173,6 +174,7 @@ test("generated plugin forwards the exact event as JSON using argv including a v
   const installed = await installOpenCodePlugin({
     homeDirectory: home,
     executablePath,
+    notifications: true,
     notificationSound: "Glass Bell",
   });
   const imported = (await import(`${pathToFileURL(installed.configPath).href}?test=${Date.now()}`)) as {
@@ -531,6 +533,7 @@ test("validates sound before writing and never treats it as program text", async
         installOpenCodePlugin({
           homeDirectory: home,
           executablePath,
+          notifications: true,
           notificationSound: sound,
         }),
       /sound/i,
@@ -541,6 +544,7 @@ test("validates sound before writing and never treats it as program text", async
       installOpenCodePlugin({
         homeDirectory: home,
         executablePath,
+        notifications: true,
         notificationSound: "x".repeat(65),
       }),
     /sound/i,

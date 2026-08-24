@@ -12,7 +12,7 @@ test("prefers an explicit wrapper surface and carries verified channels", async 
   assert.deepEqual(
     await discoverTerminalTarget({
       environment: {
-        SIDE_GLANCE_SURFACE_ID: "tmux:/private/tmp/tmux-501/default,%3",
+        SIDE_GLANCE_SURFACE_ID: "tmux:/private/tmp/tmux-501/default,123,0,@7",
         SIDE_GLANCE_TTY: "/dev/ttys003",
         TMUX_PANE: "%3",
       },
@@ -21,10 +21,80 @@ test("prefers an explicit wrapper surface and carries verified channels", async 
       },
     }),
     {
-      surfaceId: "tmux:/private/tmp/tmux-501/default,%3",
+      surfaceId: "tmux:/private/tmp/tmux-501/default,123,0,@7",
       tty: "/dev/ttys003",
       tmuxPane: "%3",
     },
+  );
+});
+
+test("maps every pane in one tmux window to one physical surface", async () => {
+  const environment = {
+    TMUX: "/private/tmp/tmux-501/default,123,0",
+  };
+  const paneThree = await discoverTerminalTarget({
+    environment: { ...environment, TMUX_PANE: "%3" },
+    resolveTmuxWindow: async (paneId: string) => {
+      assert.equal(paneId, "%3");
+      return "@7";
+    },
+  });
+  const paneFour = await discoverTerminalTarget({
+    environment: { ...environment, TMUX_PANE: "%4" },
+    resolveTmuxWindow: async (paneId: string) => {
+      assert.equal(paneId, "%4");
+      return "@7";
+    },
+  });
+
+  assert.equal(
+    paneThree.surfaceId,
+    "tmux:/private/tmp/tmux-501/default,123,@7",
+  );
+  assert.equal(paneFour.surfaceId, paneThree.surfaceId);
+  assert.equal(paneThree.tmuxPane, "%3");
+  assert.equal(paneFour.tmuxPane, "%4");
+});
+
+test("maps linked tmux sessions to one server-owned window surface", async () => {
+  const discoverTmuxSurface = async (
+    tmuxIdentity: string,
+    windowId: string,
+  ): Promise<string> =>
+    (
+      await discoverTerminalTarget({
+        environment: { TMUX: tmuxIdentity, TMUX_PANE: "%3" },
+        resolveTmuxWindow: async () => windowId,
+      })
+    ).surfaceId;
+
+  const linkedSessionZero = await discoverTmuxSurface(
+    "/private/tmp/tmux-501/linked,socket,123,0",
+    "@7",
+  );
+  const linkedSessionNine = await discoverTmuxSurface(
+    "/private/tmp/tmux-501/linked,socket,123,9",
+    "@7",
+  );
+
+  assert.equal(
+    linkedSessionZero,
+    "tmux:/private/tmp/tmux-501/linked,socket,123,@7",
+  );
+  assert.equal(linkedSessionNine, linkedSessionZero);
+  assert.notEqual(
+    await discoverTmuxSurface(
+      "/private/tmp/tmux-501/linked,socket,124,0",
+      "@7",
+    ),
+    linkedSessionZero,
+  );
+  assert.notEqual(
+    await discoverTmuxSurface(
+      "/private/tmp/tmux-501/linked,socket,123,0",
+      "@8",
+    ),
+    linkedSessionZero,
   );
 });
 
