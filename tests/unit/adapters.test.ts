@@ -89,6 +89,23 @@ test("maps current Codex hooks and preserves turn IDs without replacing notify",
   assert.equal(JSON.stringify(started).includes("private"), false);
 });
 
+test("retains wrapper ownership when a provider supplies its own session ID", () => {
+  const adapted = adaptClaudeHook(
+    {
+      hook_event_name: "UserPromptSubmit",
+      session_id: "native-claude-session",
+    },
+    {
+      ...context,
+      fallbackSessionId: "wrapper-session",
+      wrapperSessionId: "wrapper-session",
+    },
+  );
+
+  assert.equal(adapted?.sessionId, "native-claude-session");
+  assert.equal(adapted?.wrapperSessionId, "wrapper-session");
+});
+
 test("maps synchronous Gemini agent and permission hooks", () => {
   assert.equal(
     adaptGeminiHook(

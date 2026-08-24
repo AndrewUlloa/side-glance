@@ -6,6 +6,7 @@ export interface AdapterContext {
   generation?: number;
   target?: SideGlanceTarget;
   fallbackSessionId?: string;
+  wrapperSessionId?: string;
 }
 
 export type AdapterResult = SideGlanceEvent | undefined;

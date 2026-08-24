@@ -494,6 +494,48 @@ test("supervised run releases an Aider bridge session that inherited its wrapper
   assert.equal(state.surfaces["test:aider-wrapper-cleanup"].phase, "inactive");
 });
 
+test("supervised run releases a provider-native session associated with its wrapper", async (context) => {
+  const directory = await stateDirectory(context);
+  const childProgram = [
+    'import { spawnSync } from "node:child_process";',
+    `const child = spawnSync(process.execPath, [${JSON.stringify(cliPath)}, "hook", "--provider", "claude", "--json"], {`,
+    "env: process.env,",
+    'encoding: "utf8",',
+    'input: JSON.stringify({hook_event_name: "Stop", session_id: "native-claude-session"}),',
+    "});",
+    'process.stdout.write(child.stdout ?? "");',
+    'process.stderr.write(child.stderr ?? "");',
+    "process.exit(child.status ?? 1);",
+  ].join("");
+  const result = await runCli(
+    [
+      "run",
+      "--surface",
+      "test:native-wrapper-cleanup",
+      "--",
+      process.execPath,
+      "--input-type=module",
+      "-e",
+      childProgram,
+    ],
+    { stateDirectory: directory },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  const state = JSON.parse(
+    await readFile(path.join(directory, "side-glance-state.json"), "utf8"),
+  );
+  assert.match(
+    state.sessions["claude:native-claude-session"].wrapperSessionId,
+    /^wrapper-/u,
+  );
+  assert.equal(state.sessions["claude:native-claude-session"].phase, "inactive");
+  assert.equal(
+    state.sessions["claude:native-claude-session"].reason,
+    "exit:0",
+  );
+});
+
 test("exposes transactional provider install and uninstall commands", async (context) => {
   const directory = await stateDirectory(context);
   const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-install-"));

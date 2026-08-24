@@ -8,6 +8,7 @@ import {
 import { compactSideGlanceState } from "./compact.ts";
 
 const MAX_SEEN_EVENT_IDS = 4_096;
+export const SIDE_GLANCE_LEASE_TTL_MS = 30 * 60 * 1_000;
 
 export function createSideGlanceState(): SideGlanceState {
   return {
@@ -63,6 +64,9 @@ export function reduceSideGlanceEvent(
     ...(event.turnId ?? current?.turnId
       ? { turnId: event.turnId ?? current?.turnId }
       : {}),
+    ...(event.wrapperSessionId ?? current?.wrapperSessionId
+      ? { wrapperSessionId: event.wrapperSessionId ?? current?.wrapperSessionId }
+      : {}),
     ...(event.reason ? { reason: event.reason } : {}),
     confidence: event.confidence ?? current?.confidence ?? "heuristic",
     ...(event.target ?? current?.target
@@ -71,6 +75,14 @@ export function reduceSideGlanceEvent(
     ...(startedAt !== undefined ? { startedAt } : {}),
     ...(completedAt !== undefined ? { completedAt } : {}),
     ...(responseEwmaSeconds !== undefined ? { responseEwmaSeconds } : {}),
+    ...(phase !== "inactive"
+      ? {
+          leaseExpiresAt: Math.min(
+            Number.MAX_SAFE_INTEGER,
+            event.occurredAt + SIDE_GLANCE_LEASE_TTL_MS,
+          ),
+        }
+      : {}),
     updatedAt: event.occurredAt,
   };
 

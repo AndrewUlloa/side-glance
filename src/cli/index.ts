@@ -93,11 +93,14 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         sessionIndex === -1
           ? process.env.SIDE_GLANCE_SESSION_ID ?? process.env.SIGNAL_SESSION_ID
           : args[sessionIndex + 1];
+      const wrapperSessionId =
+        process.env.SIDE_GLANCE_SESSION_ID ?? process.env.SIGNAL_SESSION_ID;
       const context: AdapterContext = {
         eventId: randomUUID(),
         occurredAt: Date.now(),
         ...(target ? { target } : {}),
         ...(fallbackSessionId ? { fallbackSessionId } : {}),
+        ...(wrapperSessionId ? { wrapperSessionId } : {}),
       };
       const rawPayload: unknown = JSON.parse(await readBoundedStdin());
       const event = adaptProviderHook(provider, rawPayload, context);
@@ -110,10 +113,9 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     case "notify": {
       const source = parseSideGlanceSource(parseOption(args, "--source"));
-      const sessionId =
-        optionalOption(args, "--session") ??
-        process.env.SIDE_GLANCE_SESSION_ID ??
-        process.env.SIGNAL_SESSION_ID;
+      const wrapperSessionId =
+        process.env.SIDE_GLANCE_SESSION_ID ?? process.env.SIGNAL_SESSION_ID;
+      const sessionId = optionalOption(args, "--session") ?? wrapperSessionId;
       if (!sessionId) {
         throw new Error(
           "notify requires --session or a wrapper-provided SIDE_GLANCE_SESSION_ID.",
@@ -144,6 +146,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         sessionId,
         kind,
         occurredAt: Date.now(),
+        ...(wrapperSessionId ? { wrapperSessionId } : {}),
         confidence: "notification",
         ...(target ? { target } : {}),
       });

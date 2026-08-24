@@ -262,6 +262,34 @@ test("keeps one physical tmux window owned across pane releases", async (context
   assert.equal(final.surfaces[surfaceId]?.phase, "inactive");
 });
 
+test("reconciles an expired attention owner before selecting a new session", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  const target = { surfaceId: "logical:recovered" };
+  const leaseTtlMs = 30 * 60 * 1_000;
+
+  await controller.submit(
+    event("claude", "orphan", "orphan-failed", "turn.failed", 1_000, {
+      generation: 1,
+      target,
+    }),
+  );
+  const state = await controller.submit(
+    event(
+      "codex",
+      "replacement",
+      "replacement-start",
+      "turn.started",
+      1_000 + leaseTtlMs + 1,
+      { generation: 1, target },
+    ),
+  );
+
+  assert.equal(state.sessions["claude:orphan"]?.phase, "inactive");
+  assert.equal(state.sessions["claude:orphan"]?.reason, "reconciled-stale");
+  assert.equal(state.surfaces[target.surfaceId]?.ownerKey, "codex:replacement");
+  assert.equal(renderer.paints.at(-1)?.session.sessionId, "replacement");
+});
+
 test("bounds inactive surface history after repeated terminal churn", async (context) => {
   const { controller } = await controllerFixture(context);
   let state;

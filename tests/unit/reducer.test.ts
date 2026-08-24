@@ -50,6 +50,7 @@ test("moves a native session through working, waiting, and completed", () => {
     target: baseEvent.target,
     startedAt: 1_000,
     completedAt: 1_000,
+    leaseExpiresAt: 1_801_000,
     updatedAt: 1_000,
   });
 });

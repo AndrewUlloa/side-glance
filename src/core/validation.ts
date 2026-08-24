@@ -40,6 +40,7 @@ const EVENT_FIELDS = new Set([
   "occurredAt",
   "generation",
   "turnId",
+  "wrapperSessionId",
   "reason",
   "confidence",
   "target",
@@ -72,6 +73,13 @@ export function parseSideGlanceEvent(value: unknown): SideGlanceEvent {
   }
   if (event.turnId !== undefined) {
     parsed.turnId = requireText(event.turnId, "turnId", 256);
+  }
+  if (event.wrapperSessionId !== undefined) {
+    parsed.wrapperSessionId = requireText(
+      event.wrapperSessionId,
+      "wrapperSessionId",
+      256,
+    );
   }
   if (event.reason !== undefined) {
     parsed.reason = requireText(event.reason, "reason", 256);

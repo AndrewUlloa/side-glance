@@ -171,7 +171,7 @@ async function submitInheritedEnds(
   for (const session of Object.values(state.sessions)) {
     if (
       session.source === "generic" ||
-      session.sessionId !== sessionId ||
+      session.wrapperSessionId !== sessionId ||
       session.phase === "inactive"
     ) {
       continue;
@@ -180,7 +180,7 @@ async function submitInheritedEnds(
       v: 1,
       eventId: randomUUID(),
       source: session.source,
-      sessionId,
+      sessionId: session.sessionId,
       kind: "session.ended",
       occurredAt: Math.max(Date.now(), session.updatedAt + 1),
       generation: session.generation,

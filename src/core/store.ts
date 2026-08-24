@@ -460,7 +460,19 @@ function isSideGlanceSessionState(value: unknown): value is SideGlanceSessionSta
     return false;
   }
   if (value.turnId !== undefined && typeof value.turnId !== "string") return false;
+  if (
+    value.wrapperSessionId !== undefined &&
+    typeof value.wrapperSessionId !== "string"
+  ) {
+    return false;
+  }
   if (value.reason !== undefined && typeof value.reason !== "string") return false;
+  if (
+    value.leaseExpiresAt !== undefined &&
+    !Number.isFinite(value.leaseExpiresAt)
+  ) {
+    return false;
+  }
   if (value.target !== undefined && !isSideGlanceTarget(value.target)) return false;
   return true;
 }

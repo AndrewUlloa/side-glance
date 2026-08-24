@@ -55,11 +55,17 @@ export class SideGlanceController {
     const result = await this.store.update(async (state) => {
       const key = sessionKey(event.source, event.sessionId);
       const previousSession = state.sessions[key];
-      const next = reduceSideGlanceEvent(state, event);
-      if (next === state) return next;
-      accepted = true;
+      const reconciledExpired = ["session.started", "turn.started"].includes(
+        event.kind,
+      )
+        ? reconcileExpiredSessions(state, event.occurredAt, key)
+        : { state, surfaceIds: [] };
+      const next = reduceSideGlanceEvent(reconciledExpired.state, event);
+      accepted = next !== reconciledExpired.state;
+      if (!accepted && reconciledExpired.state === state) return state;
       const nextSession = next.sessions[key];
       const affectedSurfaceIds = [
+        ...reconciledExpired.surfaceIds,
         previousSession?.target?.surfaceId,
         nextSession?.target?.surfaceId,
       ].filter((surfaceId, index, values): surfaceId is string =>
@@ -138,6 +144,43 @@ export class SideGlanceController {
       },
     };
   }
+}
+
+function reconcileExpiredSessions(
+  state: SideGlanceState,
+  occurredAt: number,
+  exceptKey: string,
+): { state: SideGlanceState; surfaceIds: string[] } {
+  let sessions = state.sessions;
+  const surfaceIds = new Set<string>();
+
+  for (const [key, session] of Object.entries(state.sessions)) {
+    if (
+      key === exceptKey ||
+      session.phase === "inactive" ||
+      session.leaseExpiresAt === undefined ||
+      session.leaseExpiresAt > occurredAt
+    ) {
+      continue;
+    }
+
+    if (sessions === state.sessions) sessions = { ...state.sessions };
+    const rest = { ...session };
+    delete rest.completedAt;
+    delete rest.leaseExpiresAt;
+    sessions[key] = {
+      ...rest,
+      phase: "inactive",
+      reason: "reconciled-stale",
+      updatedAt: occurredAt,
+    };
+    if (session.target) surfaceIds.add(session.target.surfaceId);
+  }
+
+  return {
+    state: sessions === state.sessions ? state : { ...state, sessions },
+    surfaceIds: [...surfaceIds],
+  };
 }
 
 function visualForSession(session: SideGlanceSessionState): SurfaceVisual {

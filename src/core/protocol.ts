@@ -46,6 +46,7 @@ export interface SideGlanceEvent {
   occurredAt: number;
   generation?: number;
   turnId?: string;
+  wrapperSessionId?: string;
   reason?: string;
   confidence?: SideGlanceConfidence;
   target?: SideGlanceTarget;
@@ -57,12 +58,14 @@ export interface SideGlanceSessionState {
   phase: SideGlancePhase;
   generation: number;
   turnId?: string;
+  wrapperSessionId?: string;
   reason?: string;
   confidence: SideGlanceConfidence;
   target?: SideGlanceTarget;
   startedAt?: number;
   completedAt?: number;
   responseEwmaSeconds?: number;
+  leaseExpiresAt?: number;
   updatedAt: number;
 }
 

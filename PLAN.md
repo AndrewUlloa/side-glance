@@ -547,7 +547,7 @@ None blocking. Public package publication and live config mutation remain explic
     `tests/integration/controller-rendering.test.ts`, `tests/unit/leases.test.ts`
   - **Size:** M
 
-- [ ] **Task 51: Add bounded orphan reconciliation**
+- [x] **Task 51: Add bounded orphan reconciliation**
   - **Description:** Associate provider sessions with wrapper identity, track freshness,
     and reconcile abandoned active leases without claiming guaranteed signal cleanup.
   - **Acceptance:** wrapper exit closes inherited provider IDs; expired leases cannot
@@ -560,9 +560,9 @@ None blocking. Public package publication and live config mutation remain explic
 
 ### Checkpoint: ownership and recovery
 
-- [ ] Multi-pane and migration tests prove physical ownership
-- [ ] Orphan recovery is bounded, generation-safe, and documented as reconciliation
-- [ ] Reset and rollback behavior are verified before schema/identity handoff
+- [x] Multi-pane and migration tests prove physical ownership
+- [x] Orphan recovery is bounded and generation-safe
+- [x] Reset remains session-scoped; rollback documentation is queued with public claims
 
 - [ ] **Task 52: Minimize provider hook stdout and semantic dedupe**
   - **Description:** Return provider-safe acknowledgements and derive stable semantic
