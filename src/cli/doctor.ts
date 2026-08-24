@@ -35,6 +35,7 @@ export async function inspectProviderCapabilities(options: {
       ] as const),
     ),
   ) as Record<ProviderName, boolean>;
+  const openCodeV2Present = await safeProbe(options.pathProbe, "opencode2");
   const openCode = await inspectOpenCodeSafely(options.homeDirectory);
   const aiderBridge = await inspectAiderBridge(
     options.homeDirectory,
@@ -66,7 +67,15 @@ export async function inspectProviderCapabilities(options: {
       return [
         provider,
         {
-          binary: { command: provider, present: binaries[provider] },
+          binary:
+            provider === "opencode"
+              ? {
+                  command: provider,
+                  present: binaries[provider],
+                  incompatibleV2Command: "opencode2",
+                  incompatibleV2Present: openCodeV2Present,
+                }
+              : { command: provider, present: binaries[provider] },
           nativeNotifications,
           adapterContract: {
             status: contractAudited ? "contract-audited" : "experimental",

@@ -4,7 +4,6 @@ import { access } from "node:fs/promises";
 import { homedir } from "node:os";
 import path, { delimiter } from "node:path";
 
-import { adaptAiderNotification } from "../adapters/aider.ts";
 import { adaptClaudeHook } from "../adapters/claude.ts";
 import { adaptCodexHook } from "../adapters/codex.ts";
 import { adaptGeminiHook } from "../adapters/gemini.ts";
@@ -531,8 +530,6 @@ function adaptProviderHook(
       return adaptGeminiHook(payload, context);
     case "opencode":
       return adaptOpenCodeEvent(payload, context);
-    case "aider":
-      return adaptAiderNotification(payload, context);
     default:
       throw new Error(`Unsupported hook provider: ${provider}.`);
   }

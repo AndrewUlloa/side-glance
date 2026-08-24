@@ -24,6 +24,7 @@ const MAX_PLUGIN_BYTES = 1_048_576;
 export interface OpenCodePluginInstallerOptions {
   homeDirectory: string;
   executablePath: string;
+  notifications?: boolean;
   notificationSound?: string;
 }
 
@@ -77,7 +78,11 @@ export async function installOpenCodePlugin(
     );
   }
 
-  const source = pluginSource(validated.executablePath, validated.sound);
+  const source = pluginSource(
+    validated.executablePath,
+    options.notifications === true,
+    validated.sound,
+  );
   if (loaded.kind === "current" && loaded.source === source) {
     return result(validated.configPath, false, 1);
   }
@@ -163,6 +168,9 @@ async function validateInstallOptions(
     options.notificationSound === undefined
       ? undefined
       : validateNotificationSound(options.notificationSound);
+  if (sound !== undefined && !options.notifications) {
+    throw new Error("Notification sound requires notifications to be enabled.");
+  }
   return {
     homeDirectory: path.resolve(options.homeDirectory),
     executablePath,
@@ -317,12 +325,16 @@ function assertCurrentManifest(source: string): void {
   }
 }
 
-function pluginSource(executablePath: string, sound: string | undefined): string {
+function pluginSource(
+  executablePath: string,
+  notifications: boolean,
+  sound: string | undefined,
+): string {
   const args = [
     "hook",
     "--provider",
     "opencode",
-    "--notifications",
+    ...(notifications ? ["--notifications"] : []),
     ...(sound ? ["--notification-sound", sound] : []),
     "--json",
   ];

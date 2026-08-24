@@ -596,7 +596,7 @@ None blocking. Public package publication and live config mutation remain explic
     `src/cli/install.ts`, inspection/CLI tests
   - **Size:** M
 
-- [ ] **Task 55: Bound OpenCode and Aider support honestly**
+- [x] **Task 55: Bound OpenCode and Aider support honestly**
   - **Description:** Permit colors-only stable OpenCode integration, reject incompatible
     plugin APIs actionably, and make Aider's static bridge the only documented contract.
   - **Acceptance:** install/uninstall remains reversible; unsupported versions fail
@@ -608,8 +608,8 @@ None blocking. Public package publication and live config mutation remain explic
 
 ### Checkpoint: provider safety
 
-- [ ] Provider hooks cannot leak global state or block for default multi-minute budgets
-- [ ] Semantic duplicate and native-notification warnings are proven
+- [x] Provider hooks cannot leak global state or block for default multi-minute budgets
+- [x] Semantic duplicate and native-notification warnings are proven
 - [ ] Support tiers match live evidence
 
 - [ ] **Task 56: Add non-color markers and Terminal.app fallback**

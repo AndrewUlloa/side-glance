@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { adaptAiderNotification } from "../../src/adapters/aider.ts";
 import { adaptClaudeHook } from "../../src/adapters/claude.ts";
 import { adaptCodexHook } from "../../src/adapters/codex.ts";
 import { adaptGeminiHook } from "../../src/adapters/gemini.ts";
@@ -168,22 +167,6 @@ test("maps OpenCode session, error, and permission events", () => {
     event("session.idle", {
       info: { id: "child-session", parentID: "opencode-session" },
     }),
-    undefined,
-  );
-});
-
-test("keeps Aider explicitly completion-only and requires wrapper identity", () => {
-  const completed = adaptAiderNotification(
-    { event: "response-complete", message: "private response" },
-    { ...context, fallbackSessionId: "aider-wrapper-session" },
-  );
-
-  assert.equal(completed?.kind, "turn.completed");
-  assert.equal(completed?.confidence, "notification");
-  assert.equal(completed?.sessionId, "aider-wrapper-session");
-  assert.equal(JSON.stringify(completed).includes("private response"), false);
-  assert.equal(
-    adaptAiderNotification({ event: "unknown" }, context),
     undefined,
   );
 });

@@ -42,8 +42,8 @@ Adapters submit one JSON object on stdin to `side-glance event --json`, or trans
 | Claude Code | JSON hooks | Session, prompt, permission/idle notification, stop/failure, end |
 | Codex | JSON hooks | Session, prompt, permission, stop, synchronous end; existing legacy notify preserved |
 | Gemini CLI | JSON hooks | Session, before/after agent, permission notification, end |
-| OpenCode | managed plugin events | Top-level session status/idle/error/delete and permission events; child sessions are filtered |
-| Aider | `side-glance notify` callback + wrapper | Completion only natively; wrapper owns start/end |
+| OpenCode v1 | managed stable plugin events (experimental) | Top-level session status/idle/error/delete and permission events; child sessions are filtered. OpenCode 2's incompatible beta plugin API is rejected. |
+| Aider | static `side-glance notify` command + wrapper (experimental) | Aider invokes no JSON event producer; its documented static completion callback supplies Ready while the wrapper owns start/end. |
 | Any CLI | supervised wrapper | Process start, exit, common signals, cleanup |
 
 Adapters must never add prompt, response, transcript, tool input, secret, or arbitrary provider payload fields to normalized events.
@@ -53,3 +53,5 @@ Adapters must never add prompt, response, transcript, tool input, secret, or arb
 The wrapper exports `SIDE_GLANCE_SURFACE_ID`, `SIDE_GLANCE_SESSION_ID`, and, when available, `SIDE_GLANCE_TTY` and `SIDE_GLANCE_TMUX_PANE`. `--label` also exports `SIDE_GLANCE_LABEL`; `--notification-sound` exports `SIDE_GLANCE_NOTIFICATION_SOUND`. Explicit verified values win; otherwise Side Glance invokes `tty` directly without a shell. Native hooks should inherit wrapper identity because providers do not consistently expose a controlling TTY.
 
 Notification delivery occurs only after the originating event is accepted and persisted. Duplicate and stale events do not alert. Waiting, native/wrapper-final completed, failed, and cancelled events alert; pre-final heuristic completion, lifecycle start, acknowledgement, and teardown do not. A target is optional for notification-only hooks, and a session that does not own the visual surface can still alert. Titles contain only the provider and lifecycle result. Bodies contain an explicit sanitized label or a short digest of the session ID—never prompt, response, transcript, cwd, target, or failure-reason content.
+
+OpenCode v1 can install colors without notifications. Because its managed plugin launches Side Glance with piped JSON, run OpenCode through `side-glance run -- opencode` so the plugin inherits a stable surface. Add `--notifications` to the install command only when Side Glance desktop alerts are also wanted. OpenCode 2 uses the separate `opencode2` binary and a changing default-export plugin contract; Side Glance fails closed instead of writing a v1 plugin into that runtime.

@@ -228,6 +228,17 @@ test("exposes a targetless Aider notification bridge with inherited session iden
   const state = JSON.parse(result.stdout);
   assert.equal(state.sessions["aider:aider-wrapper-session"].phase, "completed");
   assert.equal(result.stdout.includes("Docs worker"), false);
+
+  const undocumentedHook = await runCli(
+    ["hook", "--provider", "aider", "--notifications", "--json"],
+    {
+      stateDirectory: directory,
+      input: JSON.stringify({ event: "response-complete" }),
+      env: { SIDE_GLANCE_NOTIFICATION_BACKEND: "none" },
+    },
+  );
+  assert.equal(undocumentedHook.code, 1);
+  assert.match(undocumentedHook.stderr, /Unsupported hook provider: aider/u);
 });
 
 test("uses the wrapper-provided surface for an installed hook command", async (context) => {
@@ -764,9 +775,7 @@ test("describes a Codex top-level notify command without claiming it is native",
     warnings.some((warning) => warning.includes("top-level notify command")),
   );
   assert.ok(
-    warnings.every(
-      (warning) => !warning.includes("native notifications are already configured"),
-    ),
+    warnings.some((warning) => warning.includes("enabled by default")),
   );
 });
 
@@ -776,6 +785,11 @@ test("installs and removes the owned OpenCode notification plugin through the CL
   context.after(() => rm(home, { recursive: true, force: true }));
   const executable = path.join(home, "side-glance-bin");
   await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  const providerBin = path.join(home, "bin");
+  await mkdir(providerBin, { recursive: true });
+  await writeFile(path.join(providerBin, "opencode"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
 
   const installed = await runCli(
     [
@@ -790,7 +804,7 @@ test("installs and removes the owned OpenCode notification plugin through the CL
       "Glass",
       "--json",
     ],
-    { stateDirectory: directory },
+    { stateDirectory: directory, env: { PATH: providerBin } },
   );
   assert.equal(installed.code, 0, installed.stderr);
   const result = JSON.parse(installed.stdout);
@@ -813,6 +827,79 @@ test("installs and removes the owned OpenCode notification plugin through the CL
   assert.equal(removed.code, 0, removed.stderr);
   assert.equal(JSON.parse(removed.stdout).installedHooks, 0);
   await assert.rejects(() => readFile(result.configPath), /ENOENT/u);
+});
+
+test("installs colors-only OpenCode v1 support and rejects v2-only runtimes", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-opencode-api-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "side-glance-bin");
+  const providerBin = path.join(home, "bin");
+  await mkdir(providerBin, { recursive: true });
+  await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await writeFile(path.join(providerBin, "opencode"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
+
+  const installed = await runCli(
+    [
+      "install",
+      "opencode",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { stateDirectory: directory, env: { PATH: providerBin } },
+  );
+  assert.equal(installed.code, 0, installed.stderr);
+  const pluginPath = JSON.parse(installed.stdout).configPath;
+  const plugin = await readFile(pluginPath, "utf8");
+  assert.match(plugin, /\["hook","--provider","opencode","--json"\]/u);
+  assert.doesNotMatch(plugin, /--notifications/u);
+
+  await rm(pluginPath);
+  await rm(path.join(providerBin, "opencode"));
+  await writeFile(path.join(providerBin, "opencode2"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
+  const incompatible = await runCli(
+    [
+      "install",
+      "opencode",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { stateDirectory: directory, env: { PATH: providerBin } },
+  );
+  assert.equal(incompatible.code, 1);
+  assert.match(incompatible.stderr, /OpenCode 2|v2|stable v1/i);
+  await assert.rejects(() => readFile(pluginPath), /ENOENT/u);
+
+  const overridden = await runCli(
+    [
+      "install",
+      "opencode",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    {
+      stateDirectory: directory,
+      env: {
+        PATH: providerBin,
+        OPENCODE_CONFIG_DIR: path.join(home, "custom-opencode"),
+      },
+    },
+  );
+  assert.equal(overridden.code, 1);
+  assert.match(overridden.stderr, /configuration overrides|OPENCODE_CONFIG_DIR/u);
 });
 
 test("refuses permanent provider activation from an ephemeral npm execution", async (context) => {
