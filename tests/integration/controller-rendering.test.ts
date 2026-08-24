@@ -364,6 +364,48 @@ test("notifies once for accepted attention events using the originating event", 
   assert.strictEqual(notifier.events.at(-1), cancelled);
 });
 
+test("dedupes semantic wait notifications across provider transport events", async (context) => {
+  const notifier = new RecordingNotifier();
+  const { controller } = await controllerFixture(context, notifier);
+
+  const firstWait = event(
+    "claude",
+    "permission",
+    "permission-request",
+    "attention.waiting",
+    1_000,
+  );
+  await controller.submit(firstWait);
+  await controller.submit(
+    event(
+      "claude",
+      "permission",
+      "delayed-permission-notification",
+      "attention.waiting",
+      8_000,
+    ),
+  );
+  await controller.submit(
+    event(
+      "claude",
+      "permission",
+      "permission-acknowledged",
+      "attention.acknowledged",
+      9_000,
+    ),
+  );
+  const secondWait = event(
+    "claude",
+    "permission",
+    "second-permission-request",
+    "attention.waiting",
+    10_000,
+  );
+  await controller.submit(secondWait);
+
+  assert.deepEqual(notifier.events, [firstWait, secondWait]);
+});
+
 test("does not notify for duplicates, stale events, starts, acknowledgements, or teardown", async (context) => {
   const notifier = new RecordingNotifier();
   const { controller } = await controllerFixture(context, notifier);

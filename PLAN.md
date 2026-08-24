@@ -564,7 +564,7 @@ None blocking. Public package publication and live config mutation remain explic
 - [x] Orphan recovery is bounded and generation-safe
 - [x] Reset remains session-scoped; rollback documentation is queued with public claims
 
-- [ ] **Task 52: Minimize provider hook stdout and semantic dedupe**
+- [x] **Task 52: Minimize provider hook stdout and semantic dedupe**
   - **Description:** Return provider-safe acknowledgements and derive stable semantic
     notification identities across repeated provider hook invocations.
   - **Acceptance:** hook stdout never contains sessions/surfaces; one Claude permission

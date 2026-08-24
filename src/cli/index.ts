@@ -105,10 +105,11 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       const rawPayload: unknown = JSON.parse(await readBoundedStdin());
       const event = adaptProviderHook(provider, rawPayload, context);
       if (!event) {
-        writeJson({ accepted: false });
+        writeHookAcknowledgement(provider);
         return 0;
       }
-      writeJson(await controllerWithNotifications(store, args).submit(event));
+      await controllerWithNotifications(store, args).submit(event);
+      writeHookAcknowledgement(provider);
       return 0;
     }
     case "notify": {
@@ -269,6 +270,10 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         "usage: side-glance <event|hook|notify|status|doctor|preview|reset|run|install|uninstall> [options]",
       );
   }
+}
+
+function writeHookAcknowledgement(provider: string): void {
+  if (provider === "codex" || provider === "gemini") writeJson({});
 }
 
 function helpText(): string {

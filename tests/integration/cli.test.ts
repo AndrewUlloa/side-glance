@@ -141,12 +141,16 @@ test("adapts a provider-native hook payload through the executable", async (cont
   );
 
   assert.equal(result.code, 0, result.stderr);
-  const session = JSON.parse(result.stdout).sessions[
+  assert.equal(result.stdout, "");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const session = JSON.parse(status.stdout).sessions[
     "claude:claude-native-session"
   ];
   assert.equal(session.phase, "working");
   assert.equal(session.target.surfaceId, "test:hook");
-  assert.equal(result.stdout.includes("private prompt"), false);
+  assert.equal(status.stdout.includes("private prompt"), false);
 });
 
 test("accepts targetless notification hooks without writing terminal control bytes", async (context) => {
@@ -180,7 +184,11 @@ test("accepts targetless notification hooks without writing terminal control byt
     ),
     false,
   );
-  const state = JSON.parse(result.stdout);
+  assert.equal(result.stdout, "");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const state = JSON.parse(status.stdout);
   assert.equal(state.sessions["claude:claude-targetless"].phase, "completed");
   assert.equal(state.sessions["claude:claude-targetless"].target, undefined);
 });
@@ -226,11 +234,33 @@ test("uses the wrapper-provided surface for an installed hook command", async (c
   });
 
   assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout, "");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
   assert.equal(
-    JSON.parse(result.stdout).sessions["claude:claude-installed-hook"].target
+    JSON.parse(status.stdout).sessions["claude:claude-installed-hook"].target
       .surfaceId,
     "test:wrapper-surface",
   );
+});
+
+test("emits only an empty JSON acknowledgement for Gemini hooks", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(
+    ["hook", "--provider", "gemini", "--surface", "test:gemini", "--json"],
+    {
+      stateDirectory: directory,
+      input: JSON.stringify({
+        hook_event_name: "BeforeAgent",
+        session_id: "gemini-session",
+      }),
+    },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout, "{}\n");
+  assert.equal(result.stdout.includes("session"), false);
 });
 
 test("rejects malformed event JSON without creating executable state", async (context) => {

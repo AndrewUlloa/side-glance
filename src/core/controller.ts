@@ -52,6 +52,7 @@ export class SideGlanceController {
 
   async submit(event: SideGlanceEvent): Promise<SideGlanceState> {
     let accepted = false;
+    let notifyAccepted = false;
     const result = await this.store.update(async (state) => {
       const key = sessionKey(event.source, event.sessionId);
       const previousSession = state.sessions[key];
@@ -62,6 +63,8 @@ export class SideGlanceController {
         : { state, surfaceIds: [] };
       const next = reduceSideGlanceEvent(reconciledExpired.state, event);
       accepted = next !== reconciledExpired.state;
+      notifyAccepted =
+        accepted && !isSemanticNotificationDuplicate(previousSession, event);
       if (!accepted && reconciledExpired.state === state) return state;
       const nextSession = next.sessions[key];
       const affectedSurfaceIds = [
@@ -78,7 +81,7 @@ export class SideGlanceController {
       return compactSideGlanceState(reconciled);
     });
 
-    if (accepted && this.notifier && shouldNotifyForEvent(event)) {
+    if (notifyAccepted && this.notifier && shouldNotifyForEvent(event)) {
       try {
         await this.notifier.notify(event);
       } catch {
@@ -143,6 +146,44 @@ export class SideGlanceController {
         },
       },
     };
+  }
+}
+
+function isSemanticNotificationDuplicate(
+  previous: SideGlanceSessionState | undefined,
+  event: SideGlanceEvent,
+): boolean {
+  if (!previous || previous.phase !== notificationPhase(event.kind)) {
+    return false;
+  }
+  if (
+    event.generation !== undefined &&
+    event.generation !== previous.generation
+  ) {
+    return false;
+  }
+  if (event.turnId && previous.turnId && event.turnId !== previous.turnId) {
+    return false;
+  }
+  return true;
+}
+
+function notificationPhase(
+  kind: SideGlanceEvent["kind"],
+): SideGlanceSessionState["phase"] | undefined {
+  switch (kind) {
+    case "attention.waiting":
+      return "waiting";
+    case "turn.completed":
+      return "completed";
+    case "turn.failed":
+    case "turn.cancelled":
+      return "failed";
+    case "session.started":
+    case "turn.started":
+    case "attention.acknowledged":
+    case "session.ended":
+      return undefined;
   }
 }
 
