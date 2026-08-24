@@ -525,7 +525,7 @@ None blocking. Public package publication and live config mutation remain explic
 - [x] CLI preview, controller output, and website states agree
 - [x] Focused unit, integration, site, lint, typecheck, and production-build gates are green
 
-- [ ] **Task 49: Model tmux by physical render ownership**
+- [x] **Task 49: Model tmux by physical render ownership**
   - **Description:** Resolve a pane to its window before lease arbitration and persist one
     original snapshot for the shared physical window.
   - **Acceptance:** two panes in one window cannot wipe/resurrect each other; different
@@ -536,7 +536,7 @@ None blocking. Public package publication and live config mutation remain explic
     `src/renderers/tmux.ts`, tmux tests
   - **Size:** M
 
-- [ ] **Task 50: Release previous surfaces on session migration**
+- [x] **Task 50: Release previous surfaces on session migration**
   - **Description:** Recompute both old and new surfaces atomically when an accepted event
     changes target identity.
   - **Acceptance:** old surface restores or promotes its remaining owner before new paint;

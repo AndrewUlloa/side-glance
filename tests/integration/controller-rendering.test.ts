@@ -200,6 +200,68 @@ test("never renders a stale event and recomputes shared ownership before reset",
   assert.equal(final.surfaces["tty:/dev/ttys001"]?.phase, "inactive");
 });
 
+test("releases the previous surface before painting a migrated session", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  const surfaceA = { surfaceId: "logical:A" };
+  const surfaceB = { surfaceId: "logical:B" };
+
+  await controller.submit(
+    event("claude", "moving", "start-a", "turn.started", 1_000, {
+      generation: 1,
+      turnId: "turn-a",
+      target: surfaceA,
+    }),
+  );
+  const state = await controller.submit(
+    event("claude", "moving", "start-b", "turn.started", 2_000, {
+      generation: 2,
+      turnId: "turn-b",
+      target: surfaceB,
+    }),
+  );
+
+  assert.deepEqual(renderer.resets, [surfaceA]);
+  assert.equal(state.surfaces["logical:A"]?.phase, "inactive");
+  assert.equal(state.surfaces["logical:A"]?.ownerKey, undefined);
+  assert.equal(state.surfaces["logical:B"]?.phase, "working");
+  assert.equal(state.surfaces["logical:B"]?.ownerKey, "claude:moving");
+});
+
+test("keeps one physical tmux window owned across pane releases", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  const surfaceId = "tmux:/private/tmp/tmux-501/default,123,0,@7";
+  const paneThree = { surfaceId, tmuxPane: "%3" };
+  const paneFour = { surfaceId, tmuxPane: "%4" };
+
+  await controller.submit(
+    event("claude", "pane-three", "three-start", "turn.started", 1_000, {
+      target: paneThree,
+    }),
+  );
+  await controller.submit(
+    event("codex", "pane-four", "four-wait", "attention.waiting", 2_000, {
+      target: paneFour,
+    }),
+  );
+  const afterFirstRelease = await controller.submit(
+    event("claude", "pane-three", "three-end", "session.ended", 3_000, {
+      target: paneThree,
+    }),
+  );
+
+  assert.equal(renderer.resets.length, 0);
+  assert.equal(afterFirstRelease.surfaces[surfaceId]?.ownerKey, "codex:pane-four");
+  assert.equal(afterFirstRelease.surfaces[surfaceId]?.target.tmuxPane, "%4");
+
+  const final = await controller.submit(
+    event("codex", "pane-four", "four-end", "session.ended", 4_000, {
+      target: paneFour,
+    }),
+  );
+  assert.equal(renderer.resets.length, 1);
+  assert.equal(final.surfaces[surfaceId]?.phase, "inactive");
+});
+
 test("bounds inactive surface history after repeated terminal churn", async (context) => {
   const { controller } = await controllerFixture(context);
   let state;

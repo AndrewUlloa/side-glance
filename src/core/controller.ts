@@ -1,12 +1,13 @@
 import { resolveSurface } from "./leases.ts";
 import { compactSideGlanceState } from "./compact.ts";
-import type {
-  SideGlanceEvent,
-  SideGlanceSessionState,
-  SideGlanceState,
-  SideGlanceSurfaceState,
-  SideGlanceTarget,
-  SideGlanceTmuxSnapshot,
+import {
+  sessionKey,
+  type SideGlanceEvent,
+  type SideGlanceSessionState,
+  type SideGlanceState,
+  type SideGlanceSurfaceState,
+  type SideGlanceTarget,
+  type SideGlanceTmuxSnapshot,
 } from "./protocol.ts";
 import { reduceSideGlanceEvent } from "./reducer.ts";
 import type { FileSideGlanceStore } from "./store.ts";
@@ -52,59 +53,23 @@ export class SideGlanceController {
   async submit(event: SideGlanceEvent): Promise<SideGlanceState> {
     let accepted = false;
     const result = await this.store.update(async (state) => {
+      const key = sessionKey(event.source, event.sessionId);
+      const previousSession = state.sessions[key];
       const next = reduceSideGlanceEvent(state, event);
       if (next === state) return next;
       accepted = true;
-      if (!event.target) return next;
-
-      const { surfaceId } = event.target;
-      const previous = state.surfaces[surfaceId];
-      const resolution = resolveSurface(next, surfaceId);
-      if (!resolution) {
-        if (!previous) return next;
-        await this.renderer.reset(previous.target, previous);
-        return compactSideGlanceState({
-          ...next,
-          surfaces: {
-            ...next.surfaces,
-            [surfaceId]: {
-              ...previous,
-              phase: "inactive",
-              generation: Math.max(previous.generation, event.generation ?? 0),
-              updatedAt: event.occurredAt,
-              terminalPainted: false,
-              tmuxSnapshot: undefined,
-              ownerKey: undefined,
-            },
-          },
-        });
-      }
-
-      const target = resolution.session.target ?? previous?.target ?? event.target;
-      const rendered = await this.renderer.paint(
-        target,
-        resolution.session,
-        visualForSession(resolution.session),
-        previous,
+      const nextSession = next.sessions[key];
+      const affectedSurfaceIds = [
+        previousSession?.target?.surfaceId,
+        nextSession?.target?.surfaceId,
+      ].filter((surfaceId, index, values): surfaceId is string =>
+        Boolean(surfaceId) && values.indexOf(surfaceId) === index
       );
-      return compactSideGlanceState({
-        ...next,
-        surfaces: {
-          ...next.surfaces,
-          [surfaceId]: {
-            surfaceId,
-            target,
-            phase: resolution.session.phase,
-            generation: resolution.session.generation,
-            updatedAt: event.occurredAt,
-            terminalPainted: rendered.terminalPainted,
-            ownerKey: resolution.ownerKey,
-            ...(rendered.tmuxSnapshot
-              ? { tmuxSnapshot: rendered.tmuxSnapshot }
-              : {}),
-          },
-        },
-      });
+      let reconciled = next;
+      for (const surfaceId of affectedSurfaceIds) {
+        reconciled = await this.reconcileSurface(reconciled, event, surfaceId);
+      }
+      return compactSideGlanceState(reconciled);
     });
 
     if (accepted && this.notifier && shouldNotifyForEvent(event)) {
@@ -115,6 +80,63 @@ export class SideGlanceController {
       }
     }
     return result;
+  }
+
+  private async reconcileSurface(
+    state: SideGlanceState,
+    event: SideGlanceEvent,
+    surfaceId: string,
+  ): Promise<SideGlanceState> {
+    const previous = state.surfaces[surfaceId];
+    const resolution = resolveSurface(state, surfaceId);
+    if (!resolution) {
+      if (!previous) return state;
+      await this.renderer.reset(previous.target, previous);
+      return {
+        ...state,
+        surfaces: {
+          ...state.surfaces,
+          [surfaceId]: {
+            ...previous,
+            phase: "inactive",
+            generation: Math.max(previous.generation, event.generation ?? 0),
+            updatedAt: event.occurredAt,
+            terminalPainted: false,
+            tmuxSnapshot: undefined,
+            ownerKey: undefined,
+          },
+        },
+      };
+    }
+
+    const target = resolution.session.target ?? previous?.target;
+    if (!target) {
+      throw new Error("Resolved surface owner does not have a render target.");
+    }
+    const rendered = await this.renderer.paint(
+      target,
+      resolution.session,
+      visualForSession(resolution.session),
+      previous,
+    );
+    return {
+      ...state,
+      surfaces: {
+        ...state.surfaces,
+        [surfaceId]: {
+          surfaceId,
+          target,
+          phase: resolution.session.phase,
+          generation: resolution.session.generation,
+          updatedAt: event.occurredAt,
+          terminalPainted: rendered.terminalPainted,
+          ownerKey: resolution.ownerKey,
+          ...(rendered.tmuxSnapshot
+            ? { tmuxSnapshot: rendered.tmuxSnapshot }
+            : {}),
+        },
+      },
+    };
   }
 }
 
