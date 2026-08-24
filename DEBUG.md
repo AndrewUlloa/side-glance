@@ -392,3 +392,101 @@ not installed end-to-end integrations.
 5. Use only provider name, normalized phase, and an explicit user label or privacy-safe
    short identifier. Do not display provider-generated session titles, cwd, prompt,
    assistant output, transcript, or tool details by default.
+
+---
+
+# Stale-lock recovery test reuses the refusal deadline
+
+## Observations
+
+- Final production PR #37 produced one failed `verify` job in GitHub Actions run
+  `32782443112`, job `97607213689`; the sibling compatibility, native macOS, Vercel,
+  and staging-head policy jobs passed.
+- The exact failure was `Timed out waiting for Side Glance state lock after 40ms.` at
+  `tests/integration/store.test.ts:168`, the recovery call after the fixture replaces a
+  live owner PID with a guaranteed-dead PID.
+- The focused test passed 50/50 sequential local child-process runs.
+- The same unchanged focused test failed in the first round when 12 isolated child
+  processes ran concurrently. The failed case took 394 ms and reported the same line
+  and timeout as CI. Temporary directories are created with `mkdtemp`, so the children
+  do not share lock paths.
+- `acquireLock()` records `startedAt` before awaiting `currentProcessIdentity()`, then
+  checks the 40 ms deadline before making its first `mkdir` attempt. An OS scheduling
+  pause while resuming that await can therefore exhaust the deadline without one lock
+  observation or reclaim attempt.
+- The production default timeout is 5 seconds; this regression uses 40 ms to prove the
+  live-owner refusal without slowing the suite.
+
+## Hypotheses
+
+### H1: The lock deadline includes pre-attempt identity/scheduler time (REJECTED)
+
+- Supports: the timer starts before an await, the loop can be skipped entirely, the
+  failure reproduces only under parallel load, and the recovery call fails at its
+  first possible attempt.
+- Conflicts: none; low-load runs resume inside 40 ms and pass.
+- Test: move `startedAt` immediately after the identity await, changing one line of
+  placement only, then rerun the 12-way/10-round reproduction.
+
+### H2: The supposedly dead PID is reported alive on this platform
+
+- Supports: an alive result would prevent reclamation until timeout.
+- Conflicts: 50/50 sequential runs pass on the same platform and CI passed this exact
+  test in earlier runs.
+- Test: directly invoke the platform PID-zero probe and repeat the unchanged focused
+  test sequentially.
+
+### H3: Rewriting `owner.json` refreshes the lock directory mtime
+
+- Supports: a fresh directory mtime would delay the stale-lock branch.
+- Conflicts: overwriting an existing child file does not add or remove a directory
+  entry, the first refusal already lasts at least 40 ms, and sequential recovery passes.
+- Test: capture the directory mtime before and after overwriting the existing owner.
+
+### H4: Parallel tests collide on the same lock directory
+
+- Supports: cross-process interference could preserve a live owner.
+- Conflicts: every test uses a unique `mkdtemp` directory and the failure reproduces in
+  separate child processes with no shared fixture path.
+- Test: print or assert uniqueness of the generated directories in the load harness.
+
+### H5: The 40 ms refusal budget is also too small for proved-dead recovery (ROOT HYPOTHESIS)
+
+- Supports: the failure is the second update; reclaim must stat, read, probe the PID,
+  reread the nonce, remove the directory, and then retry acquisition. If that work
+  crosses 40 ms, `continue` returns to the deadline precondition and can throw before
+  the post-reclaim `mkdir`. The two final CI jobs ran the identical SHA three seconds
+  apart: one passed this test in 69.70 ms and the other failed in 101.41 ms.
+- Conflicts: none. The production default is already 5 seconds; only the test reuses
+  the intentionally tiny live-owner refusal budget for the recovery half.
+- Test: leave the 40 ms store unchanged for the live-owner rejection, then use a second
+  store with the default lock timeout for the dead-owner recovery. Rerun the unchanged
+  12-way/10-round concurrent-load harness.
+
+## Experiments
+
+- Planned H1 falsification: move only the deadline initialization below the process
+  identity await. If the unchanged 120-run concurrent-load reproduction passes, H1 is
+  confirmed; if it still fails, revert and test H2 next.
+- H1 was rejected as sufficient: moving the timer below the identity await still failed
+  under concurrent load in round 5, at the same second recovery call. The diagnostic
+  source change was reverted.
+- Planned H5 falsification: separate the refusal and recovery timeout budgets without
+  changing production code. If 120 concurrent-load runs pass, the narrow recovery
+  budget—not stale-owner proof logic—is confirmed as the flake source.
+- H5 confirmed: the separated recovery budget passed 120/120 concurrent-load child
+  runs. The diagnostic test edit was reverted before writing the final fix.
+
+## Root Cause
+
+The integration test reused a deliberately tiny 40 ms live-owner refusal deadline for
+the separate dead-owner proof, removal, and reacquisition path, so normal CI scheduling
+and filesystem variance could exhaust the test-only budget before recovery retried.
+
+## Fix
+
+Keep the 40 ms store only for asserting that a live owner is never reclaimed. After the
+fixture replaces that owner with a guaranteed-dead PID, construct a second store with
+the normal 5-second production timeout and retain the same stale-lock and post-recovery
+assertions. This changes no product timeout or lock-safety semantics and makes the test
+exercise each contract with an appropriate budget.
