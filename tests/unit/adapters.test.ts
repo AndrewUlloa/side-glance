@@ -114,13 +114,12 @@ test("maps synchronous Gemini agent and permission hooks", () => {
     )?.kind,
     "turn.started",
   );
-  assert.equal(
-    adaptGeminiHook(
-      { hook_event_name: "AfterAgent", session_id: "gemini-session" },
-      context,
-    )?.kind,
-    "turn.completed",
+  const completed = adaptGeminiHook(
+    { hook_event_name: "AfterAgent", session_id: "gemini-session" },
+    context,
   );
+  assert.equal(completed?.kind, "turn.completed");
+  assert.equal(completed?.confidence, "heuristic");
   assert.equal(
     adaptGeminiHook(
       {
@@ -131,6 +130,23 @@ test("maps synchronous Gemini agent and permission hooks", () => {
       context,
     )?.kind,
     "attention.waiting",
+  );
+});
+
+test("marks provider completion hooks as pre-final", () => {
+  assert.equal(
+    adaptClaudeHook(
+      { hook_event_name: "Stop", session_id: "claude-session" },
+      context,
+    )?.confidence,
+    "heuristic",
+  );
+  assert.equal(
+    adaptCodexHook(
+      { hook_event_name: "Stop", session_id: "codex-session" },
+      context,
+    )?.confidence,
+    "heuristic",
   );
 });
 

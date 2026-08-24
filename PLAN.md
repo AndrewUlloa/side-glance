@@ -575,7 +575,7 @@ None blocking. Public package publication and live config mutation remain explic
     `src/core/protocol.ts`, CLI/notification tests
   - **Size:** M
 
-- [ ] **Task 53: Encode honest provider completion and timeout contracts**
+- [x] **Task 53: Encode honest provider completion and timeout contracts**
   - **Description:** Add bounded managed-hook timeouts, distinguish pre-final confidence,
     and prevent known retry/block paths from claiming native-final completion.
   - **Acceptance:** hung hooks return within the documented budget; fixture retries do not

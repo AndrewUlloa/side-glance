@@ -126,6 +126,26 @@ test("installs optional notification flags into every managed hook", async (cont
   );
 });
 
+test("installs provider-specific bounded hook timeouts", async (context) => {
+  const expectations = {
+    claude: { ordinary: 10, teardown: 3 },
+    codex: { ordinary: 10, teardown: 3 },
+    gemini: { ordinary: 10_000, teardown: 3_000 },
+  } as const;
+
+  for (const provider of ["claude", "codex", "gemini"] as const) {
+    const home = await fixtureHome(context);
+    const executablePath = await executableFixture(home);
+    await installProviderHooks({ provider, homeDirectory: home, executablePath });
+    const installed = JSON.parse(await readFile(configPath(home, provider), "utf8"));
+    const commandFor = (eventName: string) =>
+      installed.hooks[eventName].at(-1).hooks.at(-1);
+
+    assert.equal(commandFor("SessionStart").timeout, expectations[provider].ordinary);
+    assert.equal(commandFor("SessionEnd").timeout, expectations[provider].teardown);
+  }
+});
+
 test("rejects unsafe notification sound values without changing provider config", async (context) => {
   const home = await fixtureHome(context);
   const executablePath = await executableFixture(home);

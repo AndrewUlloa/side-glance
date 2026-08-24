@@ -42,13 +42,17 @@ export interface EventNotifier {
 }
 
 export function shouldNotifyForEvent(event: SideGlanceEvent): boolean {
-  return NOTIFICATION_KINDS.has(event.kind);
+  return (
+    NOTIFICATION_KINDS.has(event.kind) &&
+    !(event.kind === "turn.completed" && event.confidence === "heuristic")
+  );
 }
 
 export function notificationRequestForEvent(
   event: SideGlanceEvent,
   options: NotificationOptions = {},
 ): NotificationRequest | undefined {
+  if (!shouldNotifyForEvent(event)) return undefined;
   const phase = notificationPhase(event.kind);
   if (!phase) return undefined;
 

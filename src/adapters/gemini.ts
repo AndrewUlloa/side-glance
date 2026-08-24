@@ -34,6 +34,9 @@ export function adaptGeminiHook(
     sessionId: providerSessionId(payload, context, "Gemini"),
     kind,
     context,
+    ...(hookName === "AfterAgent"
+      ? { confidence: "heuristic" as const }
+      : {}),
     ...(hookName === "SessionEnd" && stringValue(payload.reason)
       ? { reason: stringValue(payload.reason) }
       : {}),

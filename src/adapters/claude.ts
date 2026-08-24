@@ -36,6 +36,7 @@ export function adaptClaudeHook(
     sessionId: providerSessionId(payload, context, "Claude"),
     kind,
     context,
+    ...(hookName === "Stop" ? { confidence: "heuristic" as const } : {}),
     ...(stringValue(payload.turn_id)
       ? { turnId: stringValue(payload.turn_id) }
       : {}),

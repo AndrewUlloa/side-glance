@@ -406,6 +406,28 @@ test("dedupes semantic wait notifications across provider transport events", asy
   assert.deepEqual(notifier.events, [firstWait, secondWait]);
 });
 
+test("does not notify Ready from pre-final provider completion hooks", async (context) => {
+  const notifier = new RecordingNotifier();
+  const { controller } = await controllerFixture(context, notifier);
+
+  await controller.submit(
+    event("claude", "retrying", "start", "turn.started", 1_000),
+  );
+  const provisional = event(
+    "claude",
+    "retrying",
+    "stop-hook",
+    "turn.completed",
+    2_000,
+    { confidence: "heuristic" },
+  );
+  const state = await controller.submit(provisional);
+
+  assert.equal(state.sessions["claude:retrying"].phase, "completed");
+  assert.equal(state.sessions["claude:retrying"].confidence, "heuristic");
+  assert.deepEqual(notifier.events, []);
+});
+
 test("does not notify for duplicates, stale events, starts, acknowledgements, or teardown", async (context) => {
   const notifier = new RecordingNotifier();
   const { controller } = await controllerFixture(context, notifier);

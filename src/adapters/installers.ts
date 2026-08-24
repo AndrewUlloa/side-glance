@@ -136,7 +136,7 @@ export async function installProviderHooks(
       options.provider,
     );
     withoutManagedHandlers.push({
-      hooks: [{ type: "command", command }],
+      hooks: [managedHook(options.provider, eventName, command)],
     });
     hooks[eventName] = withoutManagedHandlers;
   }
@@ -159,6 +159,27 @@ export async function installProviderHooks(
     ...result(options.provider, validated.configPath, true),
     ...(backupPath ? { backupPath } : {}),
     installedHooks: PROVIDER_EVENTS[options.provider].length,
+  };
+}
+
+function managedHook(
+  provider: InstallableProvider,
+  eventName: string,
+  command: string,
+): HookCommand {
+  const teardown = eventName === "SessionEnd";
+  return {
+    type: "command",
+    command,
+    // Claude and Codex express hook timeouts in seconds; Gemini uses milliseconds.
+    timeout:
+      provider === "gemini"
+        ? teardown
+          ? 3_000
+          : 10_000
+        : teardown
+          ? 3
+          : 10,
   };
 }
 
