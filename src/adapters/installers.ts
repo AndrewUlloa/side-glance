@@ -132,7 +132,9 @@ export async function inspectProviderHooks(options: {
       }),
     ),
   );
-  const expectedEvents = PROVIDER_EVENTS[options.provider].length;
+  const providerEvents = PROVIDER_EVENTS[options.provider];
+  const expectedEvents = providerEvents.length;
+  const managedEvents = new Set(managedHooks.map(({ event }) => event));
   const inspection: ProviderInspection = {
     provider: options.provider,
     configPath,
@@ -142,7 +144,7 @@ export async function inspectProviderHooks(options: {
     existingHookGroups: groups.length,
     sideGlanceHooks: managedHooks.length,
     integrationStatus:
-      managedHooks.length === expectedEvents
+      providerEvents.every((event) => managedEvents.has(event))
         ? "installed"
         : managedHooks.length > 0
           ? "partial"

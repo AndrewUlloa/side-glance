@@ -4,7 +4,7 @@ Date: 2026-08-24
 
 Branch: `codex/beta-release-readiness`
 
-Status: local release candidate passes; live validation and publication remain gated
+Status: PR #40 passes local and hosted gates; promotion and publication remain gated
 
 ## Beta release-readiness verdict
 
@@ -15,18 +15,26 @@ capability diagnostics, OpenCode/Aider boundaries, non-color terminal markers, t
 fallback, dependency advisories, and public claims all have observable regression
 coverage.
 
-The candidate is not published or deployed from this branch. The remaining required
+The requested manual CodeRabbit review of PR #40 raised eight inline findings. Seven
+were valid and now have regression coverage: minimal state-mutating command output,
+rollback-safe R2 guidance, exact provider-event coverage, one-handle Aider config
+inspection, lifecycle-title option parsing, OpenCode executable validation, and
+server-scoped tmux ownership for linked windows. The proposed EWMA change was rejected
+because the approved contract explicitly measures reply latency from completion to the
+next acknowledgement or turn start, which the reducer already implements. The generic
+80% docstring warning is not a repository gate or a published-TypeScript-API contract.
+
+The candidate is not published. PR #40 has a verified Vercel preview, the live main
+ruleset now includes `require-staging-head`, and one clearly labeled macOS notification
+completed through the real CLI backend with the `Glass` sound. The remaining required
 actions are deliberately external:
 
-1. Apply the reviewed [main ruleset payload](./.github/rulesets/protect-main.json) to
-   live ruleset `20776489`; the read-only comparison found only the missing
-   `require-staging-head` context.
-2. With explicit approval, fire one real macOS notification with sound and visually
-   check native Terminal.app. Exact PTY bytes and a real isolated tmux server pass, but
-   a headless session cannot prove what Notification Center or Terminal.app displays.
-3. Push this branch, merge it into protected `staging`, refresh PR #37 from `staging`
+1. Merge reviewed PR #40 into protected `staging`, refresh PR #37 from `staging`
    to `main`, and require new protected CI/Vercel results.
-4. Only from the exact green `main` commit, create the annotated beta.3 tag and allow
+2. Visually check native Terminal.app. Exact PTY bytes, a real isolated tmux server,
+   and the macOS notification subprocess pass, but a headless session cannot prove what
+   Notification Center or Terminal.app displayed to the user.
+3. Only from the exact green `main` commit, create the annotated beta.3 tag and allow
    the protected workflow to publish npm and the immutable GitHub prerelease. The
    Homebrew tap remains a separate post-release pull request.
 
@@ -42,8 +50,8 @@ TLS verification.
 |---|---|---|
 | Correctness | Pass locally | Epoch-millisecond 5/60/300-second cases, EWMA alpha 0.4, 300–450-second adaptive maximum, phase parity, multi-pane ownership, migration, orphan reconciliation, provider retries, semantic dedupe, terminal bytes, and packaged execution pass. |
 | Readability and simplicity | Pass | One canonical visual policy drives the controller and preview; provider capability fields are explicit; wrapper/title/notification opt-ins are named and documented; support tiers are consistent across public surfaces. |
-| Architecture | Pass | Reducer, store, lease arbitration, renderers, provider adapters, notifier side effects, and site projection remain separate. Physical tmux windows—not pane IDs—own render state, and provider IDs remain distinct from wrapper ownership. |
-| Security and privacy | Pass locally | Hook stdout cannot expose global state; configuration and TTY paths are bounded/no-follow; child processes use argv without a shell; labels/sounds/titles are sanitized; full and production-only npm audits report zero vulnerabilities. |
+| Architecture | Pass | Reducer, store, lease arbitration, renderers, provider adapters, notifier side effects, and site projection remain separate. Server-scoped physical tmux windows—including windows linked across sessions—own render state, and provider IDs remain distinct from wrapper ownership. |
+| Security and privacy | Pass locally | Hook and state-mutating command acknowledgements cannot expose global state; Aider configuration is opened no-follow and inspected/read through one bounded handle; other configuration and TTY paths are bounded/no-follow; child processes use argv without a shell; labels/sounds/titles are sanitized; full and production-only npm audits report zero vulnerabilities. |
 | Performance and resilience | Pass | Hooks are bounded to provider-specific seconds, teardown is shorter and non-fatal, replay/session/surface caches are capped, stale leases reconcile after 30 minutes, R2 assets are immutable, and reduced-motion/offline browser paths remain usable. |
 
 The original `idle_prompt` heat escalation was reviewed and not restored. The approved
@@ -53,8 +61,8 @@ an idle-specific thermal phase would be a separate product/protocol change.
 
 ## Verification evidence
 
-- Node `24.18.0`; unit `46/46`; integration `70/70` plus one opt-in live tmux test
-  `1/1`; core coverage `91.06%` lines, `78.41%` branches, `95.45%` functions.
+- Node `24.18.0`; unit `47/47`; integration `75/75` plus one opt-in live tmux test
+  `1/1`; core coverage `91.03%` lines, `78.18%` branches, `95.50%` functions.
 - Distribution `19/19`; site `36/36`; rendered HTML `2/2`; lint and typecheck pass.
   The full `npm test` command and canonical Turbopack build pass. The only build note
   is the known non-blocking Alan Sans fallback-metrics warning.
@@ -64,7 +72,8 @@ an idle-specific thermal phase would be a separate product/protocol change.
 - The updated dependency tree is valid. Full and production-only `npm audit` both
   report zero findings after compatible Babel, brace-expansion, esbuild, and js-yaml
   fixes.
-- Real Chromium at `1440×1000` and `390×844`: meaningful content, zero horizontal
+- Real Chromium on the PR #40 Vercel preview at `1440×1000` and `390×844`:
+  meaningful content, zero horizontal
   overflow, no framework overlay, empty console/page-error logs, keyboard focus order,
   lifecycle selection, 16px mobile input, stable reduced-motion state, usable core UI
   during an offline R2 image failure, and a `1200×630` social preview all pass.
@@ -78,18 +87,21 @@ an idle-specific thermal phase would be a separate product/protocol change.
   iTerm, Ghostty, Gemini, OpenCode, OpenCode 2, and Aider are absent. Actual `doctor`
   reports no Side Glance hooks installed, Codex native notifications ready while
   unfocused, and Side Glance's macOS `osascript` backend available.
-- Live GitHub read-only checks confirm public visibility, active main/staging/tag
+- Live GitHub checks confirm public visibility, active main/staging/tag
   rulesets, tag-scoped npm/GitHub-release environments, private vulnerability
   reporting, Dependabot security updates, secret scanning with push protection, and
-  immutable releases. Only the main required-check list is missing
-  `require-staging-head`.
+  immutable releases. Main ruleset `20776489` now requires `require-staging-head` in
+  addition to the five existing CI/Vercel contexts.
 - Release provenance uses pinned `actions/attest` v4 with the required
   `artifact-metadata: write` permission. npm trusted publishing remains limited to
   publication; stale `latest` cleanup is an explicit interactive owner action.
 
 ## Unsupported or unverified boundaries
 
-- No real notification was fired and no live provider configuration was changed.
+- A real, clearly labeled Side Glance notification completed through macOS `osascript`
+  with the `Glass` sound, using isolated temporary state. Headless automation cannot
+  confirm whether Focus or per-app preferences made it visible or audible. No live
+  provider configuration was changed.
 - Terminal.app OSC 11 remains visually unverified; the opt-in phase title is the
   documented fallback. iTerm and Ghostty were not installed for a visual matrix.
 - Gemini, OpenCode, and Aider remain experimental fixture/contract evidence. Claude

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { constants } from "node:fs";
 import {
   chmod,
   mkdir,
@@ -7,12 +8,16 @@ import {
   readFile,
   rename,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+
+import { inspectProviderCapabilities } from "../../src/cli/doctor.ts";
+import { inspectNotificationReadiness } from "../../src/notifications/inspection.ts";
 
 const cliPath = fileURLToPath(new URL("../../src/cli/entry.ts", import.meta.url));
 
@@ -104,7 +109,7 @@ async function stateDirectory(context: test.TestContext): Promise<string> {
   return directory;
 }
 
-test("accepts a normalized event and reports status without prompt content", async (context) => {
+test("acknowledges a normalized event minimally and reports status without prompt content", async (context) => {
   const directory = await stateDirectory(context);
   const payload = {
     v: 1,
@@ -124,7 +129,7 @@ test("accepts a normalized event and reports status without prompt content", asy
     input: JSON.stringify(payload),
   });
   assert.equal(submitted.code, 0, submitted.stderr);
-  assert.equal(JSON.parse(submitted.stdout).sessions["claude:session-1"].phase, "working");
+  assert.equal(submitted.stdout, "{}\n");
 
   const status = await runCli(["status", "--json"], {
     stateDirectory: directory,
@@ -225,7 +230,11 @@ test("exposes a targetless Aider notification bridge with inherited session iden
   );
 
   assert.equal(result.code, 0, result.stderr);
-  const state = JSON.parse(result.stdout);
+  assert.equal(result.stdout, "{}\n");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const state = JSON.parse(status.stdout);
   assert.equal(state.sessions["aider:aider-wrapper-session"].phase, "completed");
   assert.equal(result.stdout.includes("Docs worker"), false);
 
@@ -280,6 +289,74 @@ test("emits only an empty JSON acknowledgement for Gemini hooks", async (context
   assert.equal(result.code, 0, result.stderr);
   assert.equal(result.stdout, "{}\n");
   assert.equal(result.stdout.includes("session"), false);
+});
+
+test("accepts terminal title as a boolean lifecycle option", async (context) => {
+  const directory = await stateDirectory(context);
+  const eventPayload = {
+    v: 1,
+    eventId: "title-event",
+    source: "generic",
+    sessionId: "title-event-session",
+    kind: "turn.started",
+    occurredAt: 1_000,
+    confidence: "wrapper",
+    target: { surfaceId: "test:title-event" },
+  };
+  const invocations = [
+    runCli(["event", "--terminal-title", "--json"], {
+      stateDirectory: directory,
+      input: JSON.stringify(eventPayload),
+    }),
+    runCli(
+      [
+        "hook",
+        "--provider",
+        "gemini",
+        "--surface",
+        "test:title-hook",
+        "--terminal-title",
+        "--json",
+      ],
+      {
+        stateDirectory: directory,
+        input: JSON.stringify({
+          hook_event_name: "BeforeAgent",
+          session_id: "title-hook-session",
+        }),
+      },
+    ),
+    runCli(
+      [
+        "notify",
+        "--source",
+        "aider",
+        "--kind",
+        "completed",
+        "--session",
+        "title-notify-session",
+        "--surface",
+        "test:title-notify",
+        "--terminal-title",
+        "--json",
+      ],
+      {
+        stateDirectory: directory,
+        env: { SIDE_GLANCE_NOTIFICATION_BACKEND: "none" },
+      },
+    ),
+  ];
+
+  for (const result of await Promise.all(invocations)) {
+    assert.equal(result.code, 0, result.stderr);
+  }
+
+  const unknown = await runCli(
+    ["event", "--terminal-title", "--unknown", "--json"],
+    { stateDirectory: directory, input: JSON.stringify(eventPayload) },
+  );
+  assert.equal(unknown.code, 1);
+  assert.match(unknown.stderr, /unknown option/u);
 });
 
 test("rejects malformed event JSON without creating executable state", async (context) => {
@@ -437,6 +514,110 @@ test("doctor separates provider capabilities without claiming live verification"
   ) as Array<{ liveVerification: { status: string } }>) {
     assert.equal(capability.liveVerification.status, "not-run");
   }
+});
+
+test("doctor reads Aider config through one verified no-follow handle", async (context) => {
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-aider-handle-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const configPath = path.join(home, ".aider.conf.yml");
+  const source = Buffer.from(
+    "notifications-command: side-glance notify --source aider --kind completed --json\n",
+  );
+  const operations: string[] = [];
+  let openedPath: string | undefined;
+  let openedFlags: number | undefined;
+  const notifications = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: process.platform,
+    pathProbe: async () => false,
+    backendHints: { desktopSession: false },
+  });
+
+  const inspection = await inspectProviderCapabilities({
+    homeDirectory: home,
+    environment: {},
+    pathProbe: async () => false,
+    hooks: {},
+    notifications,
+    openAiderConfig: async (filePath: string, flags: number) => {
+      operations.push("open");
+      openedPath = filePath;
+      openedFlags = flags;
+      return {
+        async stat() {
+          operations.push("stat");
+          return { isFile: () => true, size: source.byteLength };
+        },
+        async read(
+          buffer: Uint8Array,
+          offset: number,
+          length: number,
+          position: number,
+        ) {
+          operations.push("read");
+          const bytesRead = Math.max(
+            0,
+            Math.min(length, source.byteLength - position),
+          );
+          buffer.set(source.subarray(position, position + bytesRead), offset);
+          return { bytesRead };
+        },
+        async close() {
+          operations.push("close");
+        },
+      };
+    },
+  });
+
+  assert.equal(
+    (
+      inspection.providers.aider as {
+        integration: { status: string };
+      }
+    ).integration.status,
+    "configured",
+  );
+  assert.equal(openedPath, configPath);
+  assert.equal(openedFlags, constants.O_RDONLY | constants.O_NOFOLLOW);
+  assert.equal(operations[0], "open");
+  assert.equal(operations[1], "stat");
+  assert.ok(operations.slice(2, -1).every((operation) => operation === "read"));
+  assert.equal(operations.at(-1), "close");
+});
+
+test("doctor fails closed for symlinked and oversized Aider config", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-aider-symlink-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const outside = path.join(home, "outside.yml");
+  const configPath = path.join(home, ".aider.conf.yml");
+  await writeFile(
+    outside,
+    "notifications-command: /usr/local/bin/unrelated-alert\n",
+  );
+  await symlink(outside, configPath);
+
+  const symlinked = await runCli(["doctor", "--home", home, "--json"], {
+    stateDirectory: directory,
+  });
+
+  assert.equal(symlinked.code, 0, symlinked.stderr);
+  const symlinkedIntegration = JSON.parse(symlinked.stdout).capabilities
+    .providers.aider.integration;
+  assert.equal(symlinkedIntegration.status, "unknown");
+  assert.equal(symlinkedIntegration.source, "user-config");
+
+  await rm(configPath);
+  await writeFile(configPath, "x".repeat(1_048_577));
+  const oversized = await runCli(["doctor", "--home", home, "--json"], {
+    stateDirectory: directory,
+  });
+
+  assert.equal(oversized.code, 0, oversized.stderr);
+  const oversizedIntegration = JSON.parse(oversized.stdout).capabilities
+    .providers.aider.integration;
+  assert.equal(oversizedIntegration.status, "unknown");
+  assert.equal(oversizedIntegration.source, "user-config");
 });
 
 test("doctor reports malformed provider notification settings instead of aborting", async (context) => {
@@ -846,6 +1027,40 @@ test("installs and removes the owned OpenCode notification plugin through the CL
   await assert.rejects(() => readFile(result.configPath), /ENOENT/u);
 });
 
+test("rejects an executable directory masquerading as OpenCode on PATH", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-opencode-path-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "side-glance-bin");
+  const providerBin = path.join(home, "bin");
+  await mkdir(path.join(providerBin, "opencode"), { recursive: true });
+  await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+
+  const result = await runCli(
+    [
+      "install",
+      "opencode",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { stateDirectory: directory, env: { PATH: providerBin } },
+  );
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /stable v1|regular executable|not found/i);
+  await assert.rejects(
+    () =>
+      readFile(
+        path.join(home, ".config", "opencode", "plugins", "side-glance.js"),
+        "utf8",
+      ),
+    /ENOENT/u,
+  );
+});
+
 test("installs colors-only OpenCode v1 support and rejects v2-only runtimes", async (context) => {
   const directory = await stateDirectory(context);
   const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-opencode-api-"));
@@ -897,6 +1112,10 @@ test("installs colors-only OpenCode v1 support and rejects v2-only runtimes", as
   assert.match(incompatible.stderr, /OpenCode 2|v2|stable v1/i);
   await assert.rejects(() => readFile(pluginPath), /ENOENT/u);
 
+  await rm(path.join(providerBin, "opencode2"));
+  await writeFile(path.join(providerBin, "opencode"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
   const overridden = await runCli(
     [
       "install",
@@ -1020,7 +1239,11 @@ test("reset releases only the selected session", async (context) => {
     { stateDirectory: directory },
   );
   assert.equal(reset.code, 0, reset.stderr);
-  const sessions = JSON.parse(reset.stdout).sessions;
+  assert.equal(reset.stdout, "{}\n");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const sessions = JSON.parse(status.stdout).sessions;
   assert.equal(sessions["generic:one"].phase, "inactive");
   assert.equal(sessions["generic:two"].phase, "working");
 });
@@ -1052,7 +1275,11 @@ test("reset --all releases every tracked session after abnormal teardown", async
   });
 
   assert.equal(reset.code, 0, reset.stderr);
-  const state = JSON.parse(reset.stdout);
+  assert.equal(reset.stdout, "{}\n");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const state = JSON.parse(status.stdout);
   assert.ok(Object.values(state.sessions).every(
     (session) => (session as { phase: string }).phase === "inactive",
   ));

@@ -54,14 +54,19 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     case "event": {
       requireOnlyOptions(
         args.slice(1),
-        ["--notifications", "--notification-sound", "--label", "--json"],
+        [
+          "--notifications",
+          "--notification-sound",
+          "--label",
+          "--terminal-title",
+          "--json",
+        ],
         "event",
-        ["--notifications", "--json"],
+        ["--notifications", "--terminal-title", "--json"],
       );
       const event = parseSideGlanceEvent(JSON.parse(await readBoundedStdin()));
-      writeJson(
-        await controllerWithNotifications(store, args).submit(event),
-      );
+      await controllerWithNotifications(store, args).submit(event);
+      writeJson({});
       return 0;
     }
     case "hook": {
@@ -85,10 +90,11 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           "--notifications",
           "--notification-sound",
           "--label",
+          "--terminal-title",
           "--json",
         ],
         "hook",
-        ["--notifications", "--json"],
+        ["--notifications", "--terminal-title", "--json"],
       );
       const sessionIndex = args.indexOf("--session");
       const fallbackSessionId =
@@ -138,9 +144,11 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           "--surface",
           "--notification-sound",
           "--label",
+          "--terminal-title",
           "--json",
         ],
         "notify",
+        ["--terminal-title", "--json"],
       );
       const event = parseSideGlanceEvent({
         v: 1,
@@ -153,9 +161,8 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         confidence: "notification",
         ...(target ? { target } : {}),
       });
-      writeJson(
-        await controllerWithNotifications(store, args, true).submit(event),
-      );
+      await controllerWithNotifications(store, args, true).submit(event);
+      writeJson({});
       return 0;
     }
     case "install":
@@ -246,7 +253,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
             ...(session.target ? { target: session.target } : {}),
           });
         }
-        writeJson(current);
+        writeJson({});
         return 0;
       }
       const source = parseSideGlanceSource(parseOption(args, "--source"));
@@ -255,7 +262,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       const current = await store.read();
       const session = current.sessions[sessionKey(source, sessionId)];
       if (!session) throw new Error("reset session was not found.");
-      const reset = await new SideGlanceController(store).submit({
+      await new SideGlanceController(store).submit({
         v: 1,
         eventId: randomUUID(),
         source,
@@ -267,7 +274,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         confidence: "wrapper",
         ...(session.target ? { target: session.target } : {}),
       });
-      writeJson(reset);
+      writeJson({});
       return 0;
     }
     case "run": {

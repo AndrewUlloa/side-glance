@@ -67,8 +67,10 @@ After the `sideglance.ai` zone is active in the same Cloudflare account as the b
 3. Warm an asset twice and confirm a Cloudflare cache hit on the custom domain.
 4. Change the manifest default and Vercel environment only after the custom-domain
    verification is recorded.
-5. Disable the temporary `r2.dev` public URL after the promoted site no longer
-   references it.
+5. Keep the temporary `r2.dev` public URL enabled while any retained Vercel
+   deployment still references it. Disable it only after every retained rollback
+   target has either been retired or rebuilt and verified against the custom
+   domain.
 
 The apex and `www` records remain DNS-only records pointing to Vercel. Do not put
 Cloudflare's HTTP reverse proxy in front of the Next.js application.

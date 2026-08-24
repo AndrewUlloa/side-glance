@@ -49,11 +49,53 @@ test("maps every pane in one tmux window to one physical surface", async () => {
 
   assert.equal(
     paneThree.surfaceId,
-    "tmux:/private/tmp/tmux-501/default,123,0,@7",
+    "tmux:/private/tmp/tmux-501/default,123,@7",
   );
   assert.equal(paneFour.surfaceId, paneThree.surfaceId);
   assert.equal(paneThree.tmuxPane, "%3");
   assert.equal(paneFour.tmuxPane, "%4");
+});
+
+test("maps linked tmux sessions to one server-owned window surface", async () => {
+  const discoverTmuxSurface = async (
+    tmuxIdentity: string,
+    windowId: string,
+  ): Promise<string> =>
+    (
+      await discoverTerminalTarget({
+        environment: { TMUX: tmuxIdentity, TMUX_PANE: "%3" },
+        resolveTmuxWindow: async () => windowId,
+      })
+    ).surfaceId;
+
+  const linkedSessionZero = await discoverTmuxSurface(
+    "/private/tmp/tmux-501/linked,socket,123,0",
+    "@7",
+  );
+  const linkedSessionNine = await discoverTmuxSurface(
+    "/private/tmp/tmux-501/linked,socket,123,9",
+    "@7",
+  );
+
+  assert.equal(
+    linkedSessionZero,
+    "tmux:/private/tmp/tmux-501/linked,socket,123,@7",
+  );
+  assert.equal(linkedSessionNine, linkedSessionZero);
+  assert.notEqual(
+    await discoverTmuxSurface(
+      "/private/tmp/tmux-501/linked,socket,124,0",
+      "@7",
+    ),
+    linkedSessionZero,
+  );
+  assert.notEqual(
+    await discoverTmuxSurface(
+      "/private/tmp/tmux-501/linked,socket,123,0",
+      "@8",
+    ),
+    linkedSessionZero,
+  );
 });
 
 test("accepts legacy wrapper identity only as a fallback", async () => {

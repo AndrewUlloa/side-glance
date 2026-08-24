@@ -1,10 +1,28 @@
-import { lstat, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open } from "node:fs/promises";
 import path from "node:path";
 
 import { inspectOpenCodePlugin } from "../adapters/opencode-installer.ts";
 import type { NotificationReadinessInspection } from "../notifications/inspection.ts";
 
 type ProviderName = "claude" | "codex" | "gemini" | "opencode" | "aider";
+const MAX_AIDER_CONFIG_BYTES = 1_048_576;
+
+export interface AiderConfigHandle {
+  stat(): Promise<{ isFile(): boolean; size: number }>;
+  read(
+    buffer: Uint8Array,
+    offset: number,
+    length: number,
+    position: number,
+  ): Promise<{ bytesRead: number }>;
+  close(): Promise<void>;
+}
+
+export type AiderConfigOpener = (
+  filePath: string,
+  flags: number,
+) => Promise<AiderConfigHandle>;
 
 export function inspectTerminalCapabilities(options: {
   platform: NodeJS.Platform;
@@ -55,6 +73,7 @@ export async function inspectProviderCapabilities(options: {
   pathProbe: (candidate: string) => boolean | Promise<boolean>;
   hooks: Readonly<Record<string, unknown>>;
   notifications: NotificationReadinessInspection;
+  openAiderConfig?: AiderConfigOpener;
 }): Promise<{ providers: Record<ProviderName, unknown> }> {
   const providerNames = [
     "claude",
@@ -76,6 +95,7 @@ export async function inspectProviderCapabilities(options: {
   const aiderBridge = await inspectAiderBridge(
     options.homeDirectory,
     options.environment,
+    options.openAiderConfig ?? ((filePath, flags) => open(filePath, flags)),
   );
   const surfaceStatus = options.environment.SIDE_GLANCE_SURFACE_ID
     ? "wrapper-provided"
@@ -190,6 +210,7 @@ function overrideStatus(
 async function inspectAiderBridge(
   homeDirectory: string,
   environment: Readonly<Record<string, string | undefined>>,
+  openAiderConfig: AiderConfigOpener,
 ) {
   const configPath = path.join(homeDirectory, ".aider.conf.yml");
   const environmentCommand = environment.AIDER_NOTIFICATIONS_COMMAND;
@@ -204,29 +225,34 @@ async function inspectAiderBridge(
     };
   }
   try {
-    const metadata = await lstat(configPath);
-    if (metadata.isSymbolicLink() || !metadata.isFile() || metadata.size > 1_048_576) {
+    const handle = await openAiderConfig(
+      configPath,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    try {
+      const metadata = await handle.stat();
+      if (!metadata.isFile() || metadata.size > MAX_AIDER_CONFIG_BYTES) {
+        return unknownAiderConfig(configPath);
+      }
+      const raw = await readBoundedAiderConfig(handle);
+      if (raw === undefined) return unknownAiderConfig(configPath);
+      const command = aiderNotificationCommand(raw);
       return {
-        status: "unknown",
-        source: "user-config",
+        status:
+          command === undefined
+            ? "not-configured"
+            : command === null
+              ? "unknown"
+              : sideGlanceAiderCommand(command)
+                ? "configured"
+                : "custom-command",
+        source: command === undefined ? null : "user-config",
         configPath,
         higherPrecedenceOverridesPossible: true,
       };
+    } finally {
+      await handle.close();
     }
-    const command = aiderNotificationCommand(await readFile(configPath, "utf8"));
-    return {
-      status:
-        command === undefined
-          ? "not-configured"
-          : command === null
-            ? "unknown"
-            : sideGlanceAiderCommand(command)
-              ? "configured"
-              : "custom-command",
-      source: command === undefined ? null : "user-config",
-      configPath,
-      higherPrecedenceOverridesPossible: true,
-    };
   } catch (error) {
     if (hasCode(error, "ENOENT")) {
       return {
@@ -238,11 +264,39 @@ async function inspectAiderBridge(
     }
     return {
       status: "unknown",
-      source: null,
+      source: "user-config",
       configPath,
       higherPrecedenceOverridesPossible: true,
     };
   }
+}
+
+async function readBoundedAiderConfig(
+  handle: AiderConfigHandle,
+): Promise<string | undefined> {
+  const bytes = Buffer.alloc(MAX_AIDER_CONFIG_BYTES + 1);
+  let offset = 0;
+  while (offset < bytes.byteLength) {
+    const { bytesRead } = await handle.read(
+      bytes,
+      offset,
+      bytes.byteLength - offset,
+      offset,
+    );
+    if (bytesRead === 0) break;
+    offset += bytesRead;
+  }
+  if (offset > MAX_AIDER_CONFIG_BYTES) return undefined;
+  return bytes.subarray(0, offset).toString("utf8");
+}
+
+function unknownAiderConfig(configPath: string) {
+  return {
+    status: "unknown" as const,
+    source: "user-config" as const,
+    configPath,
+    higherPrecedenceOverridesPossible: true as const,
+  };
 }
 
 function aiderNotificationCommand(raw: string): string | null | undefined {

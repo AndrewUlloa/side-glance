@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { access } from "node:fs/promises";
+import { access, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import path, { delimiter } from "node:path";
 
@@ -100,7 +100,10 @@ async function executableOnPath(
   for (const directory of (environment.PATH ?? "").split(delimiter)) {
     if (!directory) continue;
     try {
-      await access(path.join(directory, command), constants.X_OK);
+      const candidate = path.join(directory, command);
+      const metadata = await stat(candidate);
+      if (!metadata.isFile()) continue;
+      await access(candidate, constants.X_OK);
       return true;
     } catch {
       // Continue through PATH without executing an untrusted provider binary.

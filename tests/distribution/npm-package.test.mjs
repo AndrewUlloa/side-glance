@@ -175,8 +175,14 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     ],
     { cwd: temporary, env: runtimeEnvironment },
   );
+  assert.equal(notified.stdout, "{}\n");
+  const notifiedStatus = await command(executable, ["status", "--json"], {
+    cwd: temporary,
+    env: runtimeEnvironment,
+  });
   assert.equal(
-    JSON.parse(notified.stdout).sessions["aider:packaged-aider-session"].phase,
+    JSON.parse(notifiedStatus.stdout).sessions["aider:packaged-aider-session"]
+      .phase,
     "completed",
   );
 

@@ -136,6 +136,40 @@ test("installs optional notification flags into every managed hook", async (cont
   assert.ok(inspection.managedHooks.every((hook) => hook.timeout !== null));
 });
 
+test("reports partial integration when duplicate hooks hide missing events", async (context) => {
+  const home = await fixtureHome(context);
+  const targetPath = configPath(home, "claude");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(
+    targetPath,
+    JSON.stringify({
+      hooks: {
+        Stop: Array.from({ length: 7 }, () => ({
+          hooks: [
+            {
+              type: "command",
+              command:
+                "SIDE_GLANCE_MANAGED_HOOK=1 '/usr/local/bin/side-glance' hook --provider claude --json",
+            },
+          ],
+        })),
+      },
+    }),
+  );
+
+  const inspection = await inspectProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+  });
+
+  assert.equal(inspection.managedHooks.length, inspection.expectedEvents);
+  assert.deepEqual(
+    [...new Set(inspection.managedHooks.map((hook) => hook.event))],
+    ["Stop"],
+  );
+  assert.equal(inspection.integrationStatus, "partial");
+});
+
 test("installs provider-specific bounded hook timeouts", async (context) => {
   const expectations = {
     claude: { ordinary: 10, teardown: 3 },

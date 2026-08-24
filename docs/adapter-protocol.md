@@ -1,6 +1,6 @@
 # Adapter protocol v1
 
-Adapters submit one JSON object on stdin to `side-glance event --json`, or translate a provider payload through `side-glance hook --provider <name> --json`. Add `--notifications` to either Side Glance command to request the independent native notification side effect. Hook stdout is provider-specific and minimal: Claude is silent, while Codex and Gemini receive `{}`. Global Side Glance state is available only through `side-glance status --json`.
+Adapters submit one JSON object on stdin to `side-glance event --json`, or translate a provider payload through `side-glance hook --provider <name> --json`. Add `--notifications` to either Side Glance command to request the independent native notification side effect. Successful `event`, `notify`, and `reset` JSON commands emit only an empty JSON object (`{}` followed by a newline); they never serialize global state. Hook stdout remains provider-specific and minimal: Claude and OpenCode are silent, while Codex and Gemini receive the same empty JSON object. `side-glance status --json` is the only command that returns the full global Side Glance state.
 
 ```json
 {
