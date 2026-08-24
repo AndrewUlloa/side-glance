@@ -610,7 +610,7 @@ None blocking. Public package publication and live config mutation remain explic
 
 - [x] Provider hooks cannot leak global state or block for default multi-minute budgets
 - [x] Semantic duplicate and native-notification warnings are proven
-- [ ] Support tiers match live evidence
+- [x] Support tiers match live evidence
 
 - [ ] **Task 56: Add non-color markers and Terminal.app fallback**
   - **Description:** Render distinct bounded tmux markers and expose an explicitly opt-in,
@@ -622,7 +622,7 @@ None blocking. Public package publication and live config mutation remain explic
   - **Files:** renderers, CLI options/doctor, renderer tests
   - **Size:** M
 
-- [ ] **Task 57: Align public claims and release narrative**
+- [x] **Task 57: Align public claims and release narrative**
   - **Description:** Update site, both READMEs, protocol/edge-case docs, changelog, and PR
     narrative to match the verified package and provider tiers.
   - **Acceptance:** install instructions use `@beta`; no custom-domain or live-provider

@@ -20,7 +20,7 @@ This audit records the failure modes found in the original personal `stoplight.s
 | Codex notifier is replaced | Hooks live in their own file; install/uninstall never touches `config.toml` notify | Installer and doctor tests |
 | Multiple agent alerts are indistinguishable | Explicit sanitized labels or privacy-safe session digests; no prompt-derived titles | Notification policy and CLI tests |
 | Provider-native and Side Glance alerts duplicate | Separate readiness report and explicit Side Glance opt-in; native settings remain untouched | Doctor and installer tests |
-| A notification command corrupts hook stdout | Native delivery is a controller side effect; hook stdout remains one JSON object | CLI integration tests |
+| A notification command corrupts hook stdout | Native delivery is a controller side effect; provider acknowledgements remain minimal (Claude is silent; Codex and Gemini receive `{}`) | CLI integration tests |
 | Notification backend is absent or denied | macOS/Linux capability checks and non-fatal no-op degradation | Native notifier tests |
 | State/replay data grows forever | Replay IDs, inactive sessions, and inactive surfaces have tested caps; active sessions are retained | Reducer and controller compaction tests |
 
@@ -30,4 +30,4 @@ Lifecycle cleanup is deterministic when the provider hook, wrapper, or controlle
 
 ## Portability boundary
 
-OSC background support varies across terminal emulators, SSH/container layers, tmux passthrough settings, and Windows ConPTY. Side Glance safely degrades when no verified render channel exists. Desktop notifications are global OS effects: Focus or notification preferences may suppress them, Linux sound is best-effort, and clicking cannot reliably select an originating iTerm tab or tmux pane. Gemini, OpenCode, and Aider contracts are fixture verified in this development environment; their binaries were not available for live provider execution.
+OSC background support varies across terminal emulators, SSH/container layers, tmux passthrough settings, and Windows ConPTY. Side Glance safely degrades when no verified render channel exists. tmux adds phase-specific markers; direct terminals may opt into a phase-only title, while Terminal.app OSC 11 remains explicitly unverified. Desktop notifications are global OS effects: Focus or notification preferences may suppress them, Linux sound is best-effort, and clicking cannot reliably select an originating terminal, tab, or tmux pane. Claude and Codex are locally contract-audited; Gemini, OpenCode, and Aider remain experimental because their live binary matrix has not passed.

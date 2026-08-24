@@ -106,8 +106,13 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     env: { ...runtimeEnvironment, SIDE_GLANCE_SURFACE_ID: "test:packaged-hook" },
     input: hookPayload,
   });
+  assert.equal(firstHook.stdout, "");
+  const workingStatus = await command(executable, ["status", "--json"], {
+    cwd: temporary,
+    env: runtimeEnvironment,
+  });
   assert.equal(
-    JSON.parse(firstHook.stdout).sessions["claude:packaged-hook-session"].phase,
+    JSON.parse(workingStatus.stdout).sessions["claude:packaged-hook-session"].phase,
     "working",
   );
 
@@ -134,8 +139,13 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
       reason: "reinstalled",
     }),
   });
+  assert.equal(hookAfterReinstall.stdout, "");
+  const inactiveStatus = await command(executable, ["status", "--json"], {
+    cwd: temporary,
+    env: runtimeEnvironment,
+  });
   assert.equal(
-    JSON.parse(hookAfterReinstall.stdout).sessions["claude:packaged-hook-session"].phase,
+    JSON.parse(inactiveStatus.stdout).sessions["claude:packaged-hook-session"].phase,
     "inactive",
   );
   const version = await command(executable, ["--version"], {

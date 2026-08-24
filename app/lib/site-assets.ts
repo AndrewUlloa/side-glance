@@ -1,6 +1,6 @@
 import manifest from "../../assets/r2-manifest.json";
 
-export const SIDE_GLANCE_SITE_URL = "https://sideglance.ai";
+export const SIDE_GLANCE_SITE_URL = "https://side-glance.vercel.app";
 
 const configuredAssetOrigin =
   process.env.NEXT_PUBLIC_ASSET_ORIGIN ?? manifest.defaultOrigin;

@@ -6,30 +6,33 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 
 ## What is proven
 
-- Claude Code, Codex, and Gemini hook installers merge configuration transactionally and preserve unrelated handlers. Codex's existing `notify` configuration is separate and untouched.
-- An owned OpenCode plugin and an Aider completion bridge add lifecycle events without changing either provider's native notification preferences.
-- Opt-in macOS and Linux desktop notifications cover ready, attention, failure, and cancellation events. macOS supports a configurable installed sound; Linux sound is best-effort.
+- Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider remain experimental until their live binary matrices pass. Every installer is transactional and preserves unrelated settings.
+- Claude/Codex `Stop` and Gemini `AfterAgent` are pre-final hooks: they can paint the best-known Ready state, but do not ring a misleading final Ready alert while another provider hook can still block or retry.
+- OpenCode support targets the stable v1 plugin API and fails closed for the incompatible `opencode2` beta. Aider uses only its documented static notification command paired with the wrapper.
+- Opt-in macOS and Linux desktop alerts cover accepted waits, failures, cancellations, and genuinely final completions. macOS supports a requested installed sound name; Linux sound is best-effort, and neither path claims audible delivery without a live test.
 - Delayed generations, older timestamps, mismatched turn IDs, and duplicate event IDs cannot repaint newer state.
 - Shared surfaces have one deterministic owner. Releasing one session reveals the next owner; final release resets only Side Glance-owned state.
-- TTY targets must be owned character devices. tmux options are captured and restored exactly; pane sessions use tmux status instead of a whole-client background wash.
+- TTY targets must be owned character devices. tmux options are captured and restored exactly, with phase-specific non-color markers. `--terminal-title` is an explicit, phase-only fallback for direct terminals.
 - Prompt, response, and transcript content are not part of the protocol or persisted state.
 
 ## Installation status
 
-Side Glance is available as a beta package. Its canonical site is
-[sideglance.ai](https://sideglance.ai); until registrar DNS activation completes,
-use the [Vercel fallback](https://side-glance.vercel.app). The CLI prerelease is
-published on npm's `beta` channel.
+The verified public site is the [Vercel deployment](https://side-glance.vercel.app).
+`sideglance.ai` is only a future custom-domain option and does not currently resolve.
+Side Glance is available as a beta package. The npm beta tag currently resolves
+to `0.1.0-beta.1`; `0.1.0-beta.3` is an unpublished source candidate and must not
+be described as installed until its protected release workflow completes.
 
 ```bash
-# Durable Node installation
+# Latest public beta (currently beta.1)
 npm install --global side-glance@beta
 
 # Ephemeral diagnostics or preview only
 npx side-glance@beta doctor --json
 ```
 
-Standalone macOS and Linux archives will be attached to each GitHub Release. Homebrew is the preferred macOS path after the generated formula is accepted into the project tap.
+No GitHub Release or Homebrew tap exists yet. Standalone macOS and Linux archives
+remain release-candidate artifacts until the protected publication workflow runs.
 
 ## Try it from source
 
@@ -48,6 +51,7 @@ The wrapper automatically discovers the controlling TTY and passes a stable surf
 
 ```bash
 side-glance run --surface test:demo -- your-command
+side-glance run --terminal-title -- claude
 ```
 
 Native setup is intentionally a separate action because it edits provider configuration:
@@ -55,6 +59,7 @@ Native setup is intentionally a separate action because it edits provider config
 ```bash
 side-glance install claude --json
 side-glance install codex --json
+side-glance install gemini --json # experimental
 side-glance uninstall claude --json
 ```
 
@@ -62,7 +67,10 @@ Do not install over the existing `stoplight.sh` setup until you have reviewed `s
 
 ## Desktop notifications and sound
 
-Side Glance notifications are disabled by default. Enable them only on Side Glance-owned hooks, with an optional macOS sound name:
+Side Glance notifications are disabled by default. Enable them only on
+Side Glance-owned hooks, with an optional macOS sound name. Codex native TUI
+notifications are enabled by default while unfocused; `doctor` and installation
+warnings expose that overlap before opt-in.
 
 ```bash
 side-glance install claude --notifications --notification-sound Glass --json
@@ -71,7 +79,18 @@ side-glance install gemini --notifications --notification-sound Glass --json
 side-glance install opencode --notifications --notification-sound Glass --json
 ```
 
-For several Claude sessions under iTerm, wrap each with a private label. The label appears in the notification body; without one, Side Glance uses a distinct, privacy-safe session digest:
+For OpenCode colors without Side Glance alerts, install the v1 plugin without
+`--notifications`, then launch it through the wrapper so piped plugin events inherit
+a stable surface:
+
+```bash
+side-glance install opencode --json
+side-glance run -- opencode
+```
+
+For several sessions in macOS Terminal, iTerm, Ghostty, or another terminal, wrap
+each with a private label. The label appears in the notification body; without one,
+Side Glance uses a distinct, privacy-safe session digest:
 
 ```bash
 side-glance run --label "API worker" -- claude
@@ -85,13 +104,20 @@ side-glance run --label "Aider worker" -- aider --notifications \
   --notifications-command 'side-glance notify --source aider --kind completed --json'
 ```
 
-For an arbitrary one-shot command, Side Glance can truthfully notify only when the process exits:
+Claude, Codex, and Gemini do not expose a post-aggregate completion event, so their
+managed completion hooks are deliberately silent. Keep provider-native completion
+alerts enabled, or use process exit as the truthful boundary for a one-shot command:
 
 ```bash
 side-glance run --label "Release build" --notify-on-exit -- your-command
 ```
 
-`side-glance doctor --json` reports the Side Glance OS backend separately from native Codex, OpenCode, and Aider notification readiness. Gemini readiness is explicitly scoped to the user settings file because workspace, system, environment, and CLI settings can override it. Installation also returns a warning when it detects an already-active native path; enabling both can produce duplicate alerts. A Codex top-level `notify` command is reported separately for inspection because it may perform something other than desktop notification delivery. On macOS, Notifications settings and Focus can suppress delivery or sound; notification clicks are not guaranteed to select the originating iTerm tab or tmux pane.
+`side-glance doctor --json` reports binary presence, provider-native alerts, adapter
+contract, installed integration, stable-surface requirement, environment overrides,
+and live-verification status separately. It never treats configuration as audible
+verification. On macOS, Notifications settings and Focus can suppress delivery or
+sound; notification clicks are not guaranteed to select the originating terminal,
+tab, or tmux pane.
 
 ## Recovery contract
 
@@ -101,7 +127,7 @@ Normal `SessionEnd`, child exit, `SIGINT`, `SIGTERM`, `SIGHUP`, and manual reset
 side-glance reset --all --json
 ```
 
-OSC 111 restores the terminal's configured default background; terminals do not expose a portable way to recover an arbitrary dynamic OSC 11 value. Title mutation remains opt-in.
+OSC 111 restores the terminal's configured default background; terminals do not expose a portable way to recover an arbitrary dynamic OSC 11 value. Terminal.app OSC 11 remains manually unverified, so `doctor` warns and `--terminal-title` offers an opt-in phase-only fallback. Title mutation is disabled by default.
 
 ## Development
 
@@ -128,12 +154,10 @@ and the [edge-case audit](./docs/edge-case-audit.md).
 
 ## Status
 
-Beta. The GitHub repository, Vercel project and production domain, npm package,
-CLI, site, documentation, and local workspace identity use Side Glance. Public
-GitHub visibility, repository security controls, immutable releases, protected
-Vercel checks, and npm trusted publishing are active. The beta.3 protected-branch
-promotion and tag, environment reviewers when a second release operator exists,
-the Homebrew tap, and live provider migration remain explicit release gates.
+Beta candidate. The GitHub repository is public and protected branch/tag rulesets
+exist, but there is no GitHub Release, beta.3 npm publication, Homebrew tap, custom
+domain, or live provider-matrix sign-off yet. The verified public site and npm
+package remain the Vercel fallback and `0.1.0-beta.1` until those gates complete.
 
 ## License
 
