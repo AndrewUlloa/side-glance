@@ -28,6 +28,8 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
   bring both full and production-only npm audits to zero vulnerabilities.
 - A reviewed main-ruleset payload adds the existing `require-staging-head` check
   without weakening the live pull-request, history, or CI protections.
+- Release provenance now uses the current pinned `actions/attest` v4 contract and
+  its required artifact-metadata permission instead of the legacy wrapper action.
 
 ### Fixed
 

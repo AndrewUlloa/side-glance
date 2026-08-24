@@ -83,6 +83,9 @@ an idle-specific thermal phase would be a separate product/protocol change.
   reporting, Dependabot security updates, secret scanning with push protection, and
   immutable releases. Only the main required-check list is missing
   `require-staging-head`.
+- Release provenance uses pinned `actions/attest` v4 with the required
+  `artifact-metadata: write` permission. npm trusted publishing remains limited to
+  publication; stale `latest` cleanup is an explicit interactive owner action.
 
 ## Unsupported or unverified boundaries
 

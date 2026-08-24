@@ -36,6 +36,22 @@ from that tag with npm OIDC provenance; it never accepts a repository token.
 
 The release workflow rejects private repositories, forks, unprotected tags, tags that do not match the CLI version, tags not reachable from `main`, mutable action references, and artifacts that do not match the assembled manifest.
 
+## npm dist-tag policy
+
+Prereleases update only npm's `beta` tag. The initial beta.1 publication also left
+`latest` pointing at beta.1, so an unqualified install currently resolves to that old
+build. Do not move `latest` to another prerelease: [npm's dist-tag
+contract](https://docs.npmjs.com/cli/v11/commands/npm-dist-tag/) recommends channels
+such as `beta` for unstable versions and reserves `latest` for the normal unqualified
+install path.
+
+After beta.3 is verified, the package owner should remove the stale `latest` tag with
+an interactive, two-factor-authenticated npm session. [Trusted-publishing
+OIDC](https://docs.npmjs.com/trusted-publishers/) supports `npm publish`, not
+`npm dist-tag`, so the release workflow must not gain a long-lived token merely to
+automate this cleanup. Until the first stable release creates a new `latest`, every
+public installation example remains explicit about `side-glance@beta`.
+
 ## Artifact policy
 
 - Supported beta artifacts: macOS arm64, Linux x64 glibc, and Linux arm64 glibc.
@@ -56,5 +72,6 @@ appropriate only when the tagged workflow and its assembled bytes remain valid.
 
 After the release finishes, verify GitHub's immutable-release attestation,
 download the public artifacts again, verify `SHA256SUMS`, execute the Linux x64
-binary, compare npm integrity, and open a separate Homebrew tap pull request using
-the generated `side-glance.rb`.
+binary, compare npm integrity, verify the `beta` and `latest` dist-tags, perform the
+approved interactive stale-`latest` cleanup, and open a separate Homebrew tap pull
+request using the generated `side-glance.rb`.

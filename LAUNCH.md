@@ -98,7 +98,33 @@ remaining beta.3 gates are:
 - merge this release through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;
 - let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
+- verify `beta` points to beta.3, then remove the stale beta.1 `latest` tag through
+  an approved interactive npm session; trusted-publishing OIDC cannot perform
+  dist-tag mutations;
 - open a separate Homebrew tap pull request after the immutable artifact URLs exist.
+
+## Prepared pull request sequence
+
+The feature PR into `staging` should be titled **Harden beta release readiness** and
+summarize these independently reviewable outcomes:
+
+- correct epoch-millisecond thermal timing, EWMA adaptation, and preview/site parity;
+- physical tmux ownership, surface migration, and stale-wrapper reconciliation;
+- provider-safe acknowledgements, bounded hooks, semantic notification dedupe, and
+  truthful provider completion/support tiers;
+- non-color terminal markers, opt-in titles, Terminal.app diagnostics, zero-advisory
+  dependencies, current artifact attestations, and verified deployment claims.
+
+Its verification section should record the exact `REVIEW.md` results, including the
+opt-in live tmux pass, real-browser matrix, zero npm audits, absent provider binaries,
+and the still-unfired real desktop notification. It must target `staging`.
+
+After that PR is green and merged, update PR #37's title to **Promote Side Glance
+0.1.0-beta.3**. Replace its R2-only description with the complete release-readiness
+summary, temporary verified `r2.dev` origin, unresolved custom-domain status, full
+protected-check results, and explicit notification/Terminal.app boundaries. Keep it
+draft until the live main ruleset requires `require-staging-head`; then mark it ready
+for the final `staging` → `main` review.
 
 ## Controlled migration from stoplight.sh
 
