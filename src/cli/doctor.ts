@@ -6,6 +6,42 @@ import type { NotificationReadinessInspection } from "../notifications/inspectio
 
 type ProviderName = "claude" | "codex" | "gemini" | "opencode" | "aider";
 
+export function inspectTerminalCapabilities(options: {
+  platform: NodeJS.Platform;
+  environment: Readonly<Record<string, string | undefined>>;
+  tmux: boolean;
+}) {
+  const termProgram = options.environment.TERM_PROGRAM;
+  const emulator =
+    termProgram === "Apple_Terminal"
+      ? "terminal.app"
+      : termProgram === "iTerm.app"
+        ? "iterm"
+        : termProgram === "ghostty"
+          ? "ghostty"
+          : termProgram
+            ? "other"
+            : "unknown";
+  const terminalApp = emulator === "terminal.app";
+  return {
+    emulator,
+    background: {
+      channel: "osc11",
+      status: terminalApp ? "manual-verification-required" : "unverified",
+    },
+    titleFallback: {
+      available: options.platform !== "win32" && !options.tmux,
+      enabled: options.environment.SIDE_GLANCE_TERMINAL_TITLE === "1",
+      optInFlag: "--terminal-title",
+    },
+    warnings: terminalApp
+      ? [
+          "Terminal.app OSC 11 background support has not been manually verified; use --terminal-title for an opt-in phase-only fallback.",
+        ]
+      : [],
+  };
+}
+
 interface HookInspectionLike {
   expectedEvents: number;
   sideGlanceHooks: number;

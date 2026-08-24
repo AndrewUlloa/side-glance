@@ -91,6 +91,7 @@ export interface SideGlanceSurfaceState {
   generation: number;
   updatedAt: number;
   terminalPainted: boolean;
+  terminalTitlePainted?: boolean;
   ownerKey?: string;
   tmuxSnapshot?: SideGlanceTmuxSnapshot;
 }

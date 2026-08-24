@@ -2,6 +2,8 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import type { SideGlancePhase } from "../core/protocol.ts";
+
 const execFileAsync = promisify(execFile);
 const TMUX_OPTIONS = [
   "window-status-style",
@@ -99,17 +101,19 @@ export async function applyTmuxPaint(
   runner: TmuxRunner,
   snapshot: TmuxSnapshot,
   accent: string,
+  phase: SideGlancePhase,
 ): Promise<void> {
   if (!/^[0-9a-f]{6}$/i.test(accent)) {
     throw new Error("tmux accent color must be six hexadecimal digits.");
   }
   validateSnapshot(snapshot);
   const color = accent.toLowerCase();
+  const marker = markerForPhase(phase);
   const values: Record<OwnedTmuxOption, string> = {
     "window-status-style": `fg=#${color}`,
     "window-status-current-style": `fg=#${color},bold`,
-    "window-status-format": `#[fg=#${color}]● #[default]#I:#W`,
-    "window-status-current-format": `#[fg=#${color},bold]● #I:#W#[default]`,
+    "window-status-format": `#[fg=#${color}]${marker} #[default]#I:#W`,
+    "window-status-current-format": `#[fg=#${color},bold]${marker} #I:#W#[default]`,
   };
 
   for (const name of TMUX_OPTIONS) {
@@ -121,6 +125,21 @@ export async function applyTmuxPaint(
       name,
       values[name],
     ]);
+  }
+}
+
+function markerForPhase(phase: SideGlancePhase): string {
+  switch (phase) {
+    case "working":
+      return "●";
+    case "waiting":
+      return "!";
+    case "completed":
+      return "✓";
+    case "failed":
+      return "×";
+    case "inactive":
+      throw new Error("tmux paint requires an active Side Glance phase.");
   }
 }
 

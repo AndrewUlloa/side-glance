@@ -29,6 +29,8 @@ import { runInstallCommand } from "./install.ts";
 import { inspectProviderCapabilities } from "./doctor.ts";
 import { runSupervised } from "./run.ts";
 import { SIDE_GLANCE_VERSION } from "../version.ts";
+import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
+import { inspectTerminalCapabilities } from "./doctor.ts";
 
 const MAX_STDIN_BYTES = 1_048_576;
 
@@ -196,6 +198,11 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         terminal: {
           tty: Boolean(process.stdout.isTTY),
           tmux: Boolean(process.env.TMUX),
+          ...inspectTerminalCapabilities({
+            platform: process.platform,
+            environment: process.env,
+            tmux: Boolean(process.env.TMUX),
+          }),
         },
         providers: providerInspections,
         notifications: notificationReadiness,
@@ -305,6 +312,7 @@ Options:
   --notification-sound <name>  Use an installed sound name (default: Glass)
   --label <text>                Distinguish concurrent sessions privately
   --notify-on-exit              Notify when a supervised process exits
+  --terminal-title              Opt into a sanitized lifecycle title fallback
   -h, --help                    Show this help
   -v, --version                 Show the installed version
 `;
@@ -449,7 +457,11 @@ function controllerWithNotifications(
 ): SideGlanceController {
   return new SideGlanceController(
     store,
-    undefined,
+    createDefaultSurfaceRenderer({
+      terminalTitle:
+        args.includes("--terminal-title") ||
+        process.env.SIDE_GLANCE_TERMINAL_TITLE === "1",
+    }),
     configuredNotifier(args, enabled),
   );
 }

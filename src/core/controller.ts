@@ -22,6 +22,7 @@ export type { SurfaceVisual } from "./visual.ts";
 
 export interface SurfaceRenderResult {
   terminalPainted: boolean;
+  terminalTitlePainted?: boolean;
   tmuxSnapshot?: SideGlanceTmuxSnapshot;
 }
 
@@ -111,6 +112,7 @@ export class SideGlanceController {
             generation: Math.max(previous.generation, event.generation ?? 0),
             updatedAt: event.occurredAt,
             terminalPainted: false,
+            terminalTitlePainted: false,
             tmuxSnapshot: undefined,
             ownerKey: undefined,
           },
@@ -139,6 +141,7 @@ export class SideGlanceController {
           generation: resolution.session.generation,
           updatedAt: event.occurredAt,
           terminalPainted: rendered.terminalPainted,
+          terminalTitlePainted: rendered.terminalTitlePainted ?? false,
           ownerKey: resolution.ownerKey,
           ...(rendered.tmuxSnapshot
             ? { tmuxSnapshot: rendered.tmuxSnapshot }

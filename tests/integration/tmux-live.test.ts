@@ -58,7 +58,7 @@ test(
     const runner = createTmuxRunner({ executable, socketPath });
     const snapshot = await captureTmuxSnapshot(runner, paneOutput.trim());
 
-    await applyTmuxPaint(runner, snapshot, "f0a726");
+    await applyTmuxPaint(runner, snapshot, "f0a726", "waiting");
     await restoreTmuxSnapshot(runner, snapshot);
 
     const { stdout: style } = await tmux(

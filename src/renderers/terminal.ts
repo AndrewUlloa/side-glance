@@ -14,6 +14,11 @@ export interface TerminalPaint {
   allowTitle?: boolean;
 }
 
+export interface TerminalReset {
+  background?: boolean;
+  title?: boolean;
+}
+
 export class TerminalGoneError extends Error {
   override readonly name = "TerminalGoneError";
 }
@@ -35,15 +40,27 @@ export function encodeTerminalPaint(paint: TerminalPaint): Uint8Array {
   return encoder.encode(sequence);
 }
 
-export function encodeTerminalReset(): Uint8Array {
-  return encoder.encode(`${OSC_START}111${STRING_TERMINATOR}`);
+export function encodeTerminalReset(
+  reset: TerminalReset = { background: true },
+): Uint8Array {
+  let sequence = reset.background
+    ? `${OSC_START}111${STRING_TERMINATOR}`
+    : "";
+  if (reset.title) sequence += `${OSC_START}0;${STRING_TERMINATOR}`;
+  if (!sequence) throw new Error("Terminal reset must select an owned channel.");
+  return encoder.encode(sequence);
 }
 
 export async function renderTerminal(
   ttyPath: string,
-  paint: TerminalPaint | "reset",
+  paint: TerminalPaint | "reset" | { reset: TerminalReset },
 ): Promise<void> {
-  const bytes = paint === "reset" ? encodeTerminalReset() : encodeTerminalPaint(paint);
+  const bytes =
+    paint === "reset"
+      ? encodeTerminalReset()
+      : "reset" in paint
+        ? encodeTerminalReset(paint.reset)
+        : encodeTerminalPaint(paint);
   const beforeOpen = await inspectTerminalPath(ttyPath);
   const handle = await open(
     ttyPath,

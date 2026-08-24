@@ -492,10 +492,11 @@ test("supervised run passes stable surface and session identity to provider hook
       "run",
       "--surface",
       "test:inherited-surface",
+      "--terminal-title",
       "--",
       process.execPath,
       "-e",
-      "process.stdout.write(JSON.stringify({surface: process.env.SIDE_GLANCE_SURFACE_ID, session: process.env.SIDE_GLANCE_SESSION_ID}))",
+      "process.stdout.write(JSON.stringify({surface: process.env.SIDE_GLANCE_SURFACE_ID, session: process.env.SIDE_GLANCE_SESSION_ID, terminalTitle: process.env.SIDE_GLANCE_TERMINAL_TITLE}))",
     ],
     { stateDirectory: directory },
   );
@@ -504,6 +505,22 @@ test("supervised run passes stable surface and session identity to provider hook
   const environment = JSON.parse(result.stdout);
   assert.equal(environment.surface, "test:inherited-surface");
   assert.match(environment.session, /^wrapper-/u);
+  assert.equal(environment.terminalTitle, "1");
+});
+
+test("doctor warns that Terminal.app background support needs manual verification", async (context) => {
+  const directory = await stateDirectory(context);
+  const doctor = await runCli(["doctor", "--json"], {
+    stateDirectory: directory,
+    env: { TERM_PROGRAM: "Apple_Terminal" },
+  });
+
+  assert.equal(doctor.code, 0, doctor.stderr);
+  const terminal = JSON.parse(doctor.stdout).terminal;
+  assert.equal(terminal.emulator, "terminal.app");
+  assert.equal(terminal.background.status, "manual-verification-required");
+  assert.equal(terminal.titleFallback.optInFlag, "--terminal-title");
+  assert.ok(terminal.warnings.some((warning: string) => warning.includes("OSC 11")));
 });
 
 test("supervised run can take its surface from the wrapper environment", async (context) => {

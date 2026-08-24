@@ -498,6 +498,12 @@ function isSideGlanceSurfaceState(value: unknown): value is SideGlanceSurfaceSta
   if (!Number.isFinite(value.updatedAt) || typeof value.terminalPainted !== "boolean") {
     return false;
   }
+  if (
+    value.terminalTitlePainted !== undefined &&
+    typeof value.terminalTitlePainted !== "boolean"
+  ) {
+    return false;
+  }
   if (value.ownerKey !== undefined && typeof value.ownerKey !== "string") {
     return false;
   }
