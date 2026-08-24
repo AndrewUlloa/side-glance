@@ -632,7 +632,7 @@ None blocking. Public package publication and live config mutation remain explic
   - **Files:** documentation and site copy in bounded slices
   - **Size:** M per slice
 
-- [ ] **Task 58: Close dependency and repository-policy readiness**
+- [x] **Task 58: Close dependency and repository-policy readiness**
   - **Description:** Land compatible development-tool security updates and prepare the
     exact live ruleset/environment changes for explicit approval.
   - **Acceptance:** production audit remains zero; no high development advisory remains

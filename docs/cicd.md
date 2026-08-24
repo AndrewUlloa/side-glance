@@ -69,7 +69,10 @@ reconcile normally.
    checks: `CI / verify`, both `CI / npm-compatibility` matrix jobs, and
    `CI / native-macos-arm64`.
 3. Add the `Branch Policy / require-staging-head` status check to the `main`
-   branch rule only.
+   branch rule only. The reviewed GitHub API payload lives at
+   [`.github/rulesets/protect-main.json`](../.github/rulesets/protect-main.json).
+   Compare it with the live ruleset before applying it; the payload deliberately
+   preserves every existing rule and adds only the `require-staging-head` context.
 4. Keep squash merges enabled for feature PRs and merge commits enabled for
    `staging` to `main` promotions. Rebase merges are optional. Do not allow routine
    bypasses; use the repository owner's emergency path only for incident recovery.

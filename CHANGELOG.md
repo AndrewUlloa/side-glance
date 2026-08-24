@@ -24,6 +24,10 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
   the incompatible v2 beta. Aider uses only its documented static callback.
 - The verified Vercel hostname and R2 development URL remain defaults until custom
   DNS and TLS are actually active.
+- Compatible Babel, brace-expansion, esbuild, and js-yaml development-tool fixes
+  bring both full and production-only npm audits to zero vulnerabilities.
+- A reviewed main-ruleset payload adds the existing `require-staging-head` check
+  without weakening the live pull-request, history, or CI protections.
 
 ### Fixed
 

@@ -92,6 +92,9 @@ release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
 remaining beta.3 gates are:
 
+- apply the reviewed `.github/rulesets/protect-main.json` payload to live ruleset
+  `20776489`; the 2026-08-24 read-only comparison found only the missing
+  `require-staging-head` context;
 - merge this release through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;
 - let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
