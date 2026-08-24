@@ -2,7 +2,7 @@
 
 > Filed by: Codex root session
 > Status: approved
-> Last updated: 2026-08-12
+> Last updated: 2026-08-24
 
 ## One-line Summary
 
@@ -305,6 +305,125 @@ Side Glance notifications and provider-native alerts may coexist only by explici
 choice; the default Side Glance notification sound is a configurable macOS installed
 sound; exact click-to-terminal routing and delivery while Focus/notification settings
 silence alerts are not guaranteed.
+
+## Beta Release Readiness Contract
+
+The requester approved the complete 2026-08-24 remediation program after the thermal,
+provider-runtime, user-journey, and release audits. Side Glance must not promote or
+publish the current beta.3 candidate until the following observable contract is true.
+
+### Lifecycle and thermal semantics
+
+- Completed heat represents the duration of the completed turn, not the time that the
+  terminal has been sitting ready. The controller converts epoch-millisecond timestamp
+  differences to seconds exactly once.
+- Turns below 10 seconds remain visually suppressed, 60 seconds maps to urgency 500,
+  and the default maximum maps to 300 seconds.
+- A per-session reply-latency EWMA with alpha `0.4` is retained in typed JSON. Reply
+  latency is measured from completion to the next accepted acknowledgement or turn
+  start. The adaptive factor moves maximum-red duration from 300 seconds for an EWMA of
+  60 seconds or more to 450 seconds for an EWMA of 15 seconds or less.
+- Missing history safely uses the conservative 120-second default. Optional EWMA fields
+  remain compatible with schema version 1 and corrupted/non-finite values are rejected
+  or normalized at the persistence boundary.
+- `preview`, the controller, tmux, terminal output, website models, and documentation use
+  one phase-to-visual mapping. Working is teal, waiting is amber, completed uses the
+  adaptive thermal ramp, failed is maximum red, and inactive restores Side Glance-owned
+  state.
+- Completed and failed are distinguishable without color. tmux uses different bounded
+  markers, and any opt-in terminal-title fallback includes a sanitized phase marker.
+- User-facing elapsed copy says `Turn ran` or `Turn duration`; it never implies a
+  clock-driven repaint while ready.
+
+### Surface ownership and recovery
+
+- A tmux physical window is one renderable surface even when several panes report
+  events. One snapshot is captured before the first Side Glance paint; releasing one
+  pane/session recomputes the remaining winner and never clears another active owner.
+- Moving one session to a new surface releases its lease on the previous surface before
+  painting the new one. Stale generations may not reset or repaint newer owners.
+- Wrapper exit ends every non-generic provider session that inherited that wrapper's
+  explicit wrapper identity, even when the provider replaces its public session ID.
+- Active leases carry bounded freshness metadata. Startup/update reconciliation retires
+  an abandoned lease after a documented timeout, restores only Side Glance-owned state,
+  and never claims deterministic cleanup after `SIGKILL` or power loss.
+- The tmux ownership migration and rollback instructions require
+  `side-glance reset --all --json` so pane-scoped snapshots cannot cross the boundary.
+
+### Provider and notification safety
+
+- Hook installation and `doctor` state plainly that lifecycle colors require a verified
+  target. For the beta, `side-glance run -- <provider>` is the supported way to provide
+  stable surface identity when provider hooks receive piped JSON. Targetless hooks may
+  notify but may not claim color support.
+- Provider hook stdout contains only the minimal provider-safe acknowledgement and never
+  serializes global Side Glance sessions, surface IDs, TTY paths, or tmux identities.
+  Full state remains available only through `side-glance status --json`.
+- Semantically duplicate permission/wait events notify once per source, session, turn,
+  and reason even when provider invocations generate different transport event IDs.
+- Claude's immediate permission event and delayed permission notification are deduped.
+  Codex's effective default native notification state is reported before Side Glance
+  notification opt-in. A notification capability report does not claim that macOS Focus,
+  per-app sound settings, or a requested sound name has been audibly verified.
+- Managed hooks have explicit short timeouts appropriate to provider contracts; notifier
+  or renderer failure cannot block a provider for minutes. Teardown remains best-effort
+  and reconciliation repairs missed lifecycle ends.
+- Completion adapters do not knowingly emit a final Ready notification while a provider
+  contract still permits another hook to block or retry the turn. Where the provider
+  exposes no post-acceptance event, the limitation is documented and the confidence is
+  not called native-final.
+- OpenCode colors-only installation is supported when the stable plugin API is detected;
+  incompatible v2-beta APIs fail with an actionable capability message. Aider support is
+  the documented static notification-command bridge paired with the wrapper, not an
+  undocumented JSON event producer.
+- Claude and Codex may be described as locally contract-audited. Gemini, OpenCode, and
+  Aider remain experimental until live binary matrices pass; site/package claims use the
+  same support tiers.
+
+### Terminal capability and release truth
+
+- Terminal background support is capability-dependent. Terminal.app receives an honest
+  warning when OSC 11 has not been manually verified and may opt into a sanitized title
+  fallback; title mutation remains disabled by default.
+- `doctor` distinguishes binary present, provider-native notifications, Side Glance
+  adapter contract, Side Glance integration installed, stable surface identity, and live
+  verification. It never collapses these into one `ready` claim.
+- The website, README, package README, CLI help, changelog, npm dist-tags, GitHub release,
+  and deployed assets describe the version users can actually install.
+- Production may use `assets.sideglance.ai` only after public DNS, TLS, and every immutable
+  asset are verified. Until then, Production must use the verified R2 development origin
+  and custom-domain claims must remain conditional.
+- `main` requires the `require-staging-head` check in its live ruleset before promotion.
+  Release publication remains an Ask First action and must originate from the exact green
+  protected `main` commit.
+
+### Required proofs
+
+- Epoch-millisecond turns at 5, 60, and 300 seconds produce suppressed, urgency 500, and
+  urgency 1000 results; repeated response samples update the EWMA toward the 300–450
+  second adaptive maximum.
+- Every preview phase exactly matches controller and site visuals.
+- Two panes in one tmux window share one lease boundary; releasing either cannot clear or
+  resurrect the other. A session migration resets the old surface.
+- A blocked/retried completion does not notify Ready early; an eight-second Claude
+  permission wait produces exactly one alert; hook stdout cannot reveal a second session.
+- Killing a waiting provider and starting another on the same surface demonstrates bounded
+  reconciliation without wiping a newer generation.
+- Manual Terminal.app, iTerm, Ghostty, and tmux checks record supported visible channels.
+- A fresh isolated `side-glance@beta` installation exposes exactly the commands and
+  behavior documented by the deployed site.
+
+**Always:** use red-green regression tests, keep hooks/configuration reversible, preserve
+unrelated provider settings, sanitize all terminal/notification text, and run every
+`CLAUDE.md` gate before handoff.
+
+**Ask first:** mutate live provider configuration, fire a real desktop notification,
+change live Vercel environment variables or GitHub rulesets, configure DNS, push, merge,
+tag, publish npm, create a GitHub release, or create the Homebrew tap.
+
+**Never:** purchase a domain, publish an unreviewed build, hide an unsupported provider
+behind universal wording, emit global state to provider stdout, or weaken an existing
+test to preserve incorrect beta behavior.
 
 ## References
 
