@@ -144,7 +144,7 @@ class SideGlance < Formula
   test do
     assert_equal version.to_s, shell_output("#{bin}/side-glance --version").strip
     output = shell_output("#{bin}/side-glance preview --phase waiting --elapsed 60 --json")
-    assert_match '"urgency":500', output
+    assert_match '"phase":"waiting"', output
   end
 end
 `;

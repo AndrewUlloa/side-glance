@@ -31,6 +31,7 @@ test("generates a validated Homebrew formula from immutable release metadata", a
   assert.match(formula, /bin\.install "side-glance"/u);
   assert.match(formula, /assert_equal version\.to_s/u);
   assert.match(formula, /preview --phase waiting --elapsed 60 --json/u);
+  assert.match(formula, /assert_match '"phase":"waiting"'/u);
   await command("/usr/bin/ruby", ["-c", formulaPath]);
   await verifyWithHomebrewWhenAvailable(formulaPath);
 });
