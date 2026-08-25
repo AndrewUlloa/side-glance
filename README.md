@@ -25,6 +25,10 @@ installable only after its matching protected-tag workflow completes. Confirm th
 resolved version from npm before installing it.
 
 ```bash
+# Homebrew tap (Apple Silicon macOS or glibc Linux; Intel macOS is experimental)
+brew install AndrewUlloa/tap/side-glance
+side-glance --version
+
 # Public prerelease channel
 npm install --global side-glance@beta
 npm view side-glance@beta version
@@ -33,9 +37,9 @@ npm view side-glance@beta version
 npx side-glance@beta doctor --json
 ```
 
-Standalone macOS and Linux archives are distributed only through immutable
-GitHub Releases. Verify the matching release, provenance, and `SHA256SUMS` before
-using a downloaded artifact.
+The Homebrew formula installs the corresponding standalone archive from the
+immutable GitHub release. Direct archive downloads remain available there; verify
+the matching release, provenance, and `SHA256SUMS` before using one manually.
 
 ## Try it from source
 

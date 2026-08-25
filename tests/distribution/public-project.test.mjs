@@ -42,12 +42,16 @@ test("documents only durable installation and truthful beta availability", async
   const readme = await text("README.md");
   assert.doesNotMatch(readme, /npm link/u);
   assert.match(readme, /npm install --global side-glance@beta/u);
+  assert.match(readme, /brew install AndrewUlloa\/tap\/side-glance/u);
+  assert.match(readme, /Intel macOS is experimental/u);
   assert.match(readme, /npm install --global \.\/packages\/cli/u);
   assert.match(readme, /available as a beta package/iu);
   assert.match(readme, /https:\/\/side-glance\.vercel\.app/u);
 
   const packageReadme = await text("packages/cli/README.md");
   assert.match(packageReadme, /Node\.js 22 or newer/u);
+  assert.match(packageReadme, /brew install AndrewUlloa\/tap\/side-glance/u);
+  assert.match(packageReadme, /Intel macOS is experimental/u);
   assert.match(packageReadme, /refuses permanent provider installation from `npx`/u);
   assert.match(packageReadme, /Windows and musl\/Alpine are not supported/u);
 
@@ -58,6 +62,7 @@ test("documents only durable installation and truthful beta availability", async
 
   const releaseGuide = await text("docs/releasing.md");
   assert.match(releaseGuide, /Initial npm ownership is established/u);
+  assert.match(releaseGuide, /`AndrewUlloa\/homebrew-tap` is public/u);
   assert.match(releaseGuide, /trusted publishing/u);
   assert.match(releaseGuide, /ad-hoc signed/u);
 });

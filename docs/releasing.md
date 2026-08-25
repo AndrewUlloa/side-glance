@@ -18,9 +18,15 @@ owner `AndrewUlloa`, repository `side-glance`, workflow `release.yml`, and
 environment `npm-release`; publishing is allowed while staged publishing is not,
 and no legacy npm automation token is used by this repository. Required
 environment reviewers can be added when a
-second qualified release operator is available. Create `AndrewUlloa/homebrew-tap`
-only after the first immutable release exists, and update it through a narrowly
-scoped pull request rather than this repository's release token.
+second qualified release operator is available.
+
+`AndrewUlloa/homebrew-tap` is public and provides the supported third-party tap
+command `brew install AndrewUlloa/tap/side-glance`. Its protected `main` branch is
+updated through narrowly scoped pull requests, and `brew test-bot` validates Linux
+x64, Apple Silicon macOS, and experimental Intel macOS independently. Linux arm64
+is supported by the release artifact and formula but is not a separate tap CI
+runner. The release workflow only generates `side-glance.rb`; it has no credential
+that can update the tap.
 
 ## Release pull request
 
@@ -74,5 +80,6 @@ appropriate only when the tagged workflow and its assembled bytes remain valid.
 After the release finishes, verify GitHub's immutable-release attestation,
 download the public artifacts again, verify `SHA256SUMS`, execute the Linux x64
 binary, compare npm integrity, verify the `beta` and `latest` dist-tags, perform the
-approved interactive stale-`latest` cleanup, and open a separate Homebrew tap pull
-request using the generated `side-glance.rb`.
+approved interactive stale-`latest` cleanup, and open a separate pull request in
+`AndrewUlloa/homebrew-tap` using the generated `side-glance.rb`. Merge that pull
+request only after every `brew test-bot` platform passes.
