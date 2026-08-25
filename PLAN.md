@@ -901,7 +901,7 @@ claims -> dependencies/policy -> full review -> approved release
   - **Files:** `REVIEW.md`, verification evidence, remediation files as required
   - **Size:** M
 
-- [ ] **Task 69: Commit, push, and open the staging PR**
+- [x] **Task 69: Commit, push, and open the staging PR**
   - **Description:** Commit the approved spec/plan and reviewed implementation in coherent
     slices, push `codex/add-guided-setup`, open a complete PR to protected `staging`, and
     inspect CI/review state until it is merge-ready.

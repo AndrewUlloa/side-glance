@@ -4,7 +4,7 @@ Date: 2026-08-25
 
 Branch: `codex/add-guided-setup`
 
-Status: Phase 16 passes local review and every required gate; staging PR pending
+Status: PR #52 is mergeable; Phase 16 passes local and hosted required gates
 
 ## Phase 16 guided onboarding review
 
@@ -41,6 +41,9 @@ mutation, release, or deployment occurred.
   `git diff --check`, the canonical Turbopack production build, and aggregate `npm test`
   all pass. The only build note is the existing non-blocking Alan Sans fallback-metrics
   warning.
+- Hosted PR #52 passes the required `verify`, Node `22.14.0` and `24.18.0` npm
+  compatibility, native macOS arm64, Vercel, and Vercel Preview Comments contexts.
+  GitHub reports the final head mergeable with no inline review comment.
 - The real PTY journey covers static no-color discovery, invalid selection retry, final
   preview/confirmation, exact apply, and verified persisted configuration. Semantic tests
   separately cover No, EOF, SIGINT, sound retry, fixed flags, and no-eligible guidance.
