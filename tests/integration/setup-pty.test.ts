@@ -13,6 +13,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { runInteractivePty } from "../helpers/interactive-pty.mjs";
+
 const cliPath = fileURLToPath(new URL("../../src/cli/entry.ts", import.meta.url));
 
 test(
@@ -41,6 +43,7 @@ test(
       HOME: home,
       PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
       NO_COLOR: "1",
+      TERM: "xterm-256color",
     };
     const result =
       process.platform === "darwin"
@@ -51,29 +54,239 @@ test(
             [
               {
                 prompt: "Choose comma-separated numbers or names [default]: ",
-                answer: "9\n",
-              },
-              {
-                prompt: "Choose comma-separated numbers or names [default]: ",
                 answer: "\n",
-              },
-              {
-                prompt: "Choose comma-separated numbers or names [default]: ",
-                answer: "none\n",
               },
               { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
             ],
           );
 
     assert.equal(result.code, 0, result.output);
-    assert.match(result.output, /Select provider integrations/u);
-    assert.match(result.output, /Side Glance setup plan:/u);
+    assert.match(result.output, /How would you like to continue/u);
+    assert.match(result.output, /Review setup/u);
     assert.match(result.output, /Setup complete/u);
     assert.equal(result.output.includes(String.fromCodePoint(27)), false);
     const settings = JSON.parse(
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
     );
     assert.ok(JSON.stringify(settings).includes(executable));
+  },
+);
+
+test(
+  "guided init supports arrow and Space customization through a real PTY",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-arrow-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const bin = path.join(home, "bin");
+    const executable = path.join(bin, "side-glance");
+    const provider = path.join(bin, "claude");
+    await mkdir(bin, { recursive: true });
+    await writeFile(executable, "#!/bin/sh\nprintf 'development\\n'\n", {
+      mode: 0o700,
+    });
+    await writeFile(provider, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+    await chmod(executable, 0o700);
+
+    const runner = path.join(home, "run-arrow-setup.sh");
+    await writeFile(
+      runner,
+      `#!/bin/sh
+before=$(stty -g)
+${shellQuote(process.execPath)} ${shellQuote(cliPath)} init --home ${shellQuote(home)} --executable ${shellQuote(executable)}
+status=$?
+after=$(stty -g)
+test "$before" = "$after" || exit 86
+exit $status
+`,
+      { mode: 0o700 },
+    );
+    const environment = {
+      HOME: home,
+      PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+      NO_COLOR: undefined,
+      SIDE_GLANCE_ACCESSIBLE: undefined,
+      TERM: "xterm-256color",
+    };
+    const interactions = [
+      {
+        prompt: "How would you like to continue?",
+        answer: "\u001b[B\r",
+      },
+      {
+        prompt: "Select provider integrations",
+        answer: "\r",
+      },
+      {
+        prompt: "Select Side Glance computer notifications",
+        answer: " \r",
+      },
+      { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
+    ];
+    const result =
+      process.platform === "darwin"
+        ? await runExpectArrowPty(home, runner)
+        : await runPty(["-qec", runner, "/dev/null"], environment, interactions);
+
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /↑\/↓ move/u);
+    assert.match(result.output, /Space toggle/u);
+    assert.match(result.output, /Computer notifications: off/u);
+    assert.match(result.output, /Setup complete/u);
+    assert.equal(result.output.includes(String.fromCodePoint(27)), true);
+    const settings = JSON.parse(
+      await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+    );
+    assert.ok(JSON.stringify(settings).includes(executable));
+  },
+);
+
+test(
+  "guided init restores the real terminal when Ctrl-C cancels a choice",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-cancel-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const bin = path.join(home, "bin");
+    const executable = path.join(bin, "side-glance");
+    const provider = path.join(bin, "claude");
+    await mkdir(bin, { recursive: true });
+    await writeFile(executable, "#!/bin/sh\nprintf 'development\\n'\n", {
+      mode: 0o700,
+    });
+    await writeFile(provider, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+
+    const result = await runInteractivePty({
+      executable: process.execPath,
+      arguments: [
+        cliPath,
+        "init",
+        "--home",
+        home,
+        "--executable",
+        executable,
+      ],
+      cwd: home,
+      environment: {
+        HOME: home,
+        NO_COLOR: undefined,
+        SIDE_GLANCE_ACCESSIBLE: undefined,
+        TERM: "xterm-256color",
+        PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+      },
+      expectedExitCode: 130,
+      interactions: [
+        { prompt: "How would you like to continue?", answer: "\u0003" },
+      ],
+    });
+
+    assert.equal(result.code, 130);
+    await assert.rejects(
+      () => readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+      /ENOENT/u,
+    );
+  },
+);
+
+test(
+  "guided init keeps accessible and dumb terminals static and ANSI-free",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    for (const fallback of ["accessible", "dumb"] as const) {
+      const home = await mkdtemp(
+        path.join(tmpdir(), `side-glance-${fallback}-pty-`),
+      );
+      context.after(() => rm(home, { recursive: true, force: true }));
+      const bin = path.join(home, "bin");
+      const executable = path.join(bin, "side-glance");
+      const provider = path.join(bin, "claude");
+      await mkdir(bin, { recursive: true });
+      await writeFile(executable, "#!/bin/sh\nprintf 'development\\n'\n", {
+        mode: 0o700,
+      });
+      await writeFile(provider, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+
+      const result = await runInteractivePty({
+        executable: process.execPath,
+        arguments: [
+          cliPath,
+          "init",
+          "--home",
+          home,
+          "--executable",
+          executable,
+        ],
+        cwd: home,
+        environment: {
+          HOME: home,
+          NO_COLOR: undefined,
+          SIDE_GLANCE_ACCESSIBLE: fallback === "accessible" ? "1" : undefined,
+          TERM: fallback === "dumb" ? "dumb" : "xterm-256color",
+          PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+        },
+        interactions: [
+          {
+            prompt: "Choose comma-separated numbers or names [default]: ",
+            answer: "\n",
+          },
+          { prompt: "Apply this setup plan? [Y/n] ", answer: "n\n" },
+        ],
+      });
+
+      assert.equal(
+        result.output.includes(String.fromCodePoint(27)),
+        false,
+        `${fallback}: ${result.output}`,
+      );
+    }
+  },
+);
+
+test(
+  "guided init restores the prompt when the process receives SIGINT",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-sigint-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const bin = path.join(home, "bin");
+    const executable = path.join(bin, "side-glance");
+    const provider = path.join(bin, "claude");
+    const runnerPid = path.join(home, "runner.pid");
+    await mkdir(bin, { recursive: true });
+    await writeFile(executable, "#!/bin/sh\nprintf 'development\\n'\n", {
+      mode: 0o700,
+    });
+    await writeFile(provider, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+    const runner = path.join(home, "run-signal-setup.sh");
+    await writeFile(
+      runner,
+      `#!/bin/sh
+printf '%s' "$$" > ${shellQuote(runnerPid)}
+exec ${shellQuote(process.execPath)} ${shellQuote(cliPath)} init --home ${shellQuote(home)} --executable ${shellQuote(executable)}
+`,
+      { mode: 0o700 },
+    );
+    const result = await runSignalPty(home, runner, runnerPid, {
+      HOME: home,
+      PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+      NO_COLOR: undefined,
+      SIDE_GLANCE_ACCESSIBLE: undefined,
+      TERM: "xterm-256color",
+    });
+
+    assert.equal(result.code, 130, result.output);
+    assert.equal(
+      result.output.includes(`${String.fromCodePoint(27)}[?25l`),
+      true,
+    );
+    assert.equal(
+      result.output.includes(`${String.fromCodePoint(27)}[?25h`),
+      true,
+    );
+    await assert.rejects(
+      () => readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+      /ENOENT/u,
+    );
   },
 );
 
@@ -89,12 +302,7 @@ async function runExpectPty(
 set timeout 20
 spawn [lindex $argv 0]
 expect -exact {Choose comma-separated numbers or names [default]: }
-send "9\\r"
-expect -exact {Choose available numbers or names.}
-expect -exact {Choose comma-separated numbers or names [default]: }
 send "\\r"
-expect -exact {Choose comma-separated numbers or names [default]: }
-send "none\\r"
 expect -exact {Apply this setup plan? [Y/n] }
 send "y\\r"
 expect eof
@@ -106,9 +314,45 @@ exit [lindex $result 3]
   return runProcess("/usr/bin/expect", [expectScript, runner], environment);
 }
 
+async function runExpectArrowPty(
+  home: string,
+  runner: string,
+): Promise<{ code: number | null; output: string }> {
+  const expectScript = path.join(home, "arrow-setup.exp");
+  await writeFile(
+    expectScript,
+    `#!/usr/bin/expect -f
+set timeout 20
+spawn [lindex $argv 0]
+expect {*How would you like to continue?*}
+send "\\033\\[B\\r"
+expect {*Select provider integrations*}
+send "\\r"
+expect {*Select Side Glance computer notifications*}
+send " \\r"
+expect -exact {Apply this setup plan? [Y/n] }
+send "y\\r"
+expect eof
+set result [wait]
+exit [lindex $result 3]
+`,
+    { mode: 0o700 },
+  );
+  return runProcess(
+    "/usr/bin/expect",
+    [expectScript, runner],
+    {
+      HOME: home,
+      NO_COLOR: undefined,
+      SIDE_GLANCE_ACCESSIBLE: undefined,
+      TERM: "xterm-256color",
+    },
+  );
+}
+
 function runPty(
   args: readonly string[],
-  environment: Record<string, string>,
+  environment: Record<string, string | undefined>,
   interactions: readonly { prompt: string; answer: string }[],
 ): Promise<{ code: number | null; output: string }> {
   return runProcess("/usr/bin/script", args, environment, interactions);
@@ -117,12 +361,12 @@ function runPty(
 function runProcess(
   executable: string,
   args: readonly string[],
-  environment: Record<string, string>,
+  environment: Record<string, string | undefined>,
   interactions?: readonly { prompt: string; answer: string }[],
 ): Promise<{ code: number | null; output: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, [...args], {
-      env: { ...process.env, ...environment },
+      env: childEnvironment(environment),
       stdio: [interactions === undefined ? "ignore" : "pipe", "pipe", "pipe"],
     });
     let output = "";
@@ -149,6 +393,73 @@ function runProcess(
     child.stderr?.on("data", (chunk: string) => {
       output += chunk;
       drive();
+    });
+    child.once("error", reject);
+    child.once("close", (code) => {
+      clearTimeout(timeout);
+      resolve({ code, output });
+    });
+  });
+}
+
+function childEnvironment(
+  overrides: Record<string, string | undefined>,
+): NodeJS.ProcessEnv {
+  const environment = { ...process.env, ...overrides };
+  for (const [key, value] of Object.entries(environment)) {
+    if (value === undefined) delete environment[key];
+  }
+  return environment;
+}
+
+async function runSignalPty(
+  home: string,
+  runner: string,
+  runnerPid: string,
+  environment: Record<string, string | undefined>,
+): Promise<{ code: number | null; output: string }> {
+  let executable = "/usr/bin/script";
+  let args = ["-qec", runner, "/dev/null"];
+  if (process.platform === "darwin") {
+    const expectScript = path.join(home, "signal-setup.exp");
+    await writeFile(
+      expectScript,
+      `#!/usr/bin/expect -f
+set timeout 20
+spawn [lindex $argv 0]
+expect eof
+set result [wait]
+exit [lindex $result 3]
+`,
+      { mode: 0o700 },
+    );
+    executable = "/usr/bin/expect";
+    args = [expectScript, runner];
+  }
+
+  return await new Promise((resolve, reject) => {
+    const child = spawn(executable, args, {
+      env: childEnvironment(environment),
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    let signalled = false;
+    const signalPrompt = async () => {
+      if (signalled || !output.includes("How would you like to continue?")) return;
+      signalled = true;
+      const pid = Number.parseInt(await readFile(runnerPid, "utf8"), 10);
+      process.kill(pid, "SIGINT");
+    };
+    const timeout = setTimeout(() => child.kill("SIGTERM"), 20_000);
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk: string) => {
+      output += chunk;
+      void signalPrompt().catch(reject);
+    });
+    child.stderr?.on("data", (chunk: string) => {
+      output += chunk;
+      void signalPrompt().catch(reject);
     });
     child.once("error", reject);
     child.once("close", (code) => {

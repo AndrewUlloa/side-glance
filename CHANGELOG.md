@@ -4,6 +4,20 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.6] — 2026-08-25
+
+### Added
+
+- Interactive `init` and bootstrap choices now support Up/Down navigation, Space
+  toggles for multiple selections, Enter to continue, and a protected static
+  fallback for non-TTY, no-color, dumb, and accessible terminal sessions.
+
+### Changed
+
+- Guided setup now opens with a concise recommended/customize/exit decision,
+  progressively reveals advanced provider and notification choices, and shows
+  write-and-verify progress only after final approval.
+
 ## [0.1.0-beta.5] — 2026-08-25
 
 ### Fixed
@@ -101,7 +115,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.5...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.6...HEAD
+[0.1.0-beta.6]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.6
 [0.1.0-beta.5]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.3

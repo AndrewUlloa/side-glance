@@ -177,7 +177,11 @@ async function runInteractiveBootstrap(
 ): Promise<number> {
   const prompter =
     options.prompter ??
-    createReadlineSetupPrompter({ input: process.stdin, output: process.stdout });
+    createReadlineSetupPrompter({
+      input: process.stdin,
+      output: process.stdout,
+      signal: options.signal,
+    });
   let prompterClosed = false;
   const closePrompter = () => {
     if (prompterClosed) return;
@@ -419,20 +423,15 @@ async function chooseOneMethod(
   prompter: SetupPrompter,
   methods: readonly { id: BootstrapInstallMethod; label: string; selected: boolean }[],
 ): Promise<PromptOutcome<BootstrapInstallMethod>> {
-  while (true) {
-    const selection = await prompter.multiselect(
-      "Choose a durable installation method",
-      methods,
-    );
-    if (selection.status === "cancelled") return selection;
-    if (selection.value.length === 1) {
-      return {
-        status: "value",
-        value: selection.value[0] as BootstrapInstallMethod,
-      };
-    }
-    prompter.note("Choose exactly one installation method.");
-  }
+  const selection = await prompter.select(
+    "Choose a durable installation method",
+    methods,
+  );
+  if (selection.status === "cancelled") return selection;
+  return {
+    status: "value",
+    value: selection.value as BootstrapInstallMethod,
+  };
 }
 
 function createPlan(

@@ -7,6 +7,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { runInteractivePty } from "../helpers/interactive-pty.mjs";
+
 const repository = fileURLToPath(new URL("../..", import.meta.url));
 const builder = path.join(repository, "scripts/release/build-standalone.mjs");
 
@@ -99,6 +101,55 @@ test("builds and smokes the exact versioned standalone archive without Node on P
   const claude = path.join(providerBin, "claude");
   await writeFile(claude, "#!/bin/sh\nexit 0\n");
   await chmod(claude, 0o700);
+  const arrowHome = path.join(extracted, "arrow-home");
+  await mkdir(arrowHome, { recursive: true });
+  const arrowSetup = await runInteractivePty({
+    executable,
+    arguments: ["init", "--home", arrowHome, "--executable", executable],
+    cwd: extracted,
+    environment: {
+      ...strippedEnvironment,
+      NO_COLOR: undefined,
+      SIDE_GLANCE_ACCESSIBLE: undefined,
+      TERM: "xterm-256color",
+      PATH: `${providerBin}${path.delimiter}/usr/bin:/bin`,
+    },
+    interactions: [
+      {
+        prompt: "How would you like to continue?",
+        answer: "\u001b[B\u001b[A\r",
+      },
+      { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
+    ],
+  });
+  assert.match(arrowSetup.output, /↑\/↓ move/u);
+  assert.match(arrowSetup.output, /Setup complete/u);
+  assert.match(
+    await readFile(path.join(arrowHome, ".claude", "settings.json"), "utf8"),
+    new RegExp(escapeRegularExpression(executable), "u"),
+  );
+  const staticHome = path.join(extracted, "static-home");
+  await mkdir(staticHome, { recursive: true });
+  const staticSetup = await runInteractivePty({
+    executable,
+    arguments: ["init", "--home", staticHome, "--executable", executable],
+    cwd: extracted,
+    environment: {
+      ...strippedEnvironment,
+      NO_COLOR: "1",
+      TERM: "xterm-256color",
+      PATH: `${providerBin}${path.delimiter}/usr/bin:/bin`,
+    },
+    interactions: [
+      {
+        prompt: "Choose comma-separated numbers or names [default]: ",
+        answer: "\n",
+      },
+      { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
+    ],
+  });
+  assert.equal(staticSetup.output.includes(String.fromCodePoint(27)), false);
+  assert.match(staticSetup.output, /Setup complete/u);
   const setup = await command(
     executable,
     [
