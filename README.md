@@ -19,20 +19,23 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 
 The verified public site is the [Vercel deployment](https://side-glance.vercel.app).
 `sideglance.ai` is only a future custom-domain option and does not currently resolve.
-Side Glance is available as a beta package. The npm beta tag currently resolves
-to `0.1.0-beta.1`; `0.1.0-beta.3` is an unpublished source candidate and must not
-be described as installed until its protected release workflow completes.
+Side Glance is available as a beta package. Prereleases are published on npm's
+explicit `beta` channel. Source commits are not releases: a version becomes
+installable only after its matching protected-tag workflow completes. Confirm the
+resolved version from npm before installing it.
 
 ```bash
-# Latest public beta (currently beta.1)
+# Public prerelease channel
 npm install --global side-glance@beta
+npm view side-glance@beta version
 
 # Ephemeral diagnostics or preview only
 npx side-glance@beta doctor --json
 ```
 
-No GitHub Release or Homebrew tap exists yet. Standalone macOS and Linux archives
-remain release-candidate artifacts until the protected publication workflow runs.
+Standalone macOS and Linux archives are distributed only through immutable
+GitHub Releases. Verify the matching release, provenance, and `SHA256SUMS` before
+using a downloaded artifact.
 
 ## Try it from source
 
@@ -154,10 +157,10 @@ and the [edge-case audit](./docs/edge-case-audit.md).
 
 ## Status
 
-Beta candidate. The GitHub repository is public and protected branch/tag rulesets
-exist, but there is no GitHub Release, beta.3 npm publication, Homebrew tap, custom
-domain, or live provider-matrix sign-off yet. The verified public site and npm
-package remain the Vercel fallback and `0.1.0-beta.1` until those gates complete.
+Public beta. The GitHub repository is public and protected branch/tag rulesets
+gate every release. The verified public site remains the Vercel hostname until a
+custom domain is configured. Gemini, OpenCode v1, and Aider remain experimental
+until their live provider matrices are signed off.
 
 ## License
 
