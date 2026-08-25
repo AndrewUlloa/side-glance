@@ -4,7 +4,7 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
-### 0.1.0-beta.3 candidate (unreleased)
+## [0.1.0-beta.3] — 2026-08-24
 
 ### Added
 
@@ -67,6 +67,7 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.2...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.3...HEAD
+[0.1.0-beta.3]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/AndrewUlloa/side-glance/tree/v0.1.0-beta.2
 [0.1.0-beta.1]: https://www.npmjs.com/package/side-glance/v/0.1.0-beta.1
