@@ -17,7 +17,7 @@ import { createDurableSetupDiscovery } from "../../src/cli/setup-discovery.ts";
 import { createSetupPlan, type SetupRequest } from "../../src/cli/setup.ts";
 import { SetupTransactionError } from "../../src/cli/setup-transaction.ts";
 
-const version = "0.1.0-beta.5";
+const version = "0.1.0-beta.6";
 
 test("discovers canonical eligibility and creates an exact read-only provider plan", async (context) => {
   const fixture = await setupFixture(context);
