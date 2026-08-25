@@ -62,7 +62,14 @@ the matching release, provenance, and `SHA256SUMS` before using one manually.
 a read-only preview of the executable, target paths, create/update/unchanged
 actions, notification choices, warnings, and launch commands. It writes nothing
 until the whole plan is confirmed. `side-glance setup` is its exact alias; both are
-safe to re-run. For automation, start with:
+safe to re-run. On an interactive terminal, **Use recommended settings** is focused
+first; choose **Customize** to reveal provider and computer-notification choices.
+Use Up/Down to move, Space to toggle multiple choices, and Enter to continue.
+Set `SIDE_GLANCE_ACCESSIBLE=1` for the static numbered prompt; `NO_COLOR`,
+and `TERM=dumb` use that same no-ANSI fallback automatically. Non-TTY input stays
+non-interactive and requires the explicit automation flags shown below.
+
+For automation, start with:
 
 ```bash
 side-glance setup --dry-run

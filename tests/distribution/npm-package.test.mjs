@@ -6,6 +6,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { runInteractivePty } from "../helpers/interactive-pty.mjs";
+
 const repository = fileURLToPath(new URL("../..", import.meta.url));
 const npmExecutable = process.platform === "win32" ? "npm.cmd" : "npm";
 const packageVersion = JSON.parse(
@@ -171,6 +173,67 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   await mkdir(providerBin, { recursive: true });
   const claudeExecutable = path.join(providerBin, "claude");
   await writeFile(claudeExecutable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  const arrowHome = path.join(temporary, "packaged-arrow-home");
+  await mkdir(arrowHome, { recursive: true });
+  const arrowSetup = await runInteractivePty({
+    executable,
+    arguments: [
+      "init",
+      "--home",
+      arrowHome,
+      "--executable",
+      executable,
+    ],
+    cwd: temporary,
+    environment: {
+      ...runtimeEnvironment,
+      NO_COLOR: undefined,
+      SIDE_GLANCE_ACCESSIBLE: undefined,
+      TERM: "xterm-256color",
+      PATH: `${providerBin}${path.delimiter}${runtimeEnvironment.PATH}`,
+    },
+    interactions: [
+      {
+        prompt: "How would you like to continue?",
+        answer: "\u001b[B\u001b[A\r",
+      },
+      { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
+    ],
+  });
+  assert.match(arrowSetup.output, /↑\/↓ move/u);
+  assert.match(arrowSetup.output, /Setup complete/u);
+  assert.match(
+    await readFile(path.join(arrowHome, ".claude", "settings.json"), "utf8"),
+    new RegExp(escapeRegularExpression(executable), "u"),
+  );
+  const staticHome = path.join(temporary, "packaged-static-home");
+  await mkdir(staticHome, { recursive: true });
+  const staticSetup = await runInteractivePty({
+    executable,
+    arguments: [
+      "init",
+      "--home",
+      staticHome,
+      "--executable",
+      executable,
+    ],
+    cwd: temporary,
+    environment: {
+      ...runtimeEnvironment,
+      NO_COLOR: "1",
+      TERM: "xterm-256color",
+      PATH: `${providerBin}${path.delimiter}${runtimeEnvironment.PATH}`,
+    },
+    interactions: [
+      {
+        prompt: "Choose comma-separated numbers or names [default]: ",
+        answer: "\n",
+      },
+      { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
+    ],
+  });
+  assert.equal(staticSetup.output.includes(String.fromCodePoint(27)), false);
+  assert.match(staticSetup.output, /Setup complete/u);
   const setupPreview = await command(
     executable,
     [
@@ -258,6 +321,49 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     },
   );
   assert.equal(npxVersion.stdout.trim(), packageVersion);
+  const npxInteractiveHome = path.join(temporary, "npx-interactive-home");
+  await mkdir(npxInteractiveHome, { recursive: true });
+  const npxInteractive = await runInteractivePty({
+    executable: npmExecutable,
+    arguments: [
+      "exec",
+      "--yes",
+      "--offline",
+      "--package",
+      archive,
+      "--",
+      "side-glance",
+      "init",
+      "--home",
+      npxInteractiveHome,
+    ],
+    cwd: temporary,
+    environment: {
+      ...npmEnvironment,
+      NO_COLOR: undefined,
+      SIDE_GLANCE_ACCESSIBLE: undefined,
+      TERM: "xterm-256color",
+      PATH: [path.dirname(process.execPath), "/usr/bin", "/bin"].join(
+        path.delimiter,
+      ),
+    },
+    interactions: [
+      {
+        prompt: "Choose a durable installation method",
+        answer: "\u001b[A\r",
+      },
+    ],
+  });
+  assert.match(npxInteractive.output, /Preview-only/u);
+  assert.match(npxInteractive.output, /No package was installed/u);
+  await assert.rejects(
+    () =>
+      readFile(
+        path.join(npxInteractiveHome, ".claude", "settings.json"),
+        "utf8",
+      ),
+    /ENOENT/u,
+  );
   const npxHelp = await command(
     npmExecutable,
     [

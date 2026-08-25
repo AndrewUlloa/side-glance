@@ -115,11 +115,195 @@ test("JSON option failures are machine-only and do not echo hostile input", asyn
   assert.equal(stdout.includes(sentinel), false);
 });
 
+test("interactive init offers recommended settings first and applies planner defaults", async () => {
+  const requests: SetupRequest[] = [];
+  const applied: SetupPlan[] = [];
+  let stdout = "";
+  const prompter = scriptedPrompter([
+    { status: "value", value: "recommended" },
+    { status: "value", value: true },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async (request) => {
+      requests.push(request);
+      return discovery(async (plan) => {
+        applied.push(plan);
+        return {
+          providers: plan.selectedProviders.map((id) => ({
+            id,
+            configPath: `${homeDirectory}/.${id}/settings.json`,
+            changed: true,
+          })),
+        };
+      });
+    },
+    prompter,
+    writeStdout: (value) => {
+      stdout += value;
+    },
+    writeStderr: () => assert.fail("recommended setup must not fail"),
+  });
+
+  assert.equal(code, 0);
+  assert.deepEqual(
+    prompter.calls.map(({ kind }) => kind),
+    ["select", "confirm", "progress-start", "progress-stop"],
+  );
+  assert.deepEqual(requests[1]?.providers, ["claude", "codex", "gemini"]);
+  assert.deepEqual(requests[1]?.notifications, ["claude"]);
+  assert.equal(requests[1]?.notificationSound, "Glass");
+  assert.deepEqual(applied[0]?.selectedProviders, ["claude", "codex", "gemini"]);
+  const firstDecision = prompter.calls[0];
+  assert.equal(firstDecision?.kind, "select");
+  assert.equal(firstDecision?.choices?.[0]?.id, "recommended");
+  const beforeFirstDecision = prompter.rendered.slice(0, 5).join("\n");
+  assert.doesNotMatch(beforeFirstDecision, /contract-audited|integration unknown/u);
+  assert.doesNotMatch(
+    prompter.rendered.join("\n"),
+    /contract-audited|pre-final-silent/u,
+  );
+  assert.match(prompter.rendered.join("\n"), /Claude.*create.*settings\.json/u);
+  assert.match(prompter.rendered.join("\n"), /Claude.*attention.*failure/u);
+  assert.match(
+    prompter.rendered.join("\n"),
+    /launch.*side-glance run --label "Claude" -- claude/u,
+  );
+  assert.match(prompter.rendered.join("\n"), /warning.*duplicate alerts/u);
+  assert.equal(prompter.calls.at(-1)?.success, true);
+  assert.match(stdout, /delivery and sound were not live-tested/iu);
+  assert.match(stdout, /Claude.*attention.*failure/u);
+});
+
+test("interactive progress starts after approval and never reports success on failure", async () => {
+  let stdout = "";
+  const prompter = scriptedPrompter([
+    { status: "value", value: "recommended" },
+    { status: "value", value: true },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () =>
+      discovery(async () => {
+        throw new SetupTransactionError("apply-failed");
+      }),
+    prompter,
+    writeStdout: (value) => {
+      stdout += value;
+    },
+    writeStderr: () => undefined,
+  });
+
+  assert.equal(code, 1);
+  assert.deepEqual(
+    prompter.calls.map(({ kind }) => kind),
+    ["select", "confirm", "progress-start", "progress-stop"],
+  );
+  assert.equal(prompter.calls.at(-1)?.success, false);
+  assert.match(
+    prompter.calls.at(-1)?.message ?? "",
+    /could not be verified/iu,
+  );
+  assert.doesNotMatch(prompter.calls.at(-1)?.message ?? "", /not applied/iu);
+  assert.doesNotMatch(stdout, /Setup complete|verified/iu);
+});
+
+test("rollback conflicts and failures never claim configuration was not applied", async () => {
+  for (const errorCode of ["rollback-conflict", "rollback-failed"] as const) {
+    const prompter = scriptedPrompter([
+      { status: "value", value: "recommended" },
+      { status: "value", value: true },
+    ]);
+    const code = await runSetupCommand("init", [], {
+      execution: "durable",
+      interactive: true,
+      discover: async () =>
+        discovery(async () => {
+          throw new SetupTransactionError(errorCode);
+        }),
+      prompter,
+      writeStdout: () => undefined,
+      writeStderr: () => undefined,
+    });
+
+    assert.equal(code, 1);
+    assert.equal(prompter.calls.at(-1)?.success, false);
+    assert.match(
+      prompter.calls.at(-1)?.message ?? "",
+      /could not be verified/iu,
+    );
+    assert.doesNotMatch(prompter.calls.at(-1)?.message ?? "", /not applied/iu);
+  }
+});
+
+test("an abort after approval always settles progress as unsuccessful", async () => {
+  const controller = new AbortController();
+  const prompter = scriptedPrompter([
+    { status: "value", value: "recommended" },
+    { status: "value", value: true },
+  ]);
+  const startProgress = prompter.startProgress;
+  prompter.startProgress = (message) => {
+    startProgress?.(message);
+    controller.abort();
+  };
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () => discovery(),
+    prompter,
+    signal: controller.signal,
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  });
+
+  assert.equal(code, 130);
+  assert.deepEqual(
+    prompter.calls.slice(-2).map(({ kind }) => kind),
+    ["progress-start", "progress-stop"],
+  );
+  assert.equal(prompter.calls.at(-1)?.success, false);
+});
+
+test("interactive init can exit from the first decision without applying", async () => {
+  let discoveries = 0;
+  let applies = 0;
+  const prompter = scriptedPrompter([
+    { status: "value", value: "exit" },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () => {
+      discoveries += 1;
+      return discovery(async () => {
+        applies += 1;
+        return { providers: [] };
+      });
+    },
+    prompter,
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  });
+
+  assert.equal(code, 0);
+  assert.equal(discoveries, 1);
+  assert.equal(applies, 0);
+  assert.match(prompter.rendered.join("\n"), /nothing was changed/iu);
+});
+
 test("interactive setup previews the final choices and applies only after confirmation", async () => {
   const requests: SetupRequest[] = [];
   const applied: SetupPlan[] = [];
   let stdout = "";
   const prompter = scriptedPrompter([
+    { status: "value", value: "customize" },
     { status: "value", value: ["codex", "claude"] },
     { status: "value", value: ["claude"] },
     { status: "value", value: "Ping" },
@@ -259,6 +443,7 @@ test("explicit interactive selections remain fixed and an unsafe sound reprompts
 
 test("interactive notification choices explain defaults and provider coverage plainly", async () => {
   const prompter = scriptedPrompter([
+    { status: "value", value: "customize" },
     { status: "value", value: ["claude", "codex"] },
     { status: "value", value: [] },
     { status: "value", value: false },
@@ -277,14 +462,27 @@ test("interactive notification choices explain defaults and provider coverage pl
   const notificationCall = prompter.calls.find(
     ({ message }) => message === "Select Side Glance computer notifications",
   );
+  const providerCall = prompter.calls.find(
+    ({ message }) => message === "Select provider integrations",
+  );
+  assert.doesNotMatch(
+    providerCall?.choices?.map(({ label }) => label).join("\n") ?? "",
+    /eligible|contract-audited|integration not-installed/u,
+  );
   assert.ok(notificationCall?.choices);
   const labels = notificationCall.choices.map(({ label }) => label).join("\n");
   assert.equal(
-    notificationCall.choices.every(({ label }) => [...label].length <= 160),
+    notificationCall.choices.every(({ label }) => [...label].length <= 74),
     true,
   );
-  assert.match(labels, /Claude.*Ready stays silent before final/u);
-  assert.match(labels, /Codex.*native ready.*defaults off.*duplicate/u);
+  assert.match(
+    labels,
+    /Claude.*on.*attention\/failure.*Ready stays silent/u,
+  );
+  assert.match(
+    labels,
+    /Codex.*off.*native attention alerts.*Ready stays silent.*duplicates/u,
+  );
   assert.doesNotMatch(labels, /pre-final-silent/u);
 });
 
@@ -372,6 +570,7 @@ test("interactive No and EOF are successful no-write cancellations while SIGINT 
   ]) {
     let applies = 0;
     const prompter = scriptedPrompter([
+      { status: "value", value: "customize" },
       { status: "value", value: ["claude"] },
       { status: "value", value: [] },
       fixture.final,
@@ -490,9 +689,16 @@ function observation(
 function scriptedPrompter(outcomes: PromptOutcome<unknown>[]) {
   const rendered: string[] = [];
   const calls: Array<{
-    kind: "multiselect" | "confirm" | "text";
+    kind:
+      | "select"
+      | "multiselect"
+      | "confirm"
+      | "text"
+      | "progress-start"
+      | "progress-stop";
     message: string;
     choices?: readonly { id: string; label: string }[];
+    success?: boolean;
   }> = [];
   const next = <Value>(): Promise<PromptOutcome<Value>> => {
     const outcome = outcomes.shift();
@@ -507,6 +713,10 @@ function scriptedPrompter(outcomes: PromptOutcome<unknown>[]) {
     rendered,
     calls,
     closed: false,
+    select: async (message, choices) => {
+      calls.push({ kind: "select", message, choices });
+      return next<string>();
+    },
     multiselect: async (message, choices) => {
       calls.push({ kind: "multiselect", message, choices });
       return next<string[]>();
@@ -521,6 +731,12 @@ function scriptedPrompter(outcomes: PromptOutcome<unknown>[]) {
     },
     note: (message) => rendered.push(message),
     detail: (message) => rendered.push(message),
+    startProgress: (message) => {
+      calls.push({ kind: "progress-start", message });
+    },
+    stopProgress: (message, success) => {
+      calls.push({ kind: "progress-stop", message, success });
+    },
     close() {
       this.closed = true;
     },
