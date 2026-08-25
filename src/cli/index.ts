@@ -25,23 +25,44 @@ import type {
   EventNotifier,
   NotificationOptions,
 } from "../notifications/policy.ts";
-import { runInstallCommand } from "./install.ts";
-import { inspectProviderCapabilities } from "./doctor.ts";
-import { runSupervised } from "./run.ts";
-import { SIDE_GLANCE_VERSION } from "../version.ts";
 import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
-import { inspectTerminalCapabilities } from "./doctor.ts";
+import { SIDE_GLANCE_VERSION } from "../version.ts";
+import {
+  detectBootstrapTarget,
+  resolvePackageManagerOnPath,
+} from "./bootstrap.ts";
+import {
+  bootstrapInitHelpText,
+  runBootstrapChildCommand,
+  runBootstrapInit,
+} from "./bootstrap-command.ts";
+import {
+  captureExecutableIdentity,
+  detectEphemeralNpmExecution,
+  findDurableExecutableOnPath,
+  revalidateExecutableIdentity,
+} from "./executable.ts";
+import {
+  inspectProviderCapabilities,
+  inspectTerminalCapabilities,
+} from "./doctor.ts";
+import { runInstallCommand } from "./install.ts";
+import { runSupervised } from "./run.ts";
+import { runSetupCommand } from "./setup-command.ts";
+import { createDurableSetupDiscovery } from "./setup-discovery.ts";
 
 const MAX_STDIN_BYTES = 1_048_576;
 
 export async function main(args = process.argv.slice(2)): Promise<number> {
+  const command = args[0];
+  if (command === "init" || command === "setup") {
+    return runGuidedSetupCommand(command, args.slice(1));
+  }
   const { stateDirectory, legacyStateDirectory } = resolveStateDirectories();
   const store = new FileSideGlanceStore({
     directory: stateDirectory,
     ...(legacyStateDirectory ? { legacyDirectory: legacyStateDirectory } : {}),
   });
-  const command = args[0];
-
   switch (command) {
     case "--version":
     case "-v":
@@ -290,7 +311,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     default:
       throw new Error(
-        "usage: side-glance <event|hook|notify|status|doctor|preview|reset|run|install|uninstall> [options]",
+        "usage: side-glance <init|setup|event|hook|notify|status|doctor|preview|reset|run|install|uninstall> [options]",
       );
   }
 }
@@ -303,6 +324,8 @@ function helpText(): string {
   return `Side Glance ${SIDE_GLANCE_VERSION}
 
 Usage:
+  side-glance init [--dry-run | --yes --providers <list> --notifications <list|none>]
+  side-glance setup [--dry-run | --yes --providers <list> --notifications <list|none>]
   side-glance doctor --json
   side-glance preview --phase <phase> --elapsed <seconds> --json
   side-glance run [--surface <id>] [--notify-on-exit] -- <command> [args...]
@@ -323,6 +346,92 @@ Options:
   -h, --help                    Show this help
   -v, --version                 Show the installed version
 `;
+}
+
+async function runGuidedSetupCommand(
+  command: "init" | "setup",
+  args: readonly string[],
+): Promise<number> {
+  const invocationPath = path.resolve(process.argv[1] ?? process.execPath);
+  const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
+  if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
+    if (
+      command === "init" &&
+      detectEphemeralNpmExecution({
+        environment: process.env,
+        invocationPath,
+      })
+    ) {
+      process.stdout.write(bootstrapInitHelpText());
+      return 0;
+    }
+    return runSetupCommand(command, args, {
+      execution: "durable",
+      interactive,
+      discover: async () => {
+        throw new Error("Setup help does not perform discovery.");
+      },
+      writeStdout: (value) => process.stdout.write(value),
+      writeStderr: (value) => process.stderr.write(value),
+    });
+  }
+  const execution = detectEphemeralNpmExecution({
+    environment: process.env,
+    invocationPath,
+  })
+    ? "ephemeral"
+    : "durable";
+  if (execution === "ephemeral" && command === "init") {
+    const currentRunnerIdentity = await captureExecutableIdentity(invocationPath);
+    const controller = new AbortController();
+    const interrupt = () => controller.abort();
+    process.once("SIGINT", interrupt);
+    try {
+      return await runBootstrapInit(args, {
+        exactVersion: SIDE_GLANCE_VERSION,
+        invocationPath,
+        currentRunnerIdentity,
+        environment: process.env,
+        target: detectBootstrapTarget(),
+        defaultHomeDirectory: homedir(),
+        interactive,
+        dependencies: {
+          findDurableExecutable: findDurableExecutableOnPath,
+          resolvePackageManager: resolvePackageManagerOnPath,
+          revalidateExecutable: (identity, options) =>
+            revalidateExecutableIdentity(identity, options),
+          runCommand: runBootstrapChildCommand,
+        },
+        writeStdout: (value) => process.stdout.write(value),
+        writeStderr: (value) => process.stderr.write(value),
+        signal: controller.signal,
+      });
+    } finally {
+      process.removeListener("SIGINT", interrupt);
+    }
+  }
+  const controller = new AbortController();
+  const interrupt = () => controller.abort();
+  process.once("SIGINT", interrupt);
+  try {
+    return await runSetupCommand(command, args, {
+      execution,
+      interactive,
+      discover: (request) =>
+        createDurableSetupDiscovery(request, {
+          defaultHomeDirectory: homedir(),
+          defaultExecutablePath: invocationPath,
+          expectedVersion: SIDE_GLANCE_VERSION,
+          environment: process.env,
+          platform: process.platform,
+        }),
+      writeStdout: (value) => process.stdout.write(value),
+      writeStderr: (value) => process.stderr.write(value),
+      signal: controller.signal,
+    });
+  } finally {
+    process.removeListener("SIGINT", interrupt);
+  }
 }
 
 function resolveStateDirectories(): {

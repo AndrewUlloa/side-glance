@@ -747,7 +747,7 @@ claims -> dependencies/policy -> full review -> approved release
 - Rejected an unqualified crash-proof transaction claim or a durable secret-snapshot
   journal, because the former is false and the latter expands the privacy/security surface.
 
-- [ ] **Task 61: Lock safe mutation, setup, and bootstrap behavior with RED tests**
+- [x] **Task 61: Lock safe mutation, setup, and bootstrap behavior with RED tests**
   - **Description:** Add focused failing contracts before production edits: safe target
     snapshots, parent/final symlink refusal, target replacement and same-inode edits,
     absent-to-created races, writer contention, private backups, exact verification,
@@ -763,7 +763,7 @@ claims -> dependencies/policy -> full review -> approved release
     `tests/integration/cli.test.ts`, `tests/distribution/npm-package.test.mjs`, test helpers
   - **Size:** M
 
-- [ ] **Task 62: Build the shared safe provider mutation kernel**
+- [x] **Task 62: Build the shared safe provider mutation kernel**
   - **Description:** Refactor JSON-hook and OpenCode paths onto one internal participant
     shape for bounded snapshot, parent validation, plan, revalidation, private backup,
     atomic/fsynced apply, exact verification, guarded rollback, and rollback verification;
@@ -780,7 +780,7 @@ claims -> dependencies/policy -> full review -> approved release
     `src/adapters/opencode-installer.ts`, `src/cli/install.ts`, installer/CLI tests
   - **Size:** M
 
-- [ ] **Task 63: Build the shared read-only setup planner**
+- [x] **Task 63: Build the shared read-only setup planner**
   - **Description:** Centralize durable executable validation, safe provider discovery and
     eligibility, exact owned hook/plugin plan generation, action classification,
     notification readiness/defaults/coverage, Aider/custom-notifier guidance, duplicate
@@ -798,12 +798,12 @@ claims -> dependencies/policy -> full review -> approved release
 
 ### Checkpoint: safe planning and mutation kernel
 
-- [ ] Direct install/uninstall use snapshot-driven interference checks and one writer lock
-- [ ] Dry-run is a redacted projection of exact provider transforms and performs no writes
-- [ ] Eligibility and notification messaging match actual provider contracts
-- [ ] Focused unit, integration, lint, and typecheck gates are GREEN
+- [x] Direct install/uninstall use snapshot-driven interference checks and one writer lock
+- [x] Dry-run is a redacted projection of exact provider transforms and performs no writes
+- [x] Eligibility and notification messaging match actual provider contracts
+- [x] Focused unit, integration, lint, and typecheck gates are GREEN
 
-- [ ] **Task 64: Add caught-failure multi-provider transaction orchestration**
+- [x] **Task 64: Add caught-failure multi-provider transaction orchestration**
   - **Description:** Revalidate the complete approved plan under the shared lock, apply
     participants in canonical order, verify every exact desired state after the final
     write, and on caught failure roll back in reverse order using applied-state tokens;
@@ -819,7 +819,7 @@ claims -> dependencies/policy -> full review -> approved release
     provider participants, setup/installer integration tests
   - **Size:** M
 
-- [ ] **Task 65: Add the dependency-free interactive init/setup experience**
+- [x] **Task 65: Add the dependency-free interactive init/setup experience**
   - **Description:** Implement semantic prompt and renderer interfaces over built-in
     readline; present eligible/default provider choices, separate notification choices and
     honest coverage, safe sound input, redacted plan, confirmation, progress, caught-signal
@@ -835,7 +835,7 @@ claims -> dependencies/policy -> full review -> approved release
   - **Files:** `src/cli/prompts.ts`, `src/cli/setup.ts`, `src/cli/index.ts`, setup/CLI/PTY tests
   - **Size:** M
 
-- [ ] **Task 66: Add the staged safe npx-to-durable init bootstrap**
+- [x] **Task 66: Add the staged safe npx-to-durable init bootstrap**
   - **Description:** Detect ephemeral invocation; scan past shadowing npx candidates;
     realpath/inode/cache-check and bounded-time/version-check a separate durable executable;
     otherwise emit a non-authoritative bootstrap plan, offer Homebrew/npm/preview, display
@@ -863,13 +863,13 @@ claims -> dependencies/policy -> full review -> approved release
 
 ### Checkpoint: complete onboarding runtime
 
-- [ ] `npx side-glance@<channel> init --dry-run` performs no writes or installer calls
-- [ ] An approved bootstrap delegates only to a separately validated exact-version binary
-- [ ] Durable init applies only the exact plan the user previewed and approved
-- [ ] Caught failures roll back safely; interruption and repair boundaries are explicit
-- [ ] Packaged source, npm, and standalone CLIs expose identical durable setup behavior
+- [x] `npx side-glance@<channel> init --dry-run` performs no writes or installer calls
+- [x] An approved bootstrap delegates only to a separately validated exact-version binary
+- [x] Durable init applies only the exact plan the user previewed and approved
+- [x] Caught failures roll back safely; interruption and repair boundaries are explicit
+- [x] Packaged source, npm, and standalone CLIs expose identical durable setup behavior
 
-- [ ] **Task 67: Converge installation, notification, and recovery guidance**
+- [x] **Task 67: Converge installation, notification, and recovery guidance**
   - **Description:** Make root/package READMEs, landing page, CLI help, changelog, launch
     notes, and recovery guidance present Homebrew + `side-glance init` as the canonical
     installed path and npx `init` as the bootstrap/trial path, while preserving advanced
@@ -885,7 +885,7 @@ claims -> dependencies/policy -> full review -> approved release
     `CHANGELOG.md`, `LAUNCH.md`, documentation/site/distribution tests
   - **Size:** M
 
-- [ ] **Task 68: Complete release-grade verification and independent review**
+- [x] **Task 68: Complete release-grade verification and independent review**
   - **Description:** Run every repository gate, packed npm/global-prefix and standalone
     smoke, automated PTY and automation journeys, race/rollback fault matrix, security and
     privacy scans, documentation consistency scan, and independent five-axis review;

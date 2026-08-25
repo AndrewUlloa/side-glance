@@ -13,6 +13,7 @@ import {
   uninstallOpenCodePlugin,
 } from "../adapters/opencode-installer.ts";
 import { inspectNotificationReadiness } from "../notifications/inspection.ts";
+import { detectEphemeralNpmExecution } from "./executable.ts";
 
 type CliInstallableProvider = InstallableProvider | "opencode";
 
@@ -20,9 +21,15 @@ export async function runInstallCommand(
   args: readonly string[],
   action: "install" | "uninstall",
 ): Promise<number> {
-  if (action === "install" && isEphemeralNpmExecution(process.env, process.argv[1])) {
+  if (
+    action === "install" &&
+    detectEphemeralNpmExecution({
+      environment: process.env,
+      invocationPath: path.resolve(process.argv[1] ?? "side-glance"),
+    })
+  ) {
     throw new Error(
-      "Permanent provider hooks cannot be installed from npx/npm exec. Install Side Glance from a standalone release or with `npm install --global side-glance`, then run `side-glance install` again.",
+      "Permanent provider hooks cannot be installed from npx/npm exec. Run `npx side-glance@beta init` for the guided durable bootstrap, or install with `brew install AndrewUlloa/tap/side-glance` and then run `side-glance init`.",
     );
   }
   const provider = parseProvider(args[0]);
@@ -140,17 +147,6 @@ async function duplicateNotificationWarnings(
     );
   }
   return warnings;
-}
-
-function isEphemeralNpmExecution(
-  environment: Readonly<Record<string, string | undefined>>,
-  invokedPath: string | undefined,
-): boolean {
-  return (
-    environment.npm_lifecycle_event === "npx" ||
-    environment.npm_command === "exec" ||
-    /(?:^|[/\\])_npx(?:[/\\]|$)/u.test(invokedPath ?? "")
-  );
 }
 
 function parseProvider(value: string | undefined): CliInstallableProvider {

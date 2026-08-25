@@ -302,3 +302,23 @@ test("fails closed on symlinked and oversized configuration without writing file
   assert.equal(await readFile(outside, "utf8"), outsideContents);
   assert.equal((await readFile(oversized)).byteLength, 1_048_577);
 });
+
+test("never follows a symlinked notification configuration parent", async (context) => {
+  const home = await fixtureHome(context);
+  const outside = path.join(home, "outside-codex");
+  const privateConfig = 'notify = ["PRIVATE_NOTIFICATION_COMMAND"]\n';
+  await mkdir(outside);
+  await writeFile(path.join(outside, "config.toml"), privateConfig);
+  await symlink(outside, path.join(home, ".codex"));
+
+  const inspection = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: "darwin",
+    pathProbe: async () => false,
+  });
+
+  assert.equal(inspection.providers.codex.fileStatus, "unreadable");
+  assert.equal(inspection.providers.codex.status, "unknown");
+  assert.equal(inspection.providers.codex.topLevelNotify, null);
+  assert.equal(await readFile(path.join(outside, "config.toml"), "utf8"), privateConfig);
+});

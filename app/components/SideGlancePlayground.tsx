@@ -22,7 +22,8 @@ const channels: Array<{ channel: PlaygroundChannel; label: string }> = [
   { channel: "both", label: "Both" },
 ];
 
-const installCommand = "npm install -g side-glance@beta";
+const installCommand =
+  "brew install AndrewUlloa/tap/side-glance\nside-glance init";
 
 export function SideGlancePlayground() {
   const [phase, setPhase] = useState<PlaygroundPhase>("completed");

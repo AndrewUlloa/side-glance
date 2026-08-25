@@ -1,10 +1,68 @@
 # Release review
 
-Date: 2026-08-24
+Date: 2026-08-25
 
-Branch: `codex/beta-release-readiness`
+Branch: `codex/add-guided-setup`
 
-Status: PR #40 passes local and hosted gates; promotion and publication remain gated
+Status: Phase 16 passes local review and every required gate; staging PR pending
+
+## Phase 16 guided onboarding review
+
+No unresolved Critical or required source finding remains. Durable `init` and `setup`
+share one planner and transaction; ephemeral `npx ... init` can preview or bootstrap a
+separately validated exact-version installation without retaining an npm-cache path.
+Claude, Codex, Gemini, and OpenCode plans expose eligibility, maturity, exact owned
+changes, truthful notification coverage, warnings, backups, verification, launch
+guidance, and recovery boundaries. Aider and arbitrary commands remain explicit
+guidance-only paths.
+
+Three independent reviewers challenged filesystem/rollback security, the human and JSON
+UX contract, and packaged bootstrap/distribution behavior. Their Critical direct-install
+cache-path finding and every required finding were remediated with regression tests.
+The final review added strict allowlisted reconstruction for delegated setup JSON and a
+bounded `SIGTERM`-to-`SIGKILL` child termination grace period with parent-cancellation
+forwarding. No live provider configuration, real notification, npm publication, Homebrew
+mutation, release, or deployment occurred.
+
+| Axis | Result | Evidence |
+|---|---|---|
+| Correctness | Pass | Durable aliases share one plan/result contract; explicit selections remain fixed; TTY cancellation, EOF, invalid-input retry, SIGINT 130, no-eligible guidance, exact-version handoff, install/apply outcome separation, and idempotent re-runs are covered. |
+| Readability and product truth | Pass | Human and JSON projections name the durable executable, target path/action/hook count, maturity, integration state, notification defaults and actual event coverage, warnings, backups, launch commands, Aider/generic guidance, and interruption repair boundary. |
+| Architecture | Pass | Read-only discovery, executable identity, setup planning, prompt semantics, provider participants, multi-provider transaction, and ephemeral bootstrap remain separate typed boundaries. Direct install/uninstall and setup use the same mutation kernel and writer lock. |
+| Security and privacy | Pass locally | Bounded no-follow snapshots, parent/target identity checks, private snapshot-derived backups, atomic writes, immediate pre-commit executable revalidation, exact verification, guarded rollback, owner-validated lock quarantine, output bounds, strict delegated schemas, argv-only children, sanitized environments, and hostile-value redaction are regression-tested. |
+| Distribution and resilience | Pass locally | The packed npm CLI proves exact global npm argv, independent durable validation and handoff, stable persisted hooks, bootstrap help, and existing-durable dry-run. The standalone archive proves guided apply without Node on `PATH`; Homebrew planning executes no package-manager process and requires its stable bin path. |
+
+### Phase 16 verification evidence
+
+- Node `24.18.0`; unit `128/128`; integration `105/105` plus one expected skipped
+  opt-in live tmux test; core coverage `91.03%` lines, `78.21%` branches, and `95.50%`
+  functions.
+- Site `37/37`; distribution `19/19`; rendered HTML `2/2`; lint, typecheck,
+  `git diff --check`, the canonical Turbopack production build, and aggregate `npm test`
+  all pass. The only build note is the existing non-blocking Alan Sans fallback-metrics
+  warning.
+- The real PTY journey covers static no-color discovery, invalid selection retry, final
+  preview/confirmation, exact apply, and verified persisted configuration. Semantic tests
+  separately cover No, EOF, SIGINT, sound retry, fixed flags, and no-eligible guidance.
+- Mutation fault tests cover same-inode edits, target replacements, absent/create races,
+  parent symlinks, private backups, writer contention and stale recovery, post-commit
+  self-restoration, exact bytes/mode rollback, rollback conflicts, executable replacement,
+  and a later-provider failure restoring earlier providers.
+- Bootstrap tests cover supported target classification, unsupported preview-only paths,
+  custom and symlinked npm caches, PATH shadows, stable Homebrew paths, exact package-manager
+  argv, tap lag, resolve-once handoff, TTY ownership, child timeout/output/cancellation,
+  bounded delegated JSON, retained-package cleanup, and zero `_npx` hook paths.
+
+### Phase 16 explicit boundary
+
+Portable Node filesystem APIs do not expose a cross-platform pathname compare-and-swap,
+so there remains a final guard-to-rename/unlink micro-window against an unrelated process
+that ignores Side Glance's owner-validated writer lock. The implementation revalidates at
+the last practical boundary and self-restores caught post-commit failures. It does not
+claim crash-proof cross-file atomicity: power loss or `SIGKILL` between independent provider
+writes can require the documented idempotent `side-glance init` / `side-glance doctor`
+repair path. A persistent journal containing private configuration was intentionally
+rejected by the approved privacy contract.
 
 ## Beta release-readiness verdict
 

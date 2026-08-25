@@ -78,12 +78,45 @@ the toolbar must remain unpromoted; discarding that preview is its rollback path
 
 ## Notification activation preflight
 
-1. Run `side-glance doctor --json` and inspect every capability column; configured is not live-verified.
-2. Choose one notification path per provider unless duplicate alerts are intentional. Install results warn when an active native path is detected.
-3. Enable a trial provider with `side-glance install <provider> --notifications --notification-sound Glass --json`; do not point hooks at `npx`.
-4. In Terminal.app, iTerm, Ghostty, or another terminal, launch each session through `side-glance run --label "<private label>" -- <provider>`; add `--terminal-title` only when the phase-only fallback is wanted.
-5. For Aider, use its static callback through the supervised wrapper; for arbitrary one-shot commands, use only the truthful `run --notify-on-exit` path.
-6. Manually verify terminal channels plus OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
+The canonical installed smoke path is:
+
+```bash
+brew install AndrewUlloa/tap/side-glance
+side-glance init
+```
+
+During the beta, `npx side-glance@beta init` is the public bootstrap/trial path.
+The npx runner may discover and install with separate consent, but only an
+exact-version durable executable may write provider hooks. `side-glance setup` is
+the exact durable alias for `init`.
+
+1. Review the read-only preview before confirming it; setup must not print unrelated configuration values.
+2. Run `side-glance doctor --json` and inspect every capability column; configured is not live-verified.
+3. Choose one notification path per provider unless duplicate alerts are intentional. When provider-native notifications are ready, Side Glance defaults off; when the native notification state is unknown, Side Glance also defaults off. Disabled/not-configured native delivery defaults Side Glance on only when its backend is available.
+4. Confirm the promised coverage: Claude attention/failure with pre-final Ready silent; Codex and Gemini attention with pre-final Ready silent; experimental OpenCode v1 Ready/attention/failure; Aider only through an explicit conflict-aware static bridge; generic wrapper process exit only.
+5. For an advanced one-provider trial, use `side-glance install <provider> --notifications --notification-sound Glass --json`; never point hooks at `npx`.
+6. In Terminal.app, iTerm, Ghostty, or another terminal, launch each session through `side-glance run --label "<private label>" -- <provider>`; hooks provide lifecycle semantics, while the wrapper provides the stable surface identity used for colors.
+7. Manually verify terminal channels plus OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
+
+## Guided setup smoke and rollback
+
+Use a deliberately chosen provider and keep the initial preview read-only:
+
+```bash
+side-glance setup --providers claude --notifications none --dry-run
+side-glance setup --providers claude --notifications none --yes
+side-glance run --label "Side Glance smoke" -- claude
+side-glance doctor --json
+side-glance uninstall claude --json
+side-glance reset --all --json
+```
+
+Setup rolls back caught multi-provider apply or verification failures in reverse
+order only while each target still matches its setup write. A concurrent edit is a
+rollback conflict and is preserved. A power loss or `SIGKILL` between distinct
+provider-file renames can leave partial setup; the next `side-glance init` or
+`side-glance doctor` reports it for idempotent repair. No secret configuration crash
+journal is retained.
 
 ## External publication gates
 

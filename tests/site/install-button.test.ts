@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path: string) =>
   readFile(new URL(`../../${path}`, import.meta.url), "utf8").catch(() => "");
 
-test("the install control copies npm and morphs into confirmation", async () => {
+test("the install control copies Homebrew plus guided setup and morphs into confirmation", async () => {
   const [page, installButton, measureHook, css] = await Promise.all([
     read("app/page.tsx"),
     read("app/components/InstallButton.tsx"),
@@ -15,13 +15,13 @@ test("the install control copies npm and morphs into confirmation", async () => 
 
   assert.match(page, /<InstallButton/u);
   assert.match(page, /public beta · v0\.1/u);
-  assert.match(page, /install the public beta from npm/u);
+  assert.match(page, /install with Homebrew and run guided setup/u);
   assert.doesNotMatch(installButton, /github\.com\/AndrewUlloa\/side-glance/u);
 
   assert.match(installButton, /^"use client";/u);
   assert.match(
     installButton,
-    /const INSTALL_COMMAND = "npm install -g side-glance@beta";/u
+    /const INSTALL_COMMAND =\s*"brew install AndrewUlloa\/tap\/side-glance\\nside-glance init";/u
   );
   assert.match(
     installButton,
@@ -33,7 +33,7 @@ test("the install control copies npm and morphs into confirmation", async () => 
   assert.match(installButton, /useMeasure/u);
   assert.match(installButton, /animate=\{\{ width: targetWidth \}\}/u);
   assert.doesNotMatch(installButton, /layout=\{/u);
-  assert.match(installButton, /copied \? "Copied npm" : "Install"/u);
+  assert.match(installButton, /copied \? "Copied setup" : "Install"/u);
   assert.match(installButton, /setTimeout\([^,]+, 1400\)/u);
   assert.match(installButton, /clearTimeout/u);
   assert.match(installButton, /copied \? <CheckIcon \/> :/u);

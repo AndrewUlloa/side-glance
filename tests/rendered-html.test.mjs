@@ -38,7 +38,10 @@ test("server-renders the focused Side Glance launch hero", async () => {
   assert.match(text, /Know which loop needs judgment\./);
   assert.match(text, /Let the others keep running\./);
   assert.match(text, /Install/);
-  assert.match(html, /install the public beta from npm · public beta · v0\.1/);
+  assert.match(
+    html,
+    /install with Homebrew and run guided setup · public beta · v0\.1/
+  );
   assert.match(text, /Claude Code/);
   assert.match(text, /Opus 5 \(1M context\)/);
   assert.match(
@@ -100,7 +103,10 @@ test("keeps the focused site accessible, responsive, and product-safe", async ()
   ]);
 
   assert.match(page, /aria-label="Side Glance home"/);
-  assert.match(page, /idleAriaLabel="install the public beta from npm/u);
+  assert.match(
+    page,
+    /idleAriaLabel="install with Homebrew and run guided setup/u
+  );
   assert.match(page, /<TerminalShowcase\s*\/>/);
   assert.match(
     showcase,

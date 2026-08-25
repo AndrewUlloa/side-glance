@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import {
   chmod,
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
   readdir,
+  rename,
   rm,
   symlink,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -14,11 +17,26 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  applyProviderHookPlan,
   inspectProviderHooks,
   installProviderHooks,
+  planProviderHookInstall,
   uninstallProviderHooks,
   type InstallableProvider,
 } from "../../src/adapters/installers.ts";
+import {
+  acquireConfigWriterLock,
+  applyConfigTargetPlan,
+  backupConfigTargetPlan,
+  captureConfigTarget,
+  planConfigTarget,
+  planConfigTargetRemoval,
+  releaseConfigWriterLock,
+  restoreConfigTargetApplication,
+  verifyConfigTargetApplication,
+  verifyConfigTargetPlan,
+  withConfigWriterLock,
+} from "../../src/adapters/config-target.ts";
 
 async function fixtureHome(context: test.TestContext): Promise<string> {
   const home = await mkdtemp(path.join(tmpdir(), "side-glance-installer-"));
@@ -303,6 +321,339 @@ test("refuses malformed and symlinked provider configuration", async (context) =
     /symbolic link/i,
   );
   assert.equal(await readFile(outside, "utf8"), "{}");
+});
+
+test("refuses a symlinked provider parent without writing through it", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const outsideDirectory = path.join(home, "outside-claude");
+  const outsideConfig = path.join(outsideDirectory, "settings.json");
+  await mkdir(outsideDirectory);
+  await writeFile(outsideConfig, '{"outside":"untouched"}\n', { mode: 0o640 });
+  await symlink(outsideDirectory, path.join(home, ".claude"));
+
+  await assert.rejects(
+    () =>
+      installProviderHooks({
+        provider: "claude",
+        homeDirectory: home,
+        executablePath,
+      }),
+    /parent|directory|symbolic link/i,
+  );
+  assert.equal(await readFile(outsideConfig, "utf8"), '{"outside":"untouched"}\n');
+  assert.deepEqual(await readdir(outsideDirectory), ["settings.json"]);
+});
+
+test("writes provider backups from the captured bytes with private permissions", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const targetPath = configPath(home, "claude");
+  const original = '{"private":"captured value"}\n';
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, original, { mode: 0o644 });
+
+  const installed = await installProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+    executablePath,
+  });
+
+  assert.ok(installed.backupPath);
+  assert.equal(await readFile(installed.backupPath, "utf8"), original);
+  assert.equal((await lstat(installed.backupPath)).mode & 0o777, 0o600);
+});
+
+test("rejects same-inode edits and target replacements made after capture", async (context) => {
+  const home = await fixtureHome(context);
+  const targetPath = path.join(home, ".claude", "settings.json");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, "original", { mode: 0o640 });
+  const snapshot = await captureConfigTarget({
+    rootDirectory: home,
+    targetPath,
+    label: "Test provider configuration",
+    maxBytes: 1_024,
+  });
+  const plan = planConfigTarget(snapshot, "desired");
+
+  await writeFile(targetPath, "external");
+  await assert.rejects(() => applyConfigTargetPlan(plan), /changed/i);
+  assert.equal(await readFile(targetPath, "utf8"), "external");
+
+  const replacementSnapshot = await captureConfigTarget({
+    rootDirectory: home,
+    targetPath,
+    label: "Test provider configuration",
+    maxBytes: 1_024,
+  });
+  const replacementPlan = planConfigTarget(replacementSnapshot, "desired");
+  const replacementPath = path.join(home, "replacement.json");
+  await writeFile(replacementPath, "external", { mode: 0o640 });
+  await rename(replacementPath, targetPath);
+  await assert.rejects(() => applyConfigTargetPlan(replacementPlan), /changed/i);
+  assert.equal(await readFile(targetPath, "utf8"), "external");
+  assert.deepEqual(
+    (await readdir(path.dirname(targetPath))).filter((name) =>
+      name.includes(".side-glance-backup-"),
+    ),
+    [],
+  );
+});
+
+test("restores the captured target when a post-commit failure is caught", async (context) => {
+  const home = await fixtureHome(context);
+  const targetPath = path.join(home, ".claude", "settings.json");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, "private original", { mode: 0o640 });
+  const snapshot = await captureConfigTarget({
+    rootDirectory: home,
+    targetPath,
+    label: "Test provider configuration",
+    maxBytes: 1_024,
+  });
+  const plan = planConfigTarget(snapshot, "desired", { mode: 0o640 });
+
+  await assert.rejects(
+    () =>
+      applyConfigTargetPlan(plan, {
+        afterCommit: async () => {
+          throw new Error("HOSTILE_POST_COMMIT_FAILURE");
+        },
+      }),
+    /post.commit|apply|hostile/i,
+  );
+
+  assert.equal(await readFile(targetPath, "utf8"), "private original");
+  assert.equal((await lstat(targetPath)).mode & 0o777, 0o640);
+});
+
+test("backs up captured bytes before apply and still rejects a later edit", async (context) => {
+  const home = await fixtureHome(context);
+  const targetPath = path.join(home, ".claude", "settings.json");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, "captured private bytes", { mode: 0o640 });
+  const snapshot = await captureConfigTarget({
+    rootDirectory: home,
+    targetPath,
+    label: "Test provider configuration",
+    maxBytes: 1_024,
+  });
+  const plan = planConfigTarget(snapshot, "desired", {
+    backupExisting: true,
+    mode: 0o640,
+  });
+
+  const backupPath = await backupConfigTargetPlan(plan);
+  assert.ok(backupPath);
+  await writeFile(targetPath, "external private bytes", { mode: 0o640 });
+  await assert.rejects(() => applyConfigTargetPlan(plan), /changed/i);
+
+  assert.equal(await readFile(backupPath, "utf8"), "captured private bytes");
+  assert.equal((await lstat(backupPath)).mode & 0o777, 0o600);
+  assert.equal(await readFile(targetPath, "utf8"), "external private bytes");
+});
+
+test("verifies exact desired state and refuses rollback over an external edit", async (context) => {
+  const home = await fixtureHome(context);
+  const targetPath = path.join(home, ".claude", "settings.json");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, "original", { mode: 0o640 });
+  const snapshot = await captureConfigTarget({
+    rootDirectory: home,
+    targetPath,
+    label: "Test provider configuration",
+    maxBytes: 1_024,
+  });
+  const plan = planConfigTarget(snapshot, "desired", { mode: 0o640 });
+  const application = await applyConfigTargetPlan(plan);
+
+  await verifyConfigTargetPlan(plan);
+  await verifyConfigTargetApplication(application);
+  await writeFile(targetPath, "external", { mode: 0o640 });
+  await assert.rejects(
+    () => verifyConfigTargetApplication(application),
+    /changed/i,
+  );
+  await assert.rejects(
+    () => restoreConfigTargetApplication(application),
+    /changed/i,
+  );
+  assert.equal(await readFile(targetPath, "utf8"), "external");
+});
+
+test("restores exact captured bytes and mode after an applied update", async (context) => {
+  const home = await fixtureHome(context);
+  const targetPath = path.join(home, ".codex", "hooks.json");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, "private original", { mode: 0o640 });
+  const snapshot = await captureConfigTarget({
+    rootDirectory: home,
+    targetPath,
+    label: "Test provider configuration",
+    maxBytes: 1_024,
+  });
+  const plan = planConfigTarget(snapshot, "desired", { mode: 0o640 });
+  const application = await applyConfigTargetPlan(plan);
+
+  await restoreConfigTargetApplication(application);
+
+  assert.equal(await readFile(targetPath, "utf8"), "private original");
+  assert.equal((await lstat(targetPath)).mode & 0o777, 0o640);
+});
+
+test("verifies an unchanged absent target without creating its parent", async (context) => {
+  const home = await fixtureHome(context);
+  const targetPath = path.join(home, ".gemini", "settings.json");
+  const snapshot = await captureConfigTarget({
+    rootDirectory: home,
+    targetPath,
+    label: "Test provider configuration",
+    maxBytes: 1_024,
+  });
+  const plan = planConfigTargetRemoval(snapshot);
+
+  await verifyConfigTargetPlan(plan);
+  await assert.rejects(() => lstat(path.dirname(targetPath)), /ENOENT/u);
+});
+
+test("serializes direct configuration writers with an owner-validated lock", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const first = await acquireConfigWriterLock(home);
+  await assert.rejects(
+    () => acquireConfigWriterLock(home),
+    /configuration update is in progress/i,
+  );
+  await assert.rejects(
+    () =>
+      installProviderHooks({
+        provider: "claude",
+        homeDirectory: home,
+        executablePath,
+      }),
+    /configuration update is in progress/i,
+  );
+  await assert.rejects(() => lstat(path.join(home, ".claude")), /ENOENT/u);
+  await releaseConfigWriterLock(first);
+
+  const second = await acquireConfigWriterLock(home);
+  await releaseConfigWriterLock(second);
+  await assert.rejects(() => lstat(second.lockPath), /ENOENT/u);
+});
+
+test("does not unlink a writer lock whose ownership bytes changed", async (context) => {
+  const home = await fixtureHome(context);
+  const lock = await acquireConfigWriterLock(home);
+  await writeFile(lock.lockPath, "external lock owner\n", { mode: 0o600 });
+
+  await assert.rejects(
+    () => releaseConfigWriterLock(lock),
+    /ownership was lost/i,
+  );
+  assert.equal(await readFile(lock.lockPath, "utf8"), "external lock owner\n");
+});
+
+test("preserves the operation error when lock ownership is lost during failure", async (context) => {
+  const home = await fixtureHome(context);
+  const sentinel = "HOSTILE_OPERATION_FAILURE";
+
+  await assert.rejects(
+    () =>
+      withConfigWriterLock(home, async (lock) => {
+        await writeFile(lock.lockPath, "external lock owner\n", { mode: 0o600 });
+        throw new Error(sentinel);
+      }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, sentinel);
+      return true;
+    },
+  );
+  assert.equal(
+    await readFile(path.join(home, ".side-glance.config.lock"), "utf8"),
+    "external lock owner\n",
+  );
+});
+
+test("recovers a well-formed writer lock whose owning process has exited", async (context) => {
+  const home = await fixtureHome(context);
+  const lockPath = path.join(home, ".side-glance.config.lock");
+  await writeFile(
+    lockPath,
+    `${JSON.stringify({ schema: 1, pid: 2_147_483_647, owner: "stale-owner" })}\n`,
+    { mode: 0o600 },
+  );
+
+  const recovered = await acquireConfigWriterLock(home);
+  await releaseConfigWriterLock(recovered);
+
+  await assert.rejects(() => lstat(lockPath), /ENOENT/u);
+});
+
+test("recovers an old incomplete writer lock without deleting a fresh one", async (context) => {
+  const home = await fixtureHome(context);
+  const lockPath = path.join(home, ".side-glance.config.lock");
+  await writeFile(lockPath, "", { mode: 0o600 });
+
+  await assert.rejects(
+    () => acquireConfigWriterLock(home),
+    /configuration update is in progress/i,
+  );
+  const old = new Date(Date.now() - 120_000);
+  await utimes(lockPath, old, old);
+
+  const recovered = await acquireConfigWriterLock(home);
+  await releaseConfigWriterLock(recovered);
+  await assert.rejects(() => lstat(lockPath), /ENOENT/u);
+});
+
+test("redacts hostile provider event names from installer errors", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const targetPath = configPath(home, "claude");
+  const sentinel = "PRIVATE_EVENT_KEY\u001b[31m";
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(
+    targetPath,
+    `${JSON.stringify({ hooks: { [sentinel]: "not-an-array" } })}\n`,
+    { mode: 0o600 },
+  );
+
+  await assert.rejects(
+    () =>
+      installProviderHooks({
+        provider: "claude",
+        homeDirectory: home,
+        executablePath,
+      }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.doesNotMatch(error.message, /PRIVATE_EVENT_KEY/iu);
+      assert.equal(error.message.includes(String.fromCodePoint(27)), false);
+      assert.match(error.message, /hook|configuration|shape|array/iu);
+      return true;
+    },
+  );
+});
+
+test("revalidates the retained executable immediately before provider apply", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const plan = await planProviderHookInstall({
+    provider: "claude",
+    homeDirectory: home,
+    executablePath,
+  });
+  const replacement = path.join(home, "replacement-side-glance");
+  await writeFile(replacement, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await rename(replacement, executablePath);
+
+  await assert.rejects(() => applyProviderHookPlan(plan), /executable|identity|changed/i);
+  await assert.rejects(
+    () => readFile(configPath(home, "claude"), "utf8"),
+    /ENOENT/u,
+  );
 });
 
 test("accepts a stable package-manager bin symlink and preserves its path", async (context) => {
