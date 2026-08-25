@@ -92,7 +92,18 @@ async function verifyWithHomebrewWhenAvailable(formulaPath) {
   } catch {
     return;
   }
-  await command("brew", ["style", formulaPath], environment);
+  // A maintainer may already have AndrewUlloa/tap/side-glance installed. Homebrew
+  // loads tapped formulae while styling a path, so linting a second SideGlance class
+  // reports a false duplicate-method offense. Preserve the generated body while
+  // giving only the temporary lint copy its own formula identity.
+  const styleFormulaPath = path.join(path.dirname(formulaPath), "side-glance-generated-test.rb");
+  const formula = await readFile(formulaPath, "utf8");
+  await writeFile(
+    styleFormulaPath,
+    formula.replace("class SideGlance < Formula", "class SideGlanceGeneratedTest < Formula"),
+    "utf8",
+  );
+  await command("brew", ["style", styleFormulaPath], environment);
 }
 
 function command(executable, args, environment = process.env) {

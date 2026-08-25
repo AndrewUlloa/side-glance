@@ -10,6 +10,9 @@ Prereleases use npm's explicit `beta` channel; confirm the installed build with
 `side-glance --version`.
 
 ```bash
+# Apple Silicon macOS or glibc Linux; Intel macOS is experimental
+brew install AndrewUlloa/tap/side-glance
+
 # Durable installation
 npm install --global side-glance@beta
 side-glance doctor --json
