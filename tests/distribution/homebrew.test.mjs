@@ -21,7 +21,7 @@ test("generates a validated Homebrew formula from immutable release metadata", a
 
   const formula = await readFile(formulaPath, "utf8");
   assert.match(formula, /class SideGlance < Formula/u);
-  assert.match(formula, /version "0\.1\.0-beta\.3"/u);
+  assert.doesNotMatch(formula, /^\s*version\s/mu);
   assert.match(formula, /license "Apache-2\.0"/u);
   for (const artifact of manifest.artifacts) {
     assert.ok(formula.includes(artifact.url));

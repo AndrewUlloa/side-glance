@@ -20,7 +20,7 @@ if (!manifestPath || !outputPath) {
 
 const manifest = await loadManifest(manifestPath);
 const artifacts = validateManifest(manifest);
-const formula = renderFormula(manifest.version, artifacts);
+const formula = renderFormula(artifacts);
 
 await mkdir(path.dirname(path.resolve(outputPath)), { recursive: true });
 await writeFile(outputPath, formula, "utf8");
@@ -98,7 +98,7 @@ function validateManifest(value) {
   return byTarget;
 }
 
-function renderFormula(version, artifacts) {
+function renderFormula(artifacts) {
   const darwinArm = artifacts.get("darwin-arm64");
   const linuxIntel = artifacts.get("linux-x64-gnu");
   const linuxArm = artifacts.get("linux-arm64-gnu");
@@ -110,7 +110,6 @@ function renderFormula(version, artifacts) {
 class SideGlance < Formula
   desc "Local-first attention cues for coding-agent terminal sessions"
   homepage "https://github.com/${REPOSITORY}"
-  version "${version}"
   license "Apache-2.0"
 
   on_macos do
