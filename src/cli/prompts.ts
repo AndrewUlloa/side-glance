@@ -111,7 +111,8 @@ class ReadlineSetupPrompter implements SetupPrompter {
       output: options.output,
       terminal: Boolean(
         (options.input as NodeJS.ReadableStream & { isTTY?: boolean }).isTTY &&
-          (options.output as NodeJS.WritableStream & { isTTY?: boolean }).isTTY,
+          (options.output as NodeJS.WritableStream & { isTTY?: boolean }).isTTY &&
+          process.env.NO_COLOR === undefined,
       ),
     });
   }

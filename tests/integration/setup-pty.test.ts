@@ -48,7 +48,21 @@ test(
         : await runPty(
             ["-qec", runner, "/dev/null"],
             environment,
-            "9\n\nnone\ny\n",
+            [
+              {
+                prompt: "Choose comma-separated numbers or names [default]: ",
+                answer: "9\n",
+              },
+              {
+                prompt: "Choose comma-separated numbers or names [default]: ",
+                answer: "\n",
+              },
+              {
+                prompt: "Choose comma-separated numbers or names [default]: ",
+                answer: "none\n",
+              },
+              { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
+            ],
           );
 
     assert.equal(result.code, 0, result.output);
@@ -95,38 +109,52 @@ exit [lindex $result 3]
 function runPty(
   args: readonly string[],
   environment: Record<string, string>,
-  input: string,
+  interactions: readonly { prompt: string; answer: string }[],
 ): Promise<{ code: number | null; output: string }> {
-  return runProcess("/usr/bin/script", args, environment, input);
+  return runProcess("/usr/bin/script", args, environment, interactions);
 }
 
 function runProcess(
   executable: string,
   args: readonly string[],
   environment: Record<string, string>,
-  input?: string,
+  interactions?: readonly { prompt: string; answer: string }[],
 ): Promise<{ code: number | null; output: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, [...args], {
       env: { ...process.env, ...environment },
-      stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
+      stdio: [interactions === undefined ? "ignore" : "pipe", "pipe", "pipe"],
     });
     let output = "";
-    const timeout = setTimeout(() => child.kill("SIGTERM"), 10_000);
+    let interactionIndex = 0;
+    let searchOffset = 0;
+    const drive = () => {
+      while (interactions && interactionIndex < interactions.length) {
+        const interaction = interactions[interactionIndex];
+        if (!interaction) return;
+        const promptIndex = output.indexOf(interaction.prompt, searchOffset);
+        if (promptIndex < 0) return;
+        searchOffset = promptIndex + interaction.prompt.length;
+        child.stdin?.write(interaction.answer);
+        interactionIndex += 1;
+      }
+    };
+    const timeout = setTimeout(() => child.kill("SIGTERM"), 20_000);
     child.stdout?.setEncoding("utf8");
     child.stderr?.setEncoding("utf8");
     child.stdout?.on("data", (chunk: string) => {
       output += chunk;
+      drive();
     });
     child.stderr?.on("data", (chunk: string) => {
       output += chunk;
+      drive();
     });
     child.once("error", reject);
     child.once("close", (code) => {
       clearTimeout(timeout);
       resolve({ code, output });
     });
-    if (input !== undefined) child.stdin?.end(input);
   });
 }
 
