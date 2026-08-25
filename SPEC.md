@@ -572,8 +572,9 @@ silence alerts are not guaranteed.
 ## Beta Release Readiness Contract
 
 The requester approved the complete 2026-08-24 remediation program after the thermal,
-provider-runtime, user-journey, and release audits. Side Glance must not promote or
-publish the current beta.3 candidate until the following observable contract is true.
+provider-runtime, user-journey, and release audits. Side Glance did not promote or
+publish beta.3 until the following observable contract was true; later releases retain
+these requirements.
 
 ### Lifecycle and thermal semantics
 
