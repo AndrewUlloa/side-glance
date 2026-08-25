@@ -114,17 +114,22 @@ async function runInteractiveSetup(
 ): Promise<number> {
   const prompter =
     options.prompter ??
-    createReadlineSetupPrompter({ input: process.stdin, output: process.stdout });
+    createReadlineSetupPrompter({
+      input: process.stdin,
+      output: process.stdout,
+      signal: options.signal,
+    });
   try {
     const preliminary = await discoverPlan(initialRequest, options);
     if (!preliminary.ok) return preliminary.code;
     if (options.signal?.aborted) return interruptedSetup(options, false);
-    prompter.note("Side Glance guided setup");
-    renderProviderDiscovery(preliminary.plan, prompter);
+    prompter.note("Side Glance setup");
+    renderProviderSummary(preliminary.plan, prompter);
     const eligible = preliminary.plan.providers.filter(
       ({ state }) => state === "eligible",
     );
     if (eligible.length === 0) {
+      renderProviderDiscovery(preliminary.plan, prompter);
       prompter.note(
         "No safely eligible provider integrations were found. Nothing was changed.",
       );
@@ -132,9 +137,43 @@ async function runInteractiveSetup(
       return 0;
     }
 
+    const hasFixedSelections =
+      initialRequest.providers !== undefined ||
+      initialRequest.notificationsSpecified ||
+      initialRequest.notificationSound !== undefined;
+    let setupMode: "recommended" | "customize" = "customize";
+    if (!hasFixedSelections) {
+      const selectedMode = await prompter.select(
+        "How would you like to continue?",
+        [
+          {
+            id: "recommended",
+            label: recommendedChoiceLabel(preliminary.plan),
+            selected: true,
+          },
+          {
+            id: "customize",
+            label: "Customize providers and computer notifications",
+          },
+          { id: "exit", label: "Exit without making changes" },
+        ],
+      );
+      if (selectedMode.status === "cancelled") {
+        return cancellationCode(selectedMode);
+      }
+      if (selectedMode.value === "exit") {
+        prompter.note("Setup cancelled. Nothing was changed.");
+        return 0;
+      }
+      setupMode =
+        selectedMode.value === "recommended" ? "recommended" : "customize";
+    }
+
     const selectedProviderValues = initialRequest.providers
       ? [...initialRequest.providers]
-      : await promptForProviders(preliminary.plan, prompter, options);
+      : setupMode === "recommended"
+        ? [...preliminary.plan.selectedProviders]
+        : await promptForProviders(preliminary.plan, prompter, options);
     if (!Array.isArray(selectedProviderValues)) return selectedProviderValues;
     if (selectedProviderValues.length === 0) {
       prompter.note("No providers selected. Nothing was changed.");
@@ -150,6 +189,8 @@ async function runInteractiveSetup(
 
     const selectedNotificationValues = initialRequest.notificationsSpecified
       ? [...(initialRequest.notifications ?? [])]
+      : setupMode === "recommended"
+        ? [...preliminary.plan.selectedNotifications]
       : await promptForNotifications(
           preliminary.plan,
           selectedProviderValues,
@@ -170,6 +211,9 @@ async function runInteractiveSetup(
     if (selectedNotificationValues.length > 0) {
       if (initialRequest.notificationSound !== undefined) {
         notificationSound = initialRequest.notificationSound;
+      } else if (setupMode === "recommended") {
+        notificationSound =
+          preliminary.plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND;
       } else {
         renderSoundGuidance(preliminary.discovery.dependencies, prompter);
         while (notificationSound === undefined) {
@@ -220,7 +264,16 @@ async function runInteractiveSetup(
       prompter.note("Setup cancelled. Nothing was changed.");
       return 0;
     }
-    return await applyPlan(finalPlan.discovery, finalPlan.plan, false, options);
+    prompter.startProgress?.("Writing and verifying provider configuration…");
+    return await applyPlan(finalPlan.discovery, finalPlan.plan, false, options, {
+      success: () =>
+        prompter.stopProgress?.("Provider configuration verified.", true),
+      failure: () =>
+        prompter.stopProgress?.(
+          "Provider configuration could not be verified.",
+          false,
+        ),
+    });
   } finally {
     prompter.close();
   }
@@ -271,15 +324,26 @@ async function applyPlan(
   plan: SetupPlan,
   json: boolean,
   options: SetupCommandOptions,
+  progress?: { success(): void; failure(): void },
 ): Promise<number> {
+  let progressFinished = false;
   try {
-    if (options.signal?.aborted) return interruptedSetup(options, json);
+    if (options.signal?.aborted) {
+      progress?.failure();
+      progressFinished = true;
+      return interruptedSetup(options, json);
+    }
     const result = await discovery.apply(plan, options.signal);
     const projected = projectSetupResult(plan, result);
-    if (json) options.writeStdout(`${JSON.stringify(projected)}\n`);
-    else options.writeStdout(`${humanSetupResult(plan, result).join("\n")}\n`);
+    const output = json
+      ? `${JSON.stringify(projected)}\n`
+      : `${humanSetupResult(plan, result).join("\n")}\n`;
+    progress?.success();
+    progressFinished = true;
+    options.writeStdout(output);
     return 0;
   } catch (error) {
+    if (!progressFinished) progress?.failure();
     const code =
       error instanceof SetupTransactionError ? error.code : "apply-failed";
     const failure = writeSetupFailure(options, json, code);
@@ -342,7 +406,44 @@ export function projectSetupPlan(plan: SetupPlan) {
 }
 
 function renderPlanNotes(plan: SetupPlan, prompter: SetupPrompter): void {
-  for (const line of humanSetupPlan(plan, false)) writePromptDetail(prompter, line);
+  prompter.note("Review setup");
+  writePromptDetail(prompter, `  Side Glance: ${plan.executablePath}`);
+  for (const provider of plan.providers) {
+    if (!provider.selected || !provider.target) continue;
+    writePromptDetail(
+      prompter,
+      `  ${providerLabel(provider.provider)}: ${provider.target.action} ${provider.target.path}${provider.maturity === "experimental" ? " (experimental integration)" : ""}`,
+    );
+    writePromptDetail(
+      prompter,
+      provider.notifications.selected
+        ? `    ${providerLabel(provider.provider)} alerts: ${coverageDescription(provider)}`
+        : `    ${providerLabel(provider.provider)} alerts: off`,
+    );
+    for (const warning of provider.warnings) {
+      writePromptDetail(prompter, `    warning: ${warning.message}`);
+    }
+    if (provider.launchCommand) {
+      writePromptDetail(prompter, `    launch: ${provider.launchCommand}`);
+    }
+  }
+  const notifications = plan.selectedNotifications.map(providerLabel);
+  writePromptDetail(
+    prompter,
+    notifications.length === 0
+      ? "  Computer notifications: off"
+      : `  Computer notifications: ${notifications.join(", ")} (sound ${plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND})`,
+  );
+  if (notifications.length > 0) {
+    writePromptDetail(
+      prompter,
+      "  Setup configures notification hooks but does not send a live test alert.",
+    );
+  }
+  writePromptDetail(
+    prompter,
+    "  Side Glance will write this configuration, verify it, and roll back caught failures when safe.",
+  );
 }
 
 function humanSetupPlan(plan: SetupPlan, dryRun = true): string[] {
@@ -437,6 +538,11 @@ function humanSetupResult(
       `  configuration: ${provider.configPath}`,
     );
     if (provider.backupPath) lines.push(`  backup: ${provider.backupPath}`);
+    lines.push(
+      provider.notifications?.selected
+        ? `  ${providerLabel(provider.id as SetupProvider)} alerts: ${coverageDescriptionFromCoverage(provider.notifications.coverage)}`
+        : `  ${providerLabel(provider.id as SetupProvider)} alerts: off`,
+    );
     for (const warning of provider.warnings ?? []) {
       lines.push(`  warning: ${warning.message}`);
     }
@@ -444,6 +550,9 @@ function humanSetupResult(
   }
   if (projected.notificationSound) {
     lines.push(`Notification sound: ${projected.notificationSound}`);
+    lines.push(
+      "Computer notifications are configured; delivery and sound were not live-tested.",
+    );
   }
   lines.push(
     "Hooks provide lifecycle events; use the launch commands above to provide a stable terminal surface identity for reliable colors.",
@@ -478,6 +587,29 @@ function renderProviderDiscovery(
       `  ${providerLabel(provider.provider)}: ${provider.state}; ${provider.maturity}; current integration ${provider.integrationStatus}${reason}`,
     );
   }
+}
+
+function renderProviderSummary(plan: SetupPlan, prompter: SetupPrompter): void {
+  const eligible = plan.providers
+    .filter(({ state }) => state === "eligible")
+    .map(({ provider }) => providerLabel(provider));
+  const unavailable = plan.providers.length - eligible.length;
+  prompter.note(
+    eligible.length === 0
+      ? "No available provider commands were found."
+      : `Found ${eligible.length} available ${eligible.length === 1 ? "provider" : "providers"}: ${eligible.join(", ")}.`,
+  );
+  if (unavailable > 0) {
+    prompter.note(
+      `${unavailable} ${unavailable === 1 ? "provider is" : "providers are"} unavailable and will be skipped.`,
+    );
+  }
+}
+
+function recommendedChoiceLabel(plan: SetupPlan): string {
+  const providers = plan.selectedProviders.map(providerLabel).join(", ");
+  const notifications = plan.selectedNotifications.map(providerLabel).join(", ");
+  return `Use recommended — ${providers}; alerts: ${notifications.length > 0 ? notifications : "off"}`;
 }
 
 async function promptForProviders(
@@ -523,8 +655,22 @@ async function promptForNotifications(
 }
 
 function providerChoiceLabel(provider: SetupPlan["providers"][number]): string {
-  const reason = provider.reason ? `; ${provider.reason.message}` : "";
-  return `${providerLabel(provider.provider)} — ${provider.state}; ${provider.maturity}; integration ${provider.integrationStatus}${reason}`;
+  if (provider.state !== "eligible") {
+    return `${providerLabel(provider.provider)} — unavailable${provider.reason ? `; ${provider.reason.message}` : ""}`;
+  }
+  const action = (() => {
+    switch (provider.target?.action) {
+      case "create":
+        return "will create provider settings";
+      case "update":
+        return "will update provider settings";
+      case "unchanged":
+        return "settings already match";
+      default:
+        return "configuration available";
+    }
+  })();
+  return `${providerLabel(provider.provider)} — ${action}${provider.maturity === "experimental" ? "; experimental integration" : ""}`;
 }
 
 function renderSoundGuidance(
@@ -585,26 +731,36 @@ function providerLabel(provider: SetupProvider): string {
 function notificationChoiceLabel(
   provider: SetupPlan["providers"][number],
 ): string {
-  const recommendation = (() => {
+  const label = providerLabel(provider.provider);
+  const coverage = compactNotificationCoverage(provider.notifications.coverage);
+  return (() => {
     switch (provider.notifications.recommendation) {
       case "enable-side-glance":
-        return `native ${provider.notifications.nativeStatus}; defaults on`;
+        return `${label} — on; ${coverage}`;
       case "prefer-native":
-        return "native ready; defaults off (duplicate risk)";
+        return `${label} — off; native ${coverage}; no duplicates`;
       case "leave-off-unverified":
-        return "native unknown; defaults off";
+        return `${label} — off; native alert coverage unverified`;
       case "backend-unavailable":
-        return "Side Glance backend unavailable; defaults off";
+        return `${label} — off; computer alerts unavailable`;
       case "unsupported":
-        return "Side Glance notifications unsupported";
+        return `${label} — computer alerts unsupported`;
     }
   })();
-  const coverage = provider.notifications.coverage;
-  const ready =
-    coverage.ready === "pre-final-silent"
-      ? "Ready stays silent before final"
-      : "Ready covered";
-  return `${providerLabel(provider.provider)} — ${recommendation}; ${ready}; attention ${coverage.attention === "covered" ? "yes" : "no"}; failure ${coverage.failure === "covered" ? "yes" : "no"}`;
+}
+
+function compactNotificationCoverage(
+  coverage: SetupPlan["providers"][number]["notifications"]["coverage"],
+): string {
+  const covered = [
+    ...(coverage.attention === "covered" ? ["attention"] : []),
+    ...(coverage.failure === "covered" ? ["failure"] : []),
+    ...(coverage.ready === "pre-final-silent" ? [] : ["Ready"]),
+  ];
+  const alerts = covered.length > 0 ? `${covered.join("/")} alerts` : "no alerts";
+  return coverage.ready === "pre-final-silent"
+    ? `${alerts}; Ready stays silent`
+    : alerts;
 }
 
 function notificationRecommendationDescription(
@@ -627,7 +783,12 @@ function notificationRecommendationDescription(
 function coverageDescription(
   provider: SetupPlan["providers"][number],
 ): string {
-  const { coverage } = provider.notifications;
+  return coverageDescriptionFromCoverage(provider.notifications.coverage);
+}
+
+function coverageDescriptionFromCoverage(
+  coverage: SetupPlan["providers"][number]["notifications"]["coverage"],
+): string {
   return [
     coverage.ready === "pre-final-silent"
       ? "pre-final Ready stays silent"

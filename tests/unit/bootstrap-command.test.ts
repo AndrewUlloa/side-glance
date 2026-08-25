@@ -252,7 +252,7 @@ test("human post-install failure reports the retained package cleanup command", 
 test("interactive preview-only choice cancels before any command", async () => {
   let commands = 0;
   const prompter = scriptedPrompter([
-    { status: "value", value: ["none"] },
+    { status: "value", value: "none" },
   ]);
   const code = await runBootstrapInit([], {
     ...options({
@@ -275,7 +275,7 @@ test("interactive preview-only choice cancels before any command", async () => {
 test("interactive unsupported targets offer preview only without resolving installers", async () => {
   let managerResolutions = 0;
   const prompter = scriptedPrompter([
-    { status: "value", value: ["none"] },
+    { status: "value", value: "none" },
   ]);
   const code = await runBootstrapInit([], {
     ...options(
@@ -450,7 +450,7 @@ test("interactive Homebrew preview performs no package-manager command before ap
     identity: identity("/private/test/homebrew/bin/brew", 20),
   };
   const prompter = scriptedPrompter([
-    { status: "value", value: ["homebrew"] },
+    { status: "value", value: "homebrew" },
     { status: "value", value: false },
   ]);
 
@@ -615,6 +615,7 @@ function scriptedPrompter(outcomes: PromptOutcome<unknown>[]) {
   const prompter: SetupPrompter & { rendered: string[]; closed: boolean } = {
     rendered,
     closed: false,
+    select: async () => next<string>(),
     multiselect: async () => next<string[]>(),
     confirm: async () => next<boolean>(),
     text: async () => next<string>(),

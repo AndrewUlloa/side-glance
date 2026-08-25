@@ -4,6 +4,18 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- Interactive `init` and bootstrap choices now support Up/Down navigation, Space
+  toggles for multiple selections, Enter to continue, and a protected static
+  fallback for non-TTY, no-color, dumb, and accessible terminal sessions.
+
+### Changed
+
+- Guided setup now opens with a concise recommended/customize/exit decision,
+  progressively reveals advanced provider and notification choices, and shows
+  write-and-verify progress only after final approval.
+
 ## [0.1.0-beta.5] — 2026-08-25
 
 ### Fixed

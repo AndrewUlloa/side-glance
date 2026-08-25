@@ -35,7 +35,13 @@ exact-version durable install. Side Glance deliberately refuses permanent provid
 `side-glance init` shows a read-only preview of detected providers, owned target
 paths, create/update/unchanged actions, notification choices, warnings, and launch
 commands before it asks for one confirmation. `side-glance setup` is its exact alias
-and is safe to re-run. Setup does not edit shell profiles or start a daemon.
+and is safe to re-run. On an interactive terminal, **Use recommended settings** is
+focused first; choose **Customize** for provider and notification controls.
+Use Up/Down to move, Space to toggle multiple choices, and Enter to continue. Set
+`SIDE_GLANCE_ACCESSIBLE=1` for static numbered prompts; `NO_COLOR`, `TERM=dumb`,
+select that same no-ANSI fallback automatically. Non-TTY input stays
+non-interactive and requires explicit automation flags. Setup does not edit shell
+profiles or start a daemon.
 
 Provider hooks supply lifecycle semantics, but they do not identify which
 Terminal.app, iTerm, Ghostty, or tmux surface should receive colors. Use the wrapper
