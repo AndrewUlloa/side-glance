@@ -30,7 +30,7 @@ export default function Home() {
           </a>
 
           <div className="minimal-header-actions minimal-page-enter minimal-page-enter-actions gap-header-actions-gap">
-            <InstallButton idleAriaLabel="install the public beta from npm · public beta · v0.1" />
+            <InstallButton idleAriaLabel="install with Homebrew and run guided setup · public beta · v0.1" />
 
             <a
               aria-label="View Side Glance on GitHub"

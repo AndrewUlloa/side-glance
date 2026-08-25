@@ -1,9 +1,9 @@
 # Launch and rollback
 
-Side Glance is a beta. Version `0.1.0-beta.3` is the release candidate for the
-desktop-notification work integrated on `staging`. Preparing this candidate does
-not create a version tag or GitHub Release, publish to npm, update a Homebrew tap,
-or migrate live provider configuration.
+Side Glance is a beta. Version `0.1.0-beta.4` is the release candidate for the
+guided setup and durable npx bootstrap integrated on `staging`. Preparing this
+candidate does not create a version tag or GitHub Release, publish to npm, update
+a Homebrew tap, or migrate live provider configuration.
 
 ## Production deployment status
 
@@ -34,13 +34,13 @@ historical deployment identifiers are not rewritten during a product rename.
 
 ## npm beta release candidate
 
-- Candidate: `side-glance@0.1.0-beta.3`
+- Candidate: `side-glance@0.1.0-beta.4`
 - Channel: `beta`
 - Status: unpublished; pending protected `main` promotion and matching annotated tag
-- Previously published: `side-glance@0.1.0-beta.1`
+- Previously published: `side-glance@0.1.0-beta.3` and `side-glance@0.1.0-beta.1`
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
   dry-run; no npm package or GitHub Release was published.
-- Previous integrity: `sha512-xW2t4IJEwDHRgh3uMi4FhXP9zhYCEdcvefCHVrXesWMfaOlMzx+QEgLfkaaHJkGvR0boC5bZnZq0dEwDax9szw==`
+- Previous beta.3 integrity: `sha512-0nAPqWKR8ujwq5v78MC2oXaMrwXLsZEXT7dRDE0CJv5Jl6gd9V/U3rswXeW8kCMFeMRaVDXlXTTrh/tIg04Q1A==`
 - The candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
 
@@ -53,10 +53,10 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-The beta.2 source passed the canonical Turbopack build locally and in CI on Node
-24.18.0. Beta.3 retains that product source and changes the release path. The
-release-readiness remediation must repeat every local gate and protected CI must
-pass before tagging. Turbopack has previously reported a non-blocking missing
+Beta.3 passed the protected tag workflow and is public on npm, GitHub Releases,
+and the Homebrew tap. Beta.4 adds guided setup and a durable npx bootstrap. The
+release preparation must repeat every local gate and protected CI must pass before
+tagging. Turbopack has previously reported a non-blocking missing
 fallback-override warning for Alan Sans; compilation, type checking, static
 generation, and rendered HTML verification still completed successfully.
 
@@ -78,53 +78,68 @@ the toolbar must remain unpromoted; discarding that preview is its rollback path
 
 ## Notification activation preflight
 
-1. Run `side-glance doctor --json` and inspect every capability column; configured is not live-verified.
-2. Choose one notification path per provider unless duplicate alerts are intentional. Install results warn when an active native path is detected.
-3. Enable a trial provider with `side-glance install <provider> --notifications --notification-sound Glass --json`; do not point hooks at `npx`.
-4. In Terminal.app, iTerm, Ghostty, or another terminal, launch each session through `side-glance run --label "<private label>" -- <provider>`; add `--terminal-title` only when the phase-only fallback is wanted.
-5. For Aider, use its static callback through the supervised wrapper; for arbitrary one-shot commands, use only the truthful `run --notify-on-exit` path.
-6. Manually verify terminal channels plus OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
+The canonical installed smoke path is:
+
+```bash
+brew install AndrewUlloa/tap/side-glance
+side-glance init
+```
+
+During the beta, `npx side-glance@beta init` is the public bootstrap/trial path.
+The npx runner may discover and install with separate consent, but only an
+exact-version durable executable may write provider hooks. `side-glance setup` is
+the exact durable alias for `init`.
+
+1. Review the read-only preview before confirming it; setup must not print unrelated configuration values.
+2. Run `side-glance doctor --json` and inspect every capability column; configured is not live-verified.
+3. Choose one notification path per provider unless duplicate alerts are intentional. When provider-native notifications are ready, Side Glance defaults off; when the native notification state is unknown, Side Glance also defaults off. Disabled/not-configured native delivery defaults Side Glance on only when its backend is available.
+4. Confirm the promised coverage: Claude attention/failure with pre-final Ready silent; Codex and Gemini attention with pre-final Ready silent; experimental OpenCode v1 Ready/attention/failure; Aider only through an explicit conflict-aware static bridge; generic wrapper process exit only.
+5. For an advanced one-provider trial, use `side-glance install <provider> --notifications --notification-sound Glass --json`; never point hooks at `npx`.
+6. In Terminal.app, iTerm, Ghostty, or another terminal, launch each session through `side-glance run --label "<private label>" -- <provider>`; hooks provide lifecycle semantics, while the wrapper provides the stable surface identity used for colors.
+7. Manually verify terminal channels plus OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
+
+## Guided setup smoke and rollback
+
+Use a deliberately chosen provider and keep the initial preview read-only:
+
+```bash
+side-glance setup --providers claude --notifications none --dry-run
+side-glance setup --providers claude --notifications none --yes
+side-glance run --label "Side Glance smoke" -- claude
+side-glance doctor --json
+side-glance uninstall claude --json
+side-glance reset --all --json
+```
+
+Setup rolls back caught multi-provider apply or verification failures in reverse
+order only while each target still matches its setup write. A concurrent edit is a
+rollback conflict and is preserved. A power loss or `SIGKILL` between distinct
+provider-file renames can leave partial setup; the next `side-glance init` or
+`side-glance doctor` reports it for idempotent repair. No secret configuration crash
+journal is retained.
 
 ## External publication gates
 
 Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
 release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
-remaining beta.3 gates are:
+remaining beta.4 gates are:
 
-- apply the reviewed `.github/rulesets/protect-main.json` payload to live ruleset
-  `20776489`; the 2026-08-24 read-only comparison found only the missing
-  `require-staging-head` context;
-- merge this release through protected `staging` and `main`;
+- merge the release preparation through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;
 - let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
-- verify `beta` points to beta.3, then remove the stale beta.1 `latest` tag through
+- verify `beta` points to beta.4, then remove the stale beta.1 `latest` tag through
   an approved interactive npm session; trusted-publishing OIDC cannot perform
   dist-tag mutations;
 - open a separate Homebrew tap pull request after the immutable artifact URLs exist.
 
 ## Prepared pull request sequence
 
-The feature PR into `staging` should be titled **Harden beta release readiness** and
-summarize these independently reviewable outcomes:
-
-- correct epoch-millisecond thermal timing, EWMA adaptation, and preview/site parity;
-- physical tmux ownership, surface migration, and stale-wrapper reconciliation;
-- provider-safe acknowledgements, bounded hooks, semantic notification dedupe, and
-  truthful provider completion/support tiers;
-- non-color terminal markers, opt-in titles, Terminal.app diagnostics, zero-advisory
-  dependencies, current artifact attestations, and verified deployment claims.
-
-Its verification section should record the exact `REVIEW.md` results, including the
-opt-in live tmux pass, real-browser matrix, zero npm audits, absent provider binaries,
-and the still-unfired real desktop notification. It must target `staging`.
-
-After that PR is green and merged, update PR #37's title to **Promote Side Glance
-0.1.0-beta.3**. Replace its R2-only description with the complete release-readiness
-summary, temporary verified `r2.dev` origin, unresolved custom-domain status, full
-protected-check results, and explicit notification/Terminal.app boundaries. Keep it
-draft until the live main ruleset requires `require-staging-head`; then mark it ready
-for the final `staging` → `main` review.
+The guided-setup feature landed on `staging` through PR #52. Prepare beta.4 in a
+separate, narrowly scoped PR that updates the CLI and lockfile version, changelog,
+launch record, and current-version fixtures. After that PR is green and merged,
+open a fresh `staging` → `main` PR titled **Promote Side Glance 0.1.0-beta.4**.
+Tag only the exact green merge commit on `main`.
 
 ## Controlled migration from stoplight.sh
 

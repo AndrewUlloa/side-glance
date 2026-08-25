@@ -1,5 +1,10 @@
-import { lstat, readFile } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import path from "node:path";
+
+import {
+  captureConfigTarget,
+  sensitiveConfigTargetSnapshotBytes,
+} from "../adapters/config-target.ts";
 
 const MAX_CONFIG_BYTES = 1_048_576;
 const MAX_SETTING_LENGTH = 128;
@@ -192,7 +197,7 @@ async function inspectCodex(
   homeDirectory: string,
 ): Promise<CodexNotificationInspection> {
   const configPath = path.join(homeDirectory, ".codex", "config.toml");
-  const loaded = await readBoundedRegularFile(configPath);
+  const loaded = await readBoundedRegularFile(homeDirectory, configPath);
   if (loaded.status !== "regular" || loaded.raw === undefined) {
     if (loaded.status === "absent") {
       return {
@@ -241,7 +246,7 @@ async function inspectGemini(
     higherPrecedenceOverridesPossible: true,
   } as const;
   const configPath = path.join(homeDirectory, ".gemini", "settings.json");
-  const loaded = await readBoundedRegularFile(configPath);
+  const loaded = await readBoundedRegularFile(homeDirectory, configPath);
   if (loaded.status !== "regular" || loaded.raw === undefined) {
     return {
       provider: "gemini",
@@ -306,7 +311,7 @@ async function inspectOpenCode(
     "opencode",
     "tui.json",
   );
-  const loaded = await readBoundedRegularFile(configPath);
+  const loaded = await readBoundedRegularFile(homeDirectory, configPath);
   if (loaded.status !== "regular" || loaded.raw === undefined) {
     return {
       provider: "opencode",
@@ -367,15 +372,33 @@ async function inspectOpenCode(
   };
 }
 
-async function readBoundedRegularFile(configPath: string): Promise<LoadedConfig> {
+async function readBoundedRegularFile(
+  homeDirectory: string,
+  configPath: string,
+): Promise<LoadedConfig> {
+  let initialStatus: LoadedConfig["status"] | undefined;
   try {
     const metadata = await lstat(configPath);
-    if (metadata.isSymbolicLink()) return { status: "symlink" };
-    if (!metadata.isFile()) return { status: "not-file" };
-    if (metadata.size > MAX_CONFIG_BYTES) return { status: "oversized" };
-    return { status: "regular", raw: await readFile(configPath, "utf8") };
+    if (metadata.isSymbolicLink()) initialStatus = "symlink";
+    else if (!metadata.isFile()) initialStatus = "not-file";
+    else if (metadata.size > MAX_CONFIG_BYTES) initialStatus = "oversized";
   } catch (error) {
-    if (hasCode(error, "ENOENT")) return { status: "absent" };
+    if (!hasCode(error, "ENOENT")) return { status: "unreadable" };
+  }
+  if (initialStatus) return { status: initialStatus };
+
+  try {
+    const snapshot = await captureConfigTarget({
+      rootDirectory: homeDirectory,
+      targetPath: configPath,
+      label: "Notification configuration",
+      maxBytes: MAX_CONFIG_BYTES,
+    });
+    const bytes = sensitiveConfigTargetSnapshotBytes(snapshot);
+    return bytes
+      ? { status: "regular", raw: bytes.toString("utf8") }
+      : { status: "absent" };
+  } catch {
     return { status: "unreadable" };
   }
 }

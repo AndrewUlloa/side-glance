@@ -51,7 +51,7 @@ test("refuses formula metadata that does not point at Side Glance's immutable re
 });
 
 function releaseManifest() {
-  const version = "0.1.0-beta.3";
+  const version = "0.1.0-beta.4";
   const tag = `v${version}`;
   const base = `https://github.com/AndrewUlloa/side-glance/releases/download/${tag}`;
   const artifact = (target, character, support = "supported") => {

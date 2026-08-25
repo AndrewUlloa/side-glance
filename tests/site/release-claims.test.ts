@@ -58,3 +58,52 @@ test("keeps public beta, provider, terminal, and domain claims within verified e
     "https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev"
   );
 });
+
+test("keeps guided setup, notification coverage, and recovery guidance aligned", async () => {
+  const [readme, packageReadme, changelog, launch, page, installButton] =
+    await Promise.all([
+      readFile("README.md", "utf8"),
+      readFile("packages/cli/README.md", "utf8"),
+      readFile("CHANGELOG.md", "utf8"),
+      readFile("LAUNCH.md", "utf8"),
+      readFile("app/page.tsx", "utf8"),
+      readFile("app/components/InstallButton.tsx", "utf8"),
+    ]);
+  const documentation = [readme, packageReadme, changelog, launch].join("\n");
+
+  for (const guide of [readme, packageReadme, launch]) {
+    assert.match(
+      guide,
+      /brew install AndrewUlloa\/tap\/side-glance[\s\S]*?side-glance init/u
+    );
+    assert.match(guide, /npx side-glance@beta init/u);
+  }
+
+  for (const guide of [readme, packageReadme]) {
+    assert.match(guide, /`side-glance setup`[^\n]*exact alias/u);
+    assert.match(guide, /read-only preview/u);
+    assert.match(guide, /Claude[^\n]*attention[^\n]*failure/u);
+    assert.match(guide, /Codex and Gemini[^\n]*attention/u);
+    assert.match(guide, /OpenCode v1[^\n]*Ready[^\n]*attention[^\n]*failure/u);
+    assert.match(guide, /generic wrapper[^\n]*process exit/u);
+  }
+
+  assert.match(
+    documentation,
+    /native notifications are ready[^\n]*defaults off/iu
+  );
+  assert.match(
+    documentation,
+    /native notification state is unknown[^\n]*defaults off/iu
+  );
+  assert.match(documentation, /power loss[^\n]*`SIGKILL`/u);
+  assert.match(
+    documentation,
+    /next `side-glance init` or `side-glance doctor`/u
+  );
+  assert.match(page, /install with Homebrew and run guided setup/u);
+  assert.match(
+    installButton,
+    /brew install AndrewUlloa\/tap\/side-glance\\nside-glance init/u
+  );
+});

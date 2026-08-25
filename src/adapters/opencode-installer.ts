@@ -1,25 +1,38 @@
-import { randomUUID } from "node:crypto";
-import { constants } from "node:fs";
-import {
-  chmod,
-  copyFile,
-  lstat,
-  mkdir,
-  open,
-  readFile,
-  rename,
-  stat,
-  unlink,
-} from "node:fs/promises";
 import path from "node:path";
 
 import { MAX_NOTIFICATION_SOUND_CODE_POINTS } from "../notifications/policy.ts";
+import {
+  captureExecutableIdentity,
+  detectEphemeralNpmExecution,
+  revalidateExecutableIdentity,
+  type ExecutableIdentityToken,
+} from "../cli/executable.ts";
+import {
+  applyConfigTargetPlan,
+  backupConfigTargetPlan,
+  captureConfigTarget,
+  planConfigTarget,
+  planConfigTargetRemoval,
+  revalidateConfigTargetPlan,
+  restoreConfigTargetApplication,
+  sensitiveConfigTargetSnapshotBytes,
+  verifyConfigTargetApplication,
+  verifyConfigTargetPlan,
+  withConfigWriterLock,
+  type ConfigTargetApplication,
+  type ConfigTargetPlan,
+  type ConfigTargetSnapshot,
+} from "./config-target.ts";
 
 const MANAGED_MARKER = "// SIDE_GLANCE_MANAGED_OPENCODE_PLUGIN=1";
 const LEGACY_MANAGED_MARKER = "// SIGNAL_MANAGED_OPENCODE_PLUGIN=1";
 const MANIFEST_PREFIX = "// SIDE_GLANCE_MANIFEST=";
 const MANIFEST = { schema: 1, provider: "opencode" } as const;
 const MAX_PLUGIN_BYTES = 1_048_576;
+const executableIdentities = new WeakMap<
+  OpenCodePluginMutationPlan,
+  ExecutableIdentityToken
+>();
 
 export interface OpenCodePluginInstallerOptions {
   homeDirectory: string;
@@ -44,13 +57,26 @@ export interface OpenCodePluginInspection {
   api: "v1-stable";
 }
 
+export interface OpenCodePluginMutationPlan {
+  readonly provider: "opencode";
+  readonly operation: "install" | "uninstall";
+  readonly configPath: string;
+  readonly changed: boolean;
+  readonly action: "create" | "update" | "unchanged";
+  readonly installedHooks: number;
+  readonly targetPlan: ConfigTargetPlan;
+}
+
+export interface OpenCodePluginMutationApplication {
+  readonly result: OpenCodePluginInstallerResult;
+  readonly targetApplication: ConfigTargetApplication;
+}
+
 type TargetKind = "absent" | "current" | "legacy" | "unrelated";
 
 interface LoadedTarget {
   kind: TargetKind;
   source?: string;
-  device?: bigint;
-  inode?: bigint;
 }
 
 export function openCodePluginPath(homeDirectory: string): string {
@@ -69,9 +95,41 @@ export function openCodePluginPath(homeDirectory: string): string {
 export async function installOpenCodePlugin(
   options: OpenCodePluginInstallerOptions,
 ): Promise<OpenCodePluginInstallerResult> {
+  return withConfigWriterLock(options.homeDirectory, () =>
+    installOpenCodePluginUnlocked(options),
+  );
+}
+
+export async function installOpenCodePluginUnlocked(
+  options: OpenCodePluginInstallerOptions,
+): Promise<OpenCodePluginInstallerResult> {
+  const plan = await planOpenCodePluginInstall(options);
+  const applied = await applyOpenCodePluginPlan(plan);
+  try {
+    await verifyOpenCodePluginApplication(applied);
+    return applied.result;
+  } catch (error) {
+    await restoreOpenCodePluginApplication(applied).catch(
+      (rollbackError: unknown) => {
+        throw new AggregateError(
+          [error, rollbackError],
+          "OpenCode plugin verification failed and rollback encountered a conflict.",
+        );
+      },
+    );
+    throw error;
+  }
+}
+
+export async function planOpenCodePluginInstall(
+  options: OpenCodePluginInstallerOptions,
+): Promise<OpenCodePluginMutationPlan> {
   const validated = await validateInstallOptions(options);
-  await ensurePrivatePluginDirectory(validated.homeDirectory);
-  const loaded = await loadTarget(validated.configPath);
+  const snapshot = await captureOpenCodeTarget(
+    validated.homeDirectory,
+    validated.configPath,
+  );
+  const loaded = loadTarget(snapshot);
   if (loaded.kind === "unrelated") {
     throw new Error(
       "OpenCode plugin target exists but is not owned by Side Glance; no changes made.",
@@ -83,53 +141,150 @@ export async function installOpenCodePlugin(
     options.notifications === true,
     validated.sound,
   );
-  if (loaded.kind === "current" && loaded.source === source) {
-    return result(validated.configPath, false, 1);
-  }
-
-  const backupPath =
-    loaded.kind === "legacy"
-      ? await backupOwnedTarget(validated.configPath)
-      : undefined;
-  await writePluginAtomic(validated.configPath, source, loaded);
-  return {
-    ...result(validated.configPath, true, 1),
-    ...(backupPath ? { backupPath } : {}),
-  };
+  const targetPlan = planConfigTarget(
+    snapshot,
+    loaded.kind === "current" && loaded.source === source
+      ? sensitiveConfigTargetSnapshotBytes(snapshot) ?? source
+      : source,
+    {
+      backupExisting: snapshot.exists,
+      mode: snapshot.mode,
+    },
+  );
+  const plan = Object.freeze({
+    provider: "opencode" as const,
+    operation: "install" as const,
+    configPath: validated.configPath,
+    changed: targetPlan.changed,
+    action: !targetPlan.changed
+      ? ("unchanged" as const)
+      : snapshot.exists
+        ? ("update" as const)
+        : ("create" as const),
+    installedHooks: 1,
+    targetPlan,
+  });
+  executableIdentities.set(plan, validated.executableIdentity);
+  return plan;
 }
 
 export async function uninstallOpenCodePlugin(
   options: OpenCodePluginInstallerOptions,
 ): Promise<OpenCodePluginInstallerResult> {
+  return withConfigWriterLock(options.homeDirectory, () =>
+    uninstallOpenCodePluginUnlocked(options),
+  );
+}
+
+export async function uninstallOpenCodePluginUnlocked(
+  options: OpenCodePluginInstallerOptions,
+): Promise<OpenCodePluginInstallerResult> {
+  const plan = await planOpenCodePluginUninstall(options);
+  const applied = await applyOpenCodePluginPlan(plan);
+  try {
+    await verifyOpenCodePluginApplication(applied);
+    return applied.result;
+  } catch (error) {
+    await restoreOpenCodePluginApplication(applied).catch(
+      (rollbackError: unknown) => {
+        throw new AggregateError(
+          [error, rollbackError],
+          "OpenCode plugin verification failed and rollback encountered a conflict.",
+        );
+      },
+    );
+    throw error;
+  }
+}
+
+export async function planOpenCodePluginUninstall(
+  options: OpenCodePluginInstallerOptions,
+): Promise<OpenCodePluginMutationPlan> {
   const configPath = openCodePluginPath(options.homeDirectory);
   validateAbsoluteExecutable(options.executablePath);
-  const directoryStatus = await inspectPluginDirectory(options.homeDirectory);
-  if (directoryStatus === "absent") return result(configPath, false, 0);
+  const snapshot = await captureOpenCodeTarget(
+    path.resolve(options.homeDirectory),
+    configPath,
+  );
+  const loaded = loadTarget(snapshot);
+  const targetPlan =
+    loaded.kind === "current" || loaded.kind === "legacy"
+      ? planConfigTargetRemoval(snapshot)
+      : snapshot.exists
+        ? planConfigTarget(
+            snapshot,
+            sensitiveConfigTargetSnapshotBytes(snapshot) ?? Buffer.alloc(0),
+            { mode: snapshot.mode },
+          )
+        : planConfigTargetRemoval(snapshot);
+  return Object.freeze({
+    provider: "opencode" as const,
+    operation: "uninstall" as const,
+    configPath,
+    changed: targetPlan.changed,
+    action: targetPlan.changed ? ("update" as const) : ("unchanged" as const),
+    installedHooks: 0,
+    targetPlan,
+  });
+}
 
-  const loaded = await loadTarget(configPath);
-  if (loaded.kind === "absent" || loaded.kind === "unrelated") {
-    return result(configPath, false, 0);
-  }
-  await verifyTargetUnchanged(configPath, loaded);
-  await unlink(configPath);
-  return result(configPath, true, 0);
+export async function applyOpenCodePluginPlan(
+  plan: OpenCodePluginMutationPlan,
+): Promise<OpenCodePluginMutationApplication> {
+  await revalidateOpenCodeExecutable(plan);
+  const targetApplication = await applyConfigTargetPlan(plan.targetPlan);
+  const resultValue: OpenCodePluginInstallerResult = {
+    provider: "opencode",
+    configPath: plan.configPath,
+    changed: targetApplication.changed,
+    installedHooks: plan.installedHooks,
+    ...(targetApplication.backupPath
+      ? { backupPath: targetApplication.backupPath }
+      : {}),
+  };
+  return Object.freeze({ result: resultValue, targetApplication });
+}
+
+export async function backupOpenCodePluginPlan(
+  plan: OpenCodePluginMutationPlan,
+): Promise<string | undefined> {
+  return backupConfigTargetPlan(plan.targetPlan);
+}
+
+export async function revalidateOpenCodePluginPlan(
+  plan: OpenCodePluginMutationPlan,
+): Promise<void> {
+  await revalidateConfigTargetPlan(plan.targetPlan);
+  await revalidateOpenCodeExecutable(plan);
+}
+
+export async function verifyOpenCodePluginPlan(
+  plan: OpenCodePluginMutationPlan,
+): Promise<void> {
+  await verifyConfigTargetPlan(plan.targetPlan);
+}
+
+export async function verifyOpenCodePluginApplication(
+  application: OpenCodePluginMutationApplication,
+): Promise<void> {
+  await verifyConfigTargetApplication(application.targetApplication);
+}
+
+export async function restoreOpenCodePluginApplication(
+  application: OpenCodePluginMutationApplication,
+): Promise<void> {
+  await restoreConfigTargetApplication(application.targetApplication);
 }
 
 export async function inspectOpenCodePlugin(
   homeDirectory: string,
 ): Promise<OpenCodePluginInspection> {
   const configPath = openCodePluginPath(homeDirectory);
-  const directoryStatus = await inspectPluginDirectory(homeDirectory);
-  if (directoryStatus === "absent") {
-    return {
-      provider: "opencode",
-      configPath,
-      status: "not-installed",
-      installed: false,
-      api: "v1-stable",
-    };
-  }
-  const loaded = await loadTarget(configPath);
+  const snapshot = await captureOpenCodeTarget(
+    path.resolve(homeDirectory),
+    configPath,
+  );
+  const loaded = loadTarget(snapshot);
   const status =
     loaded.kind === "current"
       ? "installed"
@@ -154,16 +309,11 @@ async function validateInstallOptions(
   executablePath: string;
   configPath: string;
   sound?: string;
+  executableIdentity: ExecutableIdentityToken;
 }> {
   const configPath = openCodePluginPath(options.homeDirectory);
   const executablePath = validateAbsoluteExecutable(options.executablePath);
-  const executableMetadata = await stat(executablePath);
-  if (!executableMetadata.isFile()) {
-    throw new Error("Side Glance executable must resolve to a regular file.");
-  }
-  if ((executableMetadata.mode & 0o111) === 0) {
-    throw new Error("Side Glance executable must have an executable permission bit.");
-  }
+  const executableIdentity = await captureRetainableExecutable(executablePath);
   const sound =
     options.notificationSound === undefined
       ? undefined
@@ -175,6 +325,7 @@ async function validateInstallOptions(
     homeDirectory: path.resolve(options.homeDirectory),
     executablePath,
     configPath,
+    executableIdentity,
     ...(sound ? { sound } : {}),
   };
 }
@@ -187,6 +338,35 @@ function validateAbsoluteExecutable(executablePath: string): string {
     throw new Error("Side Glance executable path may not contain control characters.");
   }
   return path.resolve(executablePath);
+}
+
+async function captureRetainableExecutable(
+  executablePath: string,
+): Promise<ExecutableIdentityToken> {
+  const identity = await captureExecutableIdentity(executablePath);
+  if (
+    detectEphemeralNpmExecution({
+      environment: process.env,
+      invocationPath: identity.invocationPath,
+      realPath: identity.realPath,
+    })
+  ) {
+    throw new Error(
+      "Permanent provider hooks require a durable Side Glance executable outside temporary npm execution and cache paths.",
+    );
+  }
+  return identity;
+}
+
+async function revalidateOpenCodeExecutable(
+  plan: OpenCodePluginMutationPlan,
+): Promise<void> {
+  if (plan.operation !== "install") return;
+  const identity = executableIdentities.get(plan);
+  if (!identity) {
+    throw new Error("The retained Side Glance executable identity is unavailable.");
+  }
+  await revalidateExecutableIdentity(identity, { environment: process.env });
 }
 
 function validateNotificationSound(sound: string): string {
@@ -210,95 +390,32 @@ function validateNotificationSound(sound: string): string {
   return normalized;
 }
 
-async function ensurePrivatePluginDirectory(homeDirectory: string): Promise<void> {
-  const directories = [
-    path.resolve(homeDirectory),
-    path.join(homeDirectory, ".config"),
-    path.join(homeDirectory, ".config", "opencode"),
-    path.join(homeDirectory, ".config", "opencode", "plugins"),
-  ];
-  await requireDirectory(directories[0], "Installer home directory");
-  for (const directory of directories.slice(1)) {
-    await mkdir(directory, { mode: 0o700 }).catch((error: unknown) => {
-      if (!hasCode(error, "EEXIST")) throw error;
-    });
-    await requireDirectory(directory, "OpenCode plugin directory");
-  }
-}
-
-async function inspectPluginDirectory(
+async function captureOpenCodeTarget(
   homeDirectory: string,
-): Promise<"present" | "absent"> {
-  const directories = [
-    path.resolve(homeDirectory),
-    path.join(homeDirectory, ".config"),
-    path.join(homeDirectory, ".config", "opencode"),
-    path.join(homeDirectory, ".config", "opencode", "plugins"),
-  ];
-  for (const directory of directories) {
-    try {
-      await requireDirectory(directory, "OpenCode plugin directory");
-    } catch (error) {
-      if (hasCode(error, "ENOENT")) return "absent";
-      throw error;
-    }
-  }
-  return "present";
+  configPath: string,
+): Promise<ConfigTargetSnapshot> {
+  return captureConfigTarget({
+    rootDirectory: homeDirectory,
+    targetPath: configPath,
+    label: "OpenCode plugin target",
+    maxBytes: MAX_PLUGIN_BYTES,
+    defaultMode: 0o600,
+  });
 }
 
-async function requireDirectory(directory: string, label: string): Promise<void> {
-  const metadata = await lstat(directory, { bigint: true });
-  if (metadata.isSymbolicLink()) {
-    throw new Error(`${label} may not be a symbolic link.`);
-  }
-  if (!metadata.isDirectory()) {
-    throw new Error(`${label} must be a directory.`);
-  }
-}
-
-async function loadTarget(configPath: string): Promise<LoadedTarget> {
-  let metadata;
-  try {
-    metadata = await lstat(configPath, { bigint: true });
-  } catch (error) {
-    if (hasCode(error, "ENOENT")) return { kind: "absent" };
-    throw error;
-  }
-  if (metadata.isSymbolicLink()) {
-    throw new Error("OpenCode plugin target may not be a symbolic link.");
-  }
-  if (!metadata.isFile()) {
-    throw new Error("OpenCode plugin target must be a regular file.");
-  }
-  if (metadata.size > BigInt(MAX_PLUGIN_BYTES)) {
-    throw new Error("OpenCode plugin target is too large to update safely.");
-  }
-
-  const source = await readFile(configPath, "utf8");
+function loadTarget(snapshot: ConfigTargetSnapshot): LoadedTarget {
+  const bytes = sensitiveConfigTargetSnapshotBytes(snapshot);
+  if (!bytes) return { kind: "absent" };
+  const source = bytes.toString("utf8");
   const firstLine = source.split(/\r?\n/u, 1)[0];
   if (firstLine === LEGACY_MANAGED_MARKER) {
-    return {
-      kind: "legacy",
-      source,
-      device: metadata.dev,
-      inode: metadata.ino,
-    };
+    return { kind: "legacy", source };
   }
   if (firstLine !== MANAGED_MARKER) {
-    return {
-      kind: "unrelated",
-      source,
-      device: metadata.dev,
-      inode: metadata.ino,
-    };
+    return { kind: "unrelated", source };
   }
   assertCurrentManifest(source);
-  return {
-    kind: "current",
-    source,
-    device: metadata.dev,
-    inode: metadata.ino,
-  };
+  return { kind: "current", source };
 }
 
 function assertCurrentManifest(source: string): void {
@@ -533,87 +650,7 @@ export const SideGlancePlugin = async (context = {}) => ({
 `;
 }
 
-async function backupOwnedTarget(configPath: string): Promise<string> {
-  const backupPath = `${configPath}.side-glance-backup-${Date.now()}-${randomUUID()}`;
-  await copyFile(configPath, backupPath, constants.COPYFILE_EXCL);
-  await chmod(backupPath, 0o600);
-  return backupPath;
-}
-
-async function writePluginAtomic(
-  configPath: string,
-  source: string,
-  previous: LoadedTarget,
-): Promise<void> {
-  const temporaryPath = path.join(
-    path.dirname(configPath),
-    `.${path.basename(configPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  let handle;
-  try {
-    handle = await open(
-      temporaryPath,
-      constants.O_CREAT |
-        constants.O_EXCL |
-        constants.O_WRONLY |
-        constants.O_NOFOLLOW,
-      0o600,
-    );
-    await handle.writeFile(source, "utf8");
-    await handle.sync();
-    await handle.close();
-    handle = undefined;
-    await verifyTargetUnchanged(configPath, previous);
-    await rename(temporaryPath, configPath);
-    await chmod(configPath, 0o600);
-  } finally {
-    if (handle) await handle.close();
-    await unlink(temporaryPath).catch((error: unknown) => {
-      if (!hasCode(error, "ENOENT")) throw error;
-    });
-  }
-}
-
-async function verifyTargetUnchanged(
-  configPath: string,
-  previous: LoadedTarget,
-): Promise<void> {
-  let metadata;
-  try {
-    metadata = await lstat(configPath, { bigint: true });
-  } catch (error) {
-    if (hasCode(error, "ENOENT") && previous.kind === "absent") return;
-    throw new Error("OpenCode plugin target changed during update; no changes made.");
-  }
-  if (
-    previous.kind === "absent" ||
-    metadata.isSymbolicLink() ||
-    !metadata.isFile() ||
-    metadata.dev !== previous.device ||
-    metadata.ino !== previous.inode
-  ) {
-    throw new Error("OpenCode plugin target changed during update; no changes made.");
-  }
-}
-
-function result(
-  configPath: string,
-  changed: boolean,
-  installedHooks: number,
-): OpenCodePluginInstallerResult {
-  return { provider: "opencode", configPath, changed, installedHooks };
-}
-
 function isControlCharacter(character: string): boolean {
   const codePoint = character.codePointAt(0) ?? 0;
   return codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f);
-}
-
-function hasCode(error: unknown, code: string): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === code
-  );
 }

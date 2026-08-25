@@ -4,6 +4,31 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.4] — 2026-08-25
+
+### Added
+
+- Guided `side-glance init` onboarding with an exact `side-glance setup` alias,
+  read-only preview, provider detection, notification recommendations, explicit
+  automation flags, post-write verification, and re-runnable repair.
+- A staged `npx side-glance@beta init` bootstrap that keeps ephemeral npm-cache
+  paths out of provider hooks and hands setup to an exact-version durable install.
+
+### Changed
+
+- Homebrew followed by `side-glance init` is now the canonical installed journey;
+  direct `install`, `uninstall`, `doctor`, and `run` commands remain available for
+  advanced use and recovery.
+- Notification guidance now states the event coverage for each provider, defaults
+  Side Glance alerts off when native delivery is ready or unknown, and avoids
+  claiming a universal completion bell.
+
+### Fixed
+
+- Multi-provider setup rolls back caught apply and verification failures in reverse
+  order without overwriting a concurrent external edit. Power loss and `SIGKILL`
+  remain an explicit partial-setup boundary repaired by the next `init` or `doctor`.
+
 ## [0.1.0-beta.3] — 2026-08-24
 
 ### Added
@@ -67,7 +92,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.3...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.4...HEAD
+[0.1.0-beta.4]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/AndrewUlloa/side-glance/tree/v0.1.0-beta.2
 [0.1.0-beta.1]: https://www.npmjs.com/package/side-glance/v/0.1.0-beta.1
