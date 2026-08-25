@@ -49,6 +49,7 @@ Success means all controller invariants have executable regression tests; Claude
 | 13 | Standalone releases | Native artifact build and smoke tests on each release runner | `side-glance` runs without a system Node installation; archive names, checksums, and version match the tag |
 | 14 | Homebrew readiness | Formula generation and `brew audit`/install test | Formula selects the correct release artifact and installs the standalone `side-glance` executable |
 | 15 | Supply-chain safety | Release workflow policy and dry-run checks | Least-privilege permissions, immutable tags, SHA-256 checksums, attestations/provenance where supported, no long-lived publish token in source |
+| 16 | Guided setup | Temp-home CLI, planner, rollback, and packaged-install tests | One re-runnable command detects providers, previews owned changes, configures selected integrations, verifies the result, and exactly rolls back caught multi-provider apply/verification failures when no external writer has intervened |
 
 ## Non-Goals
 
@@ -64,6 +65,7 @@ Success means all controller invariants have executable regression tests; Claude
 
 - As a developer with several coding agents open, I want terminal state to show which session is working, waiting, ready, or failed so I can direct attention quickly.
 - As a developer using multiple CLIs, I want one controller and installation model so each integration behaves consistently.
+- As a new user, I want one guided setup command that detects my coding agents, explains notification tradeoffs, and gives me the exact launch commands without requiring me to edit provider configuration by hand.
 - As a cautious terminal user, I want reset/uninstall to preserve my existing configuration and explain platform limitations.
 - As a prospective user, I want to try the real state model on the landing page before installing anything.
 
@@ -120,6 +122,266 @@ docs/                → audit, architecture, adapter protocol, launch notes
 **Ask first:** change GitHub repository visibility; create a public release/tag; publish or stage to npm; create or mutate a Homebrew tap repository; mutate the user’s live Claude/Codex configuration; replace an existing completion notifier; delete the Vercel project or change its production domain.
 
 **Never do:** write to an unverified path as a TTY; execute state; log prompt/transcript content; use `SIGKILL` cleanup as a product claim; overwrite unrelated hooks; hide a failing gate.
+
+## Guided Setup Contract
+
+> Amendment status: approved by the requester on 2026-08-24
+
+Side Glance adopts the useful onboarding shape of Ultracite's `init` command: one
+discoverable, interactive-by-default entry point; environment-aware recommendations;
+explicit automation flags; and safe re-runs. Because Side Glance configures global
+provider files rather than a project-local toolchain, its setup flow adds a complete
+read-only preview and a multi-provider rollback boundary.
+
+The primary journey is:
+
+```bash
+brew install AndrewUlloa/tap/side-glance
+side-glance init
+```
+
+The public discovery journey is:
+
+```bash
+# During the beta channel
+npx side-glance@beta init
+
+# After the stable package owns the latest tag
+npx side-glance@latest init
+```
+
+### User experience
+
+- `side-glance init` (and its exact `setup` alias) runs interactively only when both input
+  and output are attached to a TTY. It introduces Side Glance, performs read-only detection,
+  and shows installed,
+  already configured, partially configured, experimental, incompatible, and unavailable
+  provider states without executing provider binaries.
+- Discovery classifies each provider as `eligible`, `blocked`, `unavailable`, or
+  `guidance-only`. Only an `eligible` provider is selected by default: its binary is
+  present, its configuration target passed read-only safety checks, and its supported
+  integration contract is not contradicted by detected overrides. Already configured
+  providers remain selectable only while eligible. A blocked provider is displayed with
+  a redacted reason but cannot be selected; unavailable providers are informational;
+  Aider and generic commands are guidance-only. When nothing is eligible, setup exits
+  read-only with guidance instead of forcing an empty or unsafe plan.
+- Claude, Codex, Gemini, and the stable-command OpenCode v1 contract are selectable
+  integration targets. Claude and Codex are labeled contract-audited; Gemini and
+  OpenCode remain labeled experimental. The presence of `opencode` makes it a v1-contract
+  candidate, not a live version proof; a detected `opencode2`-only beta or active OpenCode
+  configuration override is reported as incompatible rather than silently configured.
+- Aider and arbitrary commands are reported as supported wrapper/manual-bridge paths,
+  not as installable provider-hook targets. Setup never overwrites Aider's notification
+  command. The result prints exact Aider and generic wrapper guidance when applicable.
+- The user separately chooses which selected providers should use Side Glance computer
+  notifications. When provider-native notifications are already ready, setup recommends
+  leaving Side Glance notifications off and explains the duplicate-alert risk. This is a
+  recommendation, not a silent override.
+- Notification defaults are deterministic: native ready defaults Side Glance off with a
+  duplicate warning; native unknown defaults off with uncertainty explained; native
+  disabled/not configured plus an available Side Glance backend defaults on; a temporarily
+  unavailable Side Glance backend defaults off with a degraded warning; and an unsupported
+  platform makes Side Glance notifications unselectable. An explicit automation choice
+  that cannot be delivered fails before mutation. Codex's effective unfocused default,
+  custom top-level notify command, and Gemini's possible higher-precedence override remain
+  distinct warnings rather than one generic status.
+- The plan states what a selected notification channel can actually report. Claude covers
+  attention and failure while pre-final Ready stays silent; Codex and Gemini cover
+  attention while pre-final Ready stays silent; OpenCode v1 experimentally covers Ready,
+  attention, and failure; Aider completion requires its explicit static bridge; and the
+  generic wrapper reports only process exit when `--notify-on-exit` is selected. Setup
+  never equates “notifications enabled” with a guaranteed completion bell.
+- If any Side Glance notifications are selected, setup explains that macOS uses the
+  installed sound name `Glass` by default and allows a different bounded safe name.
+  Linux sound remains best-effort. Setup does not fire a real notification or claim
+  audible delivery; the user must explicitly run the documented live notification test.
+- Before confirmation, setup displays the durable Side Glance executable, every target
+  provider, exact configuration path, create/update/unchanged action, managed hook count,
+  Side Glance notification choice and sound, provider maturity, and every duplicate or
+  compatibility warning. It never prints unrelated configuration contents or secrets.
+- One confirmation applies the whole plan. Choosing No or receiving EOF exits `0` with no
+  changes; SIGINT exits `130` with no changes before apply and attempts caught-failure
+  rollback during apply; an incomplete non-TTY invocation exits `1` actionably.
+  `side-glance init --help` and `side-glance setup --help` exit `0` without detection or
+  TTY requirements. After application, setup re-inspects every selected provider and reports
+  changed/unchanged paths, backups, integration status, warnings, and exact supervised
+  launch commands such as `side-glance run --label "Claude" -- claude`.
+- Setup states plainly that installed hooks provide lifecycle semantics while
+  `side-glance run` supplies the stable terminal surface identity needed for reliable
+  lifecycle colors. It does not edit shell profiles, create aliases, start a daemon, or
+  claim that computer-notification clicks will focus the originating terminal.
+- On a durable installation, `side-glance init` is an exact alias for
+  `side-glance setup`. Both names share one parser, plan, prompt flow, and result shape;
+  help presents `init` as the friendly onboarding command and `setup` as the explicit
+  configuration command.
+
+### Npx bootstrap contract
+
+- An ephemeral `npx side-glance@<tag> init` may perform read-only discovery and bootstrap
+  a durable installation, but it may never persist its own cache path in provider hooks.
+  Ephemeral `setup` and direct `install` mutations continue to fail closed.
+- The bootstrap first searches for a separate durable `side-glance` executable, rejects
+  `_npx`/npm-exec/cache candidates, executes only `side-glance --version` for validation,
+  and hands the approved setup plan to that executable only when its version exactly
+  matches the invoking package version. This avoids delegating new setup flags or plan
+  fields across an unproven version boundary.
+- When no durable executable exists, interactive macOS setup offers Homebrew as the
+  recommended method when a supported `brew` executable is available, global npm as the
+  portable fallback, and preview-only as the no-mutation choice. Other platforms offer
+  only methods whose executable and platform contract can be validated. No path uses
+  `curl | sh`, silently copies the npx payload, or invents an unmanaged updater.
+- During the beta, bootstrap installation is offered only on the published platform
+  boundary: supported macOS and glibc Linux, with Intel macOS still labeled experimental.
+  Windows, musl, and other unverified targets receive preview/manual guidance rather than
+  an installer choice merely because `npm` or `brew` happens to exist.
+- Before running an installer, the bootstrap displays the exact package-manager command,
+  destination model, and version/channel consequence, then asks separately for approval.
+  Package managers are spawned with argument vectors, never through a shell. Explicitly
+  approved interactive execution may inherit stdio; JSON automation captures and bounds
+  child output. Cancellation leaves provider configuration untouched.
+- After installation, the bootstrap resolves the new executable independently, confirms
+  it is durable and exactly version-matched, and then invokes its `init` flow. A missing,
+  stale, or mismatched result fails actionably before provider configuration is changed.
+- Global npm pins the exact build with `npm install --global --ignore-scripts --no-audit --no-fund side-glance@<exact-version>`, never a mutable channel tag. Homebrew distinguishes first
+  install from upgrade and retains the stable Homebrew bin symlink rather than a versioned
+  Cellar path. Because an npm beta can briefly precede its tap update, a mismatched formula
+  fails without config changes; interactive mode may offer the exact npm method only after
+  a new explicit choice, while automation never falls back silently.
+- Fully specified bootstrap automation uses
+  `--install <homebrew|npm|none> --providers <list> --notifications <list|none> --yes`.
+  `--install none` is valid only with `--dry-run`. The chosen method must be available;
+  setup never silently falls back to a different installer.
+- Bootstrap output distinguishes the temporary npx runner from the durable executable
+  that provider hooks will retain. JSON mode reports both paths, versions, install method,
+  child exit status, and the delegated setup result without mixing decorative output into
+  stdout.
+- Package installation is outside the provider-configuration transaction and is not
+  automatically removed if post-install validation or delegated setup fails. The result
+  reports `packageInstalled` separately from `setupApplied` and gives an explicit cleanup
+  command when known.
+- Delegation strips inherited npm-exec markers and ephemeral PATH entries, forwards no
+  bootstrap-only option, and passes the validated stable invocation path explicitly as the
+  setup executable. Candidate and package-manager paths are resolved once to absolute
+  validated paths, then identity-checked again before spawn/config apply. Version probes
+  have bounded time/output, accept exactly one canonical version line, and never forward
+  raw child output.
+- Bootstrap planning and provider setup planning are two discriminated stages. If an
+  exact-version durable executable exists, npx may delegate dry-run and return its exact
+  `setup-plan`. Otherwise `init --dry-run` returns a versioned `bootstrap-plan` containing
+  the ephemeral runner, exact proposed installer argv (or none), pending durable status,
+  requested provider/notification intent, and safely derived target paths; provider
+  create/update/unchanged actions, final hook commands, and launch commands remain
+  explicitly deferred. After installation, the durable CLI recomputes and previews the
+  authoritative setup plan. The dry-run/apply same-plan invariant begins only after the
+  durable executable has been resolved.
+
+### Automation contract
+
+- `side-glance setup --dry-run` performs detection, validation, and planning without
+  writing configuration, creating backups/directories, emitting terminal control bytes,
+  or sending notifications. With no explicit provider list it previews the detected
+  interactive defaults.
+- `--providers <claude,codex,gemini,opencode>` fixes the selected provider set.
+  `--notifications <provider-list|none>` fixes the Side Glance notification subset, and
+  `--notification-sound <name>` is valid only when that subset is non-empty.
+- `--yes` accepts a fully specified plan without prompts and requires `--providers` plus
+  an explicit `--notifications` value. `--json` is permitted only for dry-run or fully
+  specified non-interactive setup and emits one machine-readable result on stdout.
+- Advanced `--home <absolute-path>` and `--executable <absolute-path>` options match the
+  existing installer testability and custom-home contract. Permanent setup refuses
+  `npx`/`npm exec` cache execution and points to Homebrew, a standalone release, or a
+  global npm installation. Non-interactive setup without `--dry-run` or a fully
+  specified `--yes` plan fails before mutation with an actionable command example.
+- `--install` is accepted only by ephemeral `init`; durable `init`/`setup` reject it.
+  Providers are normalized to the canonical Claude, Codex, Gemini, OpenCode order
+  regardless of flag order. In `--json` mode, success and failure each emit exactly one
+  versioned, redacted object on stdout and no stderr; failure uses a nonzero exit status.
+  Human mode reserves stdout for progress/results and stderr for redacted errors.
+- Unknown, duplicate, empty, unavailable, incompatible, or notification-only provider
+  selections fail during preflight. Notification selections must be a subset of the
+  provider selections. Unsafe sound names and unstable executable paths fail before any
+  configuration target is changed.
+
+### Safety and transactional behavior
+
+- Detection and planning reuse the same typed provider inspections, notification
+  readiness, executable validation, managed-entry generation, and ownership markers as
+  `doctor` and `install`; setup must not grow a second interpretation of configuration.
+- Once a durable executable is resolved, a pure setup plan is computed and every selected
+  target is fully parsed and validated before confirmation or mutation. Durable dry-run
+  and apply consume that same plan shape.
+- Applying a multi-provider plan snapshots the exact pre-transaction existence, bytes,
+  mode, and concurrency identity of every target, revalidates the complete approved plan
+  under a shared Side Glance installer lock, then uses atomic provider writes with exact
+  desired-end-state verification after the final write. Manual install/uninstall use the
+  same lock and participant primitives. If a caught write or verification failure occurs,
+  setup rolls back in reverse order only after proving each target still matches the state
+  written by this transaction. It restores pre-transaction bytes/mode or removes a target
+  that was absent before setup, then verifies the restoration. If an external writer has
+  intervened, rollback does not overwrite that newer value; it returns a distinct redacted
+  rollback-conflict result and never reports success.
+- Snapshot, backup, apply, verification, and rollback use the same bounded no-follow read
+  and parent-chain validation primitives for JSON provider files and the OpenCode plugin.
+  Backups are written from captured bytes with private `0600` permissions rather than
+  re-reading a live pathname. Existing target modes are restored; file identity is only a
+  concurrency token and is not claimed to survive atomic rename.
+- The transaction guarantee covers caught failures while the process can execute rollback.
+  A power loss, `SIGKILL`, runtime crash, or terminal death between distinct file renames
+  can leave a partial setup; Side Glance does not persist secret configuration snapshots
+  in a transaction journal. The next `init`/`doctor` reports partial state and supports an
+  idempotent repair. This boundary is stated in help/docs rather than hidden.
+- Existing provider installers continue creating their ordinary timestamped backups.
+  Re-running an identical setup is idempotent and produces no new backup or write.
+- Symlinked, non-regular, oversized, malformed, concurrently replaced, or unsupported
+  configuration fails closed. Setup preserves unrelated provider settings, native
+  notification preferences, existing non-Side-Glance hooks, and custom completion
+  commands byte-for-byte except for the provider file's established formatting behavior.
+- Setup output contains no prompt, response, transcript, cwd, token, secret, or raw
+  unrelated configuration value. Interactive rendering writes only to its owned TTY;
+  JSON mode and provider hooks remain free of decorative or terminal-control bytes.
+- Planning may derive redacted errors from hostile configuration but never echoes
+  untrusted event keys, values, control characters, version-probe output, or config
+  contents. Exact owned paths, selected safe sound, and backup paths are the only intended
+  local details in setup output.
+
+### Required proofs
+
+- Focused RED tests precede production code for argument validation, read-only dry-run,
+  interactive cancellation, smart notification recommendations, exact plan output,
+  idempotent re-runs, unavailable/OpenCode-v2 refusal, ephemeral-execution refusal, and
+  post-install launch guidance.
+- Foundational RED tests cover parent-directory symlinks, target replacement, same-inode
+  edits, absent-to-created races, Side Glance writer contention, exact desired-state
+  verification, rollback conflicts, private snapshot-derived backups, and caught signal
+  rollback before provider setup becomes user-reachable.
+- Temp-home integration tests apply Claude, Codex, Gemini, and OpenCode selections while
+  preserving unrelated settings and native notification configuration. Injected failure
+  after an earlier provider write proves exact all-target rollback.
+- Packaged npm and standalone smoke tests expose `setup` in help and prove that a durable
+  installed executable is persisted. Npx bootstrap tests use fake package-manager and
+  durable-executable fixtures to prove handoff, version validation, cancellation, child
+  failure, and the absence of ephemeral hook paths. No test mutates the requester's live
+  provider configuration or sends a real desktop notification.
+- An automated PTY smoke against a temp home covers default selection, invalid-input
+  reprompting, empty eligibility, confirmation rejection, EOF, SIGINT, no-write-before-
+  confirmation, and the complete static/no-color happy path.
+- The README, package README, website setup copy, CLI help, and doctor guidance converge
+  on Homebrew install followed by `side-glance init`, while keeping the exact `setup` alias
+  and explicit manual
+  `install`, `uninstall`, and `run` commands available for advanced use and recovery.
+
+**Always:** default to read-only discovery, distinguish provider-native from Side Glance
+notifications, preview owned changes, preserve user configuration, and verify the applied
+plan.
+
+**Ask first:** mutate the requester's live provider configuration, send a real computer
+notification, add a published runtime dependency, publish a package/release, or promote a
+deployment.
+
+**Never:** install permanent hooks from an ephemeral executable, silently enable duplicate
+notification channels, configure an unavailable/incompatible provider, expose unrelated
+configuration in a preview, rewrite shell startup files, or leave a failed multi-provider
+plan reported as successful, or overwrite a concurrent external edit during rollback.
 
 ## Risks
 
@@ -435,6 +697,8 @@ test to preserve incorrect beta behavior.
 - Motion reference: https://linear.app/homepage
 - Lenis React README: https://github.com/darkroomengineering/lenis/blob/main/packages/react/README.md
 - Agentation install guide: https://www.agentation.com/install
+- Ultracite interactive initialization: https://github.com/haydenbleasel/ultracite#quick-start
+- shadcn CLI initialization: https://github.com/shadcn-ui/ui/blob/main/packages/shadcn/src/commands/init.ts
 
 ## Sign-off
 
@@ -444,3 +708,4 @@ test to preserve incorrect beta behavior.
 - [x] Boundaries agreed
 - [x] Open questions resolved or explicitly deferred
 - [x] Human direction approved implementation
+- [x] Requester approved the guided setup amendment and npx/init extension
