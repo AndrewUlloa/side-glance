@@ -6,6 +6,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  rename,
   rm,
   symlink,
   writeFile,
@@ -16,9 +17,14 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import {
+  applyOpenCodePluginPlan,
   installOpenCodePlugin,
   openCodePluginPath,
+  planOpenCodePluginInstall,
+  restoreOpenCodePluginApplication,
   uninstallOpenCodePlugin,
+  verifyOpenCodePluginApplication,
+  verifyOpenCodePluginPlan,
 } from "../../src/adapters/opencode-installer.ts";
 
 async function fixtureHome(context: test.TestContext): Promise<string> {
@@ -584,6 +590,115 @@ test("replaces an owned legacy plugin with a private backup and uninstall remove
     executablePath,
   });
   assert.equal(again.changed, false);
+});
+
+test("rejects an OpenCode same-inode edit made after planning without creating a backup", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const pluginPath = openCodePluginPath(home);
+  await mkdir(path.dirname(pluginPath), { recursive: true });
+  await writeFile(
+    pluginPath,
+    "// SIGNAL_MANAGED_OPENCODE_PLUGIN=1\nexport const Legacy = () => ({})\n",
+    { mode: 0o640 },
+  );
+  const plan = await planOpenCodePluginInstall({
+    homeDirectory: home,
+    executablePath,
+  });
+  const external =
+    "// SIGNAL_MANAGED_OPENCODE_PLUGIN=1\nexport const External = () => ({})\n";
+  await writeFile(pluginPath, external, { mode: 0o640 });
+
+  await assert.rejects(() => applyOpenCodePluginPlan(plan), /changed/i);
+  assert.equal(await readFile(pluginPath, "utf8"), external);
+  assert.deepEqual(
+    (await readdir(path.dirname(pluginPath))).filter((name) =>
+      name.includes(".side-glance-backup-"),
+    ),
+    [],
+  );
+});
+
+test("rejects temporary and replaced retained executables before OpenCode apply", async (context) => {
+  const home = await fixtureHome(context);
+  const cachedExecutable = path.join(home, ".npm", "_npx", "fixture", "side-glance");
+  await mkdir(path.dirname(cachedExecutable), { recursive: true });
+  await writeFile(cachedExecutable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+
+  await assert.rejects(
+    () =>
+      planOpenCodePluginInstall({
+        homeDirectory: home,
+        executablePath: cachedExecutable,
+      }),
+    /temporary|npm|cache|durable/i,
+  );
+
+  const executablePath = await executableFixture(home);
+  const plan = await planOpenCodePluginInstall({
+    homeDirectory: home,
+    executablePath,
+  });
+  const replacement = path.join(home, "replacement-side-glance");
+  await writeFile(replacement, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await rename(replacement, executablePath);
+
+  await assert.rejects(
+    () => applyOpenCodePluginPlan(plan),
+    /executable|identity|changed/i,
+  );
+  await assert.rejects(() => readFile(openCodePluginPath(home)), /ENOENT/u);
+});
+
+test("verifies an exact OpenCode plan and preserves mode while guarding rollback conflicts", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const installed = await installOpenCodePlugin({
+    homeDirectory: home,
+    executablePath,
+  });
+  await chmod(installed.configPath, 0o640);
+  const original = await readFile(installed.configPath, "utf8");
+  const plan = await planOpenCodePluginInstall({
+    homeDirectory: home,
+    executablePath,
+    notifications: true,
+  });
+  const application = await applyOpenCodePluginPlan(plan);
+
+  await verifyOpenCodePluginPlan(plan);
+  await verifyOpenCodePluginApplication(application);
+  assert.equal((await lstat(installed.configPath)).mode & 0o777, 0o640);
+  assert.ok(application.result.backupPath);
+  assert.equal(await readFile(application.result.backupPath, "utf8"), original);
+  assert.equal(
+    (await lstat(application.result.backupPath)).mode & 0o777,
+    0o600,
+  );
+
+  const external = "export const Personal = () => ({ external: true })\n";
+  await writeFile(installed.configPath, external, { mode: 0o640 });
+  await assert.rejects(
+    () => restoreOpenCodePluginApplication(application),
+    /changed/i,
+  );
+  assert.equal(await readFile(installed.configPath, "utf8"), external);
+});
+
+test("rollback removes only the still-empty parent directories created by an OpenCode plan", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const plan = await planOpenCodePluginInstall({
+    homeDirectory: home,
+    executablePath,
+  });
+  const application = await applyOpenCodePluginPlan(plan);
+
+  await restoreOpenCodePluginApplication(application);
+
+  await assert.rejects(() => lstat(openCodePluginPath(home)), /ENOENT/u);
+  await assert.rejects(() => lstat(path.join(home, ".config")), /ENOENT/u);
 });
 
 test("refuses symlinked, non-file, unrelated, and malformed managed targets", async (context) => {

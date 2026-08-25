@@ -1159,6 +1159,147 @@ test("refuses permanent provider activation from an ephemeral npm execution", as
   );
 });
 
+test("refuses an explicit npx-cache executable from an otherwise durable install", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-explicit-npx-home-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const cacheBin = path.join(home, ".npm", "_npx", "fixture", "node_modules", ".bin");
+  const cachedExecutable = path.join(cacheBin, "side-glance");
+  await mkdir(cacheBin, { recursive: true });
+  await writeFile(
+    cachedExecutable,
+    `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(cliPath)} "$@"\n`,
+    { mode: 0o700 },
+  );
+
+  const result = await runCli(
+    [
+      "install",
+      "claude",
+      "--home",
+      home,
+      "--executable",
+      cachedExecutable,
+      "--json",
+    ],
+    { stateDirectory: directory },
+  );
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /temporary|ephemeral|npx|cache|durable/iu);
+  await assert.rejects(
+    () => readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+    /ENOENT/u,
+  );
+});
+
+test("guided setup help is side-effect free and exposes init plus setup", async (context) => {
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-setup-help-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+
+  for (const command of ["init", "setup"] as const) {
+    const result = await runCli([command, "--help"], {
+      env: { HOME: home },
+    });
+
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /side-glance init/u);
+    assert.match(result.stdout, /side-glance setup/u);
+    await assert.rejects(
+      () => readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+      /ENOENT/u,
+    );
+  }
+});
+
+test("guided init refuses an incomplete non-TTY invocation before mutation", async (context) => {
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-setup-nontty-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+
+  const result = await runCli(["init"], { env: { HOME: home } });
+
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /--dry-run|--yes/iu);
+  await assert.rejects(
+    () => readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+    /ENOENT/u,
+  );
+});
+
+test("guided setup returns one redacted durable dry-run plan without writing", async (context) => {
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-setup-dry-run-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "side-glance-bin");
+  const providerBin = path.join(home, "bin");
+  await mkdir(providerBin, { recursive: true });
+  await writeFile(executable, "#!/bin/sh\nprintf 'development\\n'\n", {
+    mode: 0o700,
+  });
+  await writeFile(path.join(providerBin, "claude"), "#!/bin/sh\nexit 0\n", {
+    mode: 0o700,
+  });
+
+  const result = await runCli(
+    [
+      "setup",
+      "--dry-run",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--json",
+    ],
+    { env: { HOME: home, PATH: providerBin } },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stderr, "");
+  const plan = JSON.parse(result.stdout);
+  assert.equal(plan.schemaVersion, 1);
+  assert.equal(plan.kind, "setup-plan");
+  assert.deepEqual(plan.providers.map((provider: { id: string }) => provider.id), [
+    "claude",
+  ]);
+  assert.ok(!result.stdout.includes("SIDE_GLANCE_MANAGED_HOOK"));
+  await assert.rejects(
+    () => readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+    /ENOENT/u,
+  );
+});
+
+test("guided setup JSON failures stay versioned, redacted, and machine-only", async (context) => {
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-setup-json-error-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const sentinel = "DO_NOT_ECHO_CONFIGURATION_SECRET";
+
+  const result = await runCli(
+    [
+      "setup",
+      "--dry-run",
+      "--providers",
+      `unknown-${sentinel}`,
+      "--notifications",
+      "none",
+      "--json",
+    ],
+    { env: { HOME: home } },
+  );
+
+  assert.equal(result.code, 1);
+  assert.equal(result.stderr, "");
+  const failure = JSON.parse(result.stdout);
+  assert.equal(failure.schemaVersion, 1);
+  assert.equal(failure.kind, "setup-error");
+  assert.equal(failure.code, "invalid-options");
+  assert.ok(!result.stdout.includes(sentinel));
+});
+
 test(
   "supervised run forwards termination, records cleanup, and exits by the same signal",
   { skip: process.platform === "win32" },

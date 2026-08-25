@@ -57,7 +57,7 @@ test("documents only durable installation and truthful beta availability", async
 
   const page = await text("app/page.tsx");
   assert.match(page, /public beta · v0\.1/u);
-  assert.match(page, /install the public beta from npm/u);
+  assert.match(page, /install with Homebrew and run guided setup/u);
   assert.doesNotMatch(page, /available after the first verified beta release/u);
 
   const releaseGuide = await text("docs/releasing.md");

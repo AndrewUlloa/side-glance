@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -73,6 +73,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   assert.equal(report.node.supported, true);
   assert.equal(report.stateDirectory, stateDirectory);
   const installedHome = path.join(temporary, "installed-home");
+  await mkdir(installedHome, { recursive: true });
   const runtimeEnvironment = {
     SIDE_GLANCE_STATE_DIR: stateDirectory,
     SIDE_GLANCE_NOTIFICATION_BACKEND: "none",
@@ -161,6 +162,41 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     help.stdout,
     /side-glance install <claude\|codex\|gemini\|opencode>/u,
   );
+  assert.match(help.stdout, /side-glance init/u);
+  assert.match(help.stdout, /side-glance setup/u);
+
+  const setupHome = path.join(temporary, "guided-setup-home");
+  await mkdir(setupHome, { recursive: true });
+  const providerBin = path.join(temporary, "provider-bin");
+  await mkdir(providerBin, { recursive: true });
+  const claudeExecutable = path.join(providerBin, "claude");
+  await writeFile(claudeExecutable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  const setupPreview = await command(
+    executable,
+    [
+      "setup",
+      "--dry-run",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--home",
+      setupHome,
+      "--json",
+    ],
+    {
+      cwd: temporary,
+      env: {
+        ...runtimeEnvironment,
+        PATH: `${providerBin}${path.delimiter}${runtimeEnvironment.PATH}`,
+      },
+    },
+  );
+  assert.equal(JSON.parse(setupPreview.stdout).kind, "setup-plan");
+  await assert.rejects(
+    () => readFile(path.join(setupHome, ".claude", "settings.json"), "utf8"),
+    /ENOENT/u,
+  );
   const notified = await command(
     executable,
     [
@@ -222,8 +258,177 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     },
   );
   assert.equal(npxVersion.stdout.trim(), packageVersion);
+  const npxHelp = await command(
+    npmExecutable,
+    [
+      "exec",
+      "--yes",
+      "--offline",
+      "--package",
+      archive,
+      "--",
+      "side-glance",
+      "init",
+      "--help",
+    ],
+    {
+      cwd: temporary,
+      env: {
+        ...npmEnvironment,
+        PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+    },
+  );
+  assert.match(npxHelp.stdout, /--install <homebrew\|npm\|none>/u);
 
   const npxHome = path.join(temporary, "npx-home");
+  await mkdir(npxHome, { recursive: true });
+  const npxBootstrap = await command(
+    npmExecutable,
+    [
+      "exec",
+      "--yes",
+      "--offline",
+      "--package",
+      archive,
+      "--",
+      "side-glance",
+      "init",
+      "--install",
+      "none",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--home",
+      npxHome,
+      "--dry-run",
+      "--json",
+    ],
+    {
+      cwd: temporary,
+      env: {
+        ...npmEnvironment,
+        PATH: `${providerBin}${path.delimiter}${path.dirname(process.execPath)}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+      },
+    },
+  );
+  const bootstrapPlan = JSON.parse(npxBootstrap.stdout);
+  assert.equal(bootstrapPlan.kind, "bootstrap-plan");
+  assert.equal(bootstrapPlan.durableExecutable.status, "pending");
+  assert.equal(bootstrapPlan.providerActions[0].action, "deferred");
+  assert.equal(bootstrapPlan.launchCommands, "deferred");
+
+  const fakeManagerBin = path.join(temporary, "fake-manager-bin");
+  const durableBin = path.join(temporary, "durable-bin");
+  const fakeNpm = path.join(fakeManagerBin, "npm");
+  const durableExecutable = path.join(durableBin, "side-glance");
+  const installerArguments = path.join(temporary, "fake-npm-arguments.txt");
+  await mkdir(fakeManagerBin, { recursive: true });
+  await mkdir(durableBin, { recursive: true });
+  await writeFile(
+    fakeNpm,
+    `#!/bin/sh
+printf '%s\n' "$@" > ${shellQuote(installerArguments)}
+/bin/cp ${shellQuote(executable)} ${shellQuote(durableExecutable)}
+/bin/chmod 700 ${shellQuote(durableExecutable)}
+`,
+    { mode: 0o700 },
+  );
+  const bootstrapHome = path.join(temporary, "bootstrap-apply-home");
+  await mkdir(bootstrapHome, { recursive: true });
+  const installedBootstrap = await command(
+    executable,
+    [
+      "init",
+      "--install",
+      "npm",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--home",
+      bootstrapHome,
+      "--yes",
+      "--json",
+    ],
+    {
+      cwd: temporary,
+      env: {
+        ...npmEnvironment,
+        npm_command: "exec",
+        npm_lifecycle_event: "npx",
+        PATH: [
+          fakeManagerBin,
+          durableBin,
+          providerBin,
+          path.dirname(process.execPath),
+          "/usr/bin",
+          "/bin",
+        ].join(path.delimiter),
+      },
+    },
+  );
+  const installedBootstrapResult = JSON.parse(installedBootstrap.stdout);
+  assert.equal(installedBootstrapResult.kind, "bootstrap-result");
+  assert.equal(installedBootstrapResult.packageInstalled, true);
+  assert.equal(installedBootstrapResult.setupApplied, true);
+  assert.deepEqual(
+    (await readFile(installerArguments, "utf8")).trim().split("\n"),
+    [
+      "install",
+      "--global",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+      `side-glance@${packageVersion}`,
+    ],
+  );
+  const bootstrappedSettings = await readFile(
+    path.join(bootstrapHome, ".claude", "settings.json"),
+    "utf8",
+  );
+  assert.match(
+    bootstrappedSettings,
+    new RegExp(escapeRegularExpression(durableExecutable), "u"),
+  );
+  assert.doesNotMatch(bootstrappedSettings, /(?:^|[/\\])_npx(?:[/\\]|$)/u);
+
+  const exactHandoff = await command(
+    npmExecutable,
+    [
+      "exec",
+      "--yes",
+      "--offline",
+      "--package",
+      archive,
+      "--",
+      "side-glance",
+      "init",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--home",
+      bootstrapHome,
+      "--dry-run",
+      "--json",
+    ],
+    {
+      cwd: temporary,
+      env: {
+        ...npmEnvironment,
+        PATH: [
+          path.dirname(process.execPath),
+          durableBin,
+          providerBin,
+          "/usr/bin",
+          "/bin",
+        ].join(path.delimiter),
+      },
+    },
+  );
+  assert.equal(JSON.parse(exactHandoff.stdout).kind, "setup-plan");
   await assert.rejects(
     () =>
       command(
@@ -293,4 +498,8 @@ function command(executable, args, options) {
 
 function escapeRegularExpression(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function shellQuote(value) {
+  return `'${value.replaceAll("'", `'"'"'`)}'`;
 }

@@ -690,6 +690,284 @@ claims -> dependencies/policy -> full review -> approved release
 - [x] Tasks are ordered behind shared contracts and bounded to M-sized slices.
 - [x] External publication and live configuration remain explicit Ask First gates.
 
+## Phase 16: Guided setup and durable npx initialization
+
+### Architecture decisions
+
+- **Decision:** `setup` and durable `init` route to one typed workflow in
+  `src/cli/setup.ts`; ephemeral `init` routes through a separate bootstrap boundary and
+  delegates back to that workflow only after resolving a durable executable.
+  **Rationale:** one setup contract prevents drift while keeping temporary-install risk
+  isolated and testable.
+- **Decision:** prompt rendering uses Node's built-in readline APIs behind an injected
+  prompt interface. **Rationale:** the published CLI remains dependency-free while unit
+  tests can drive cancellation, defaults, and selections without a real terminal.
+- **Decision:** JSON-hook and OpenCode installers first move onto one snapshot-driven
+  participant kernel: bounded no-follow reads, validated parent chains, bytes/mode and
+  concurrency tokens, private snapshot-derived backups, exact desired-state verification,
+  compare-before-rollback, and a shared Side Glance writer lock also used by direct
+  install/uninstall. Human/JSON output receives only a redacted projection. **Rationale:**
+  the existing per-file installers cannot safely be wrapped into a multi-file transaction
+  while they re-read paths and overwrite without a complete interference check.
+- **Decision:** a setup transaction revalidates the complete approved plan under the lock,
+  applies atomically per target, verifies all selected targets after the final write, and
+  rolls back caught failures in reverse order only while each target still matches the
+  transaction's applied token. **Rationale:** this restores exact bytes/mode/absence without
+  clobbering a concurrent external edit.
+- **Decision:** transactional claims stop at caught failures. No secret configuration
+  snapshot is persisted as a crash journal; interruption can be diagnosed and repaired by
+  the next idempotent init. **Rationale:** cross-file crash atomicity is impossible with
+  independent renames, and persisting user config creates a larger privacy risk.
+- **Decision:** package-manager execution is injected, uses argument vectors without a
+  shell, and is never reached during planning/dry-run. **Rationale:** bootstrap tests stay
+  offline and live installation remains visibly consented.
+- **Decision:** no `--force` flag is added. Re-runs replace only owned entries; malformed,
+  incompatible, or unrelated targets fail closed. **Rationale:** global user configuration
+  deserves stricter ownership than a disposable project scaffold.
+- **Decision:** npx emits a staged `bootstrap-plan` until an exact-version durable
+  executable is resolved; only the durable CLI emits an authoritative `setup-plan`.
+  **Rationale:** the post-install executable realpath affects hook create/update/unchanged
+  classification and cannot be guessed during a no-install preview.
+- **Decision:** provider eligibility and notification coverage/defaults are explicit data,
+  not prompt-only copy. **Rationale:** unsafe detected providers must not be selected, and
+  enabling an alert channel must not imply a completion ding a provider cannot deliver.
+
+### Rejected alternatives
+
+- Rejected pointing provider hooks at the npx executable, because the npm cache is not a
+  durable runtime and may disappear or change after initialization.
+- Rejected a `curl | sh` bootstrap or copying the npx payload into a hidden directory,
+  because that creates a second unmanaged distribution/update channel.
+- Rejected separate `init` and `setup` planners, because notification recommendations,
+  ownership rules, and previews would inevitably drift.
+- Rejected adding Clack/Commander solely for onboarding, because the standalone/npm CLI
+  currently ships as a dependency-free bundle and the required prompt surface is bounded.
+- Rejected best-effort continuation after one provider fails, because success would be
+  ambiguous and users could unknowingly run different notification/lifecycle policies.
+- Rejected an unqualified crash-proof transaction claim or a durable secret-snapshot
+  journal, because the former is false and the latter expands the privacy/security surface.
+
+- [x] **Task 61: Lock safe mutation, setup, and bootstrap behavior with RED tests**
+  - **Description:** Add focused failing contracts before production edits: safe target
+    snapshots, parent/final symlink refusal, target replacement and same-inode edits,
+    absent-to-created races, writer contention, private backups, exact verification,
+    rollback conflicts, setup argument/TTY/JSON behavior, privacy sentinels, provider
+    eligibility, notification coverage/defaults, and staged bootstrap results.
+  - **Acceptance:** tests fail for missing behavior rather than fixtures; every error path
+    proves no unintended write and no hostile key/value/control byte leakage; setup help
+    exits before detection; canonical provider order and exit codes 0/1/130 are fixed.
+  - **Verify:** focused installer, setup-unit, CLI, and packaged-test commands show the
+    intended RED assertions.
+  - **Depends on:** approved Guided Setup Contract
+  - **Files:** `tests/integration/installers.test.ts`, `tests/unit/setup.test.ts`,
+    `tests/integration/cli.test.ts`, `tests/distribution/npm-package.test.mjs`, test helpers
+  - **Size:** M
+
+- [x] **Task 62: Build the shared safe provider mutation kernel**
+  - **Description:** Refactor JSON-hook and OpenCode paths onto one internal participant
+    shape for bounded snapshot, parent validation, plan, revalidation, private backup,
+    atomic/fsynced apply, exact verification, guarded rollback, and rollback verification;
+    add one owner-validated Side Glance writer lock used by setup/install/uninstall and an
+    executable-identity participant rechecked immediately before configuration writes.
+  - **Acceptance:** direct install/uninstall preserve current JSON/result contracts while
+    rejecting unsafe parents and interference; backup bytes come from the approved snapshot
+    at mode 0600; existing target mode is preserved; rollback never overwrites an external
+    edit; unchanged operations create no write or backup.
+  - **Verify:** Task 61 mutation/race/backup/lock tests turn GREEN; all existing installer,
+    OpenCode, CLI-install, lint, and typecheck tests remain GREEN.
+  - **Depends on:** Task 61
+  - **Files:** `src/adapters/config-target.ts`, `src/adapters/installers.ts`,
+    `src/adapters/opencode-installer.ts`, `src/cli/install.ts`, installer/CLI tests
+  - **Size:** M
+
+- [x] **Task 63: Build the shared read-only setup planner**
+  - **Description:** Centralize durable executable validation, safe provider discovery and
+    eligibility, exact owned hook/plugin plan generation, action classification,
+    notification readiness/defaults/coverage, Aider/custom-notifier guidance, duplicate
+    warnings, stable launch guidance, argument parsing, and redacted/versioned projections.
+  - **Acceptance:** only eligible providers default selected; blocked/unavailable/guidance
+    states are explicit; no provider binary executes; OpenCode claims only the detected
+    v1-command contract; Claude/Codex/Gemini pre-final Ready silence is visible; dry-run and
+    future apply share the exact desired provider transforms once a durable path exists.
+  - **Verify:** planner/argument/privacy tests turn GREEN; existing doctor and notification
+    inspection suites remain GREEN; typecheck passes.
+  - **Depends on:** Task 62
+  - **Files:** `src/cli/setup.ts`, `src/cli/doctor.ts`, `src/cli/executable.ts`, provider
+    participants, `tests/unit/setup.test.ts`, `tests/integration/cli.test.ts`
+  - **Size:** M
+
+### Checkpoint: safe planning and mutation kernel
+
+- [x] Direct install/uninstall use snapshot-driven interference checks and one writer lock
+- [x] Dry-run is a redacted projection of exact provider transforms and performs no writes
+- [x] Eligibility and notification messaging match actual provider contracts
+- [x] Focused unit, integration, lint, and typecheck gates are GREEN
+
+- [x] **Task 64: Add caught-failure multi-provider transaction orchestration**
+  - **Description:** Revalidate the complete approved plan under the shared lock, apply
+    participants in canonical order, verify every exact desired state after the final
+    write, and on caught failure roll back in reverse order using applied-state tokens;
+    remove transaction-created empty directories only when still empty and unchanged.
+  - **Acceptance:** a four-provider plan applies/verifies as one command; injected failure
+    after any write restores exact bytes/mode/absence; a concurrent edit yields a distinct
+    redacted rollback conflict without clobbering it; JSON failure is one versioned stdout
+    object with nonzero exit; interruption limitations remain explicit.
+  - **Verify:** full apply/verify/failure/signal/conflict matrix, including directory and
+    permission failures, turns GREEN; idempotent re-run creates no backup or write.
+  - **Depends on:** Task 63
+  - **Files:** `src/cli/setup-transaction.ts`, `src/cli/setup.ts`, `src/cli/entry.ts`,
+    provider participants, setup/installer integration tests
+  - **Size:** M
+
+- [x] **Task 65: Add the dependency-free interactive init/setup experience**
+  - **Description:** Implement semantic prompt and renderer interfaces over built-in
+    readline; present eligible/default provider choices, separate notification choices and
+    honest coverage, safe sound input, redacted plan, confirmation, progress, caught-signal
+    handling, verification/rollback results, and conditional Aider/generic guidance.
+  - **Acceptance:** `init` and `setup` are exact durable aliases; No/EOF exits 0, SIGINT 130,
+    incomplete non-TTY 1, help 0; no writes precede final confirmation; invalid input
+    reprompts; no-eligible state exits read-only; static/no-color output remains legible;
+    JSON contains no decoration and human output contains no raw config/probe values.
+  - **Verify:** semantic prompt unit tests, spawned non-TTY/signal tests, and automated PTY
+    temp-home smoke cover cancellation, defaults, reprompting, empty eligibility, and the
+    complete happy path.
+  - **Depends on:** Task 64
+  - **Files:** `src/cli/prompts.ts`, `src/cli/setup.ts`, `src/cli/index.ts`, setup/CLI/PTY tests
+  - **Size:** M
+
+- [x] **Task 66: Add the staged safe npx-to-durable init bootstrap**
+  - **Description:** Detect ephemeral invocation; scan past shadowing npx candidates;
+    realpath/inode/cache-check and bounded-time/version-check a separate durable executable;
+    otherwise emit a non-authoritative bootstrap plan, offer Homebrew/npm/preview, display
+    and confirm exact absolute-path argv, run the chosen installer without a shell, require
+    an exact-version durable result, sanitize inherited npm-exec state, then delegate
+    authoritative planning/apply using the stable invocation path.
+  - **Acceptance:** no ephemeral/cache/same-inode path enters hooks; raw or malicious
+    version output is bounded and never forwarded; custom npm caches and PATH shadowing are
+    covered; package managers resolve once to validated absolute paths; npm pins the exact
+    version with ignore-scripts/audit/fund disabled; Homebrew distinguishes install/upgrade,
+    preserves its stable bin symlink, and fails safely during tap-version lag; only supported
+    macOS/glibc-Linux targets offer installation; `--install` is ephemeral-init-only; no
+    unavailable-method fallback occurs; a no-install dry-run marks provider actions/launch
+    commands deferred; package-installed and setup-applied outcomes remain distinct.
+  - **Verify:** fake PATH/cache/package-manager/durable-binary matrix plus packed npm smoke
+    proves exact-version existing handoff, bootstrap-plan JSON, exact-version npm argv,
+    Homebrew install/upgrade argv and lag, inherited-env sanitization, platform refusal,
+    timeout/oversized/malformed version output, post-install missing/mismatch, child failure,
+    package-retained cleanup guidance, stable symlink persistence, and zero `_npx` hook paths.
+  - **Depends on:** Tasks 63–65
+  - **Files:** `src/cli/bootstrap.ts`, `src/cli/executable.ts`, `src/cli/index.ts`,
+    `tests/integration/cli.test.ts`, `tests/distribution/npm-package.test.mjs`,
+    `tests/distribution/standalone.test.mjs`, `tests/distribution/homebrew.test.mjs`
+  - **Size:** M
+
+### Checkpoint: complete onboarding runtime
+
+- [x] `npx side-glance@<channel> init --dry-run` performs no writes or installer calls
+- [x] An approved bootstrap delegates only to a separately validated exact-version binary
+- [x] Durable init applies only the exact plan the user previewed and approved
+- [x] Caught failures roll back safely; interruption and repair boundaries are explicit
+- [x] Packaged source, npm, and standalone CLIs expose identical durable setup behavior
+
+- [x] **Task 67: Converge installation, notification, and recovery guidance**
+  - **Description:** Make root/package READMEs, landing page, CLI help, changelog, launch
+    notes, and recovery guidance present Homebrew + `side-glance init` as the canonical
+    installed path and npx `init` as the bootstrap/trial path, while preserving advanced
+    install/uninstall/doctor/run instructions and the exact `setup` alias.
+  - **Acceptance:** beta copy uses `@beta`; stable copy is conditional on the latest tag;
+    hook semantics versus wrapper surface identity, per-provider notification coverage,
+    native-duplicate defaults, Aider conflict-aware bridge, OpenCode experimental status,
+    caught-failure rollback, interruption repair, and one smoke/rollback sequence are clear.
+  - **Verify:** documentation/source-contract tests, links, site tests, lint, typecheck,
+    production build, and copy scans for overclaims.
+  - **Depends on:** Tasks 65–66
+  - **Files:** `README.md`, `packages/cli/README.md`, `src/cli/index.ts`, site setup copy,
+    `CHANGELOG.md`, `LAUNCH.md`, documentation/site/distribution tests
+  - **Size:** M
+
+- [x] **Task 68: Complete release-grade verification and independent review**
+  - **Description:** Run every repository gate, packed npm/global-prefix and standalone
+    smoke, automated PTY and automation journeys, race/rollback fault matrix, security and
+    privacy scans, documentation consistency scan, and independent five-axis review;
+    remediate all Critical/required findings and record evidence.
+  - **Acceptance:** no unresolved Critical/required finding; no live provider config, real
+    notification, npm publish, Homebrew mutation, deployment, or release occurs; REVIEW
+    records exact commands/results and the PR narrative explains durability and failure
+    boundaries without exposing configuration.
+  - **Verify:** `npm run test:unit`, `npm run test:integration`, `npm run test:coverage`,
+    `npm run lint`, `npm run typecheck`, `npm run build`, `npm test`, packed/standalone smoke,
+    automated PTY smoke, `git diff --check`, and independent code/documentation review.
+  - **Depends on:** Task 67
+  - **Files:** `REVIEW.md`, verification evidence, remediation files as required
+  - **Size:** M
+
+- [x] **Task 69: Commit, push, and open the staging PR**
+  - **Description:** Commit the approved spec/plan and reviewed implementation in coherent
+    slices, push `codex/add-guided-setup`, open a complete PR to protected `staging`, and
+    inspect CI/review state until it is merge-ready.
+  - **Acceptance:** the PR references the approved contract, lists observable setup/init
+    and rollback journeys, contains no unrelated changes, and every required check is green.
+  - **Verify:** clean worktree, remote commit equality, `gh pr view`, and `gh pr checks`.
+  - **Depends on:** Task 68
+  - **Files:** git/PR metadata only
+  - **Size:** S
+
+## Phase 16 dependency graph
+
+```text
+RED safety/setup contracts -> safe provider mutation kernel -> read-only planner
+                                      |                            |
+                                      +------> transaction <-------+
+                                                   |
+                                                   v
+                                         interactive init/setup
+                                                   |
+                                                   v
+                                           staged npx bootstrap
+                                                   |
+                                                   v
+                                          docs/help/site parity
+                                                   |
+                                                   v
+                                    full review -> staging PR
+```
+
+## Phase 16 risks and mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---:|---:|---|
+| Npx cache path reaches a provider hook | Low | Critical | Central durable-path validator, exact packaged smoke, transaction preflight |
+| Caught failure leaves partial provider setup | Low | High | Plan-all-first, shared lock, applied tokens, exact verify, guarded reverse rollback |
+| Crash interrupts distinct file renames | Low | High | Honest boundary, partial-state doctor output, idempotent repair; no secret snapshot journal |
+| Duplicate native and Side Glance alerts | Medium | Medium | Separate selection, readiness-derived defaults, explicit warning and summary |
+| Bootstrap runs an unintended command | Low | Critical | Bounded method enum, validated executable, argv spawn, exact preview/consent, no shell |
+| Interactive UI is hard to test | Medium | Medium | Injected semantic prompt/renderer interfaces plus automated temp-home PTY smoke |
+| Public copy implies hooks alone color Terminal.app | Medium | High | Contract test wrapper/surface wording across CLI, READMEs, and site |
+
+## Phase 16 rollback and observability
+
+- Before apply, retain exact in-memory target snapshots and private ordinary backups; on a
+  caught failure, restore in reverse order only while applied-state tokens still match,
+  verify each result, and report conflicts/outcomes without printing contents.
+- A successful Homebrew/npm bootstrap may remain installed if later validation or setup
+  fails; it is outside provider rollback and the result provides known cleanup guidance.
+- Feature rollback is source-only before release: remove `init`/`setup` routing and docs;
+  existing advanced install/uninstall behavior remains unchanged.
+- User rollback after a successful setup remains `side-glance uninstall <provider> --json`
+  per provider, followed by `side-glance doctor --json`; setup reports every backup path.
+- Observe only local command exit status, redacted provider integration state, and test/CI
+  evidence. No telemetry, transcripts, prompts, or live notification delivery is added.
+
+## Phase 16 sign-off
+
+- [x] Requester approved the Guided Setup Contract and npx/init direction.
+- [x] Transaction, UX/privacy, and npx/distribution reviewers independently challenged the
+  plan; required findings are incorporated before production code.
+- [x] Every task has observable acceptance and verification.
+- [x] Tasks are ordered behind shared contracts and bounded to M-sized slices.
+- [x] External publication, live configuration, and real notifications remain Ask First.
+- [x] Requester approved this implementation plan on 2026-08-24.
+
 ## Sign-off
 
 - [x] Every task has acceptance + verify

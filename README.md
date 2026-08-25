@@ -6,10 +6,10 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 
 ## What is proven
 
-- Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider remain experimental until their live binary matrices pass. Every installer is transactional and preserves unrelated settings.
+- Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider remain experimental until their live binary matrices pass. Setup previews every owned change and preserves unrelated settings.
 - Claude/Codex `Stop` and Gemini `AfterAgent` are pre-final hooks: they can paint the best-known Ready state, but do not ring a misleading final Ready alert while another provider hook can still block or retry.
 - OpenCode support targets the stable v1 plugin API and fails closed for the incompatible `opencode2` beta. Aider uses only its documented static notification command paired with the wrapper.
-- Opt-in macOS and Linux desktop alerts cover accepted waits, failures, cancellations, and genuinely final completions. macOS supports a requested installed sound name; Linux sound is best-effort, and neither path claims audible delivery without a live test.
+- Opt-in macOS and Linux desktop alerts follow the provider-specific event coverage below. macOS supports a requested installed sound name; Linux sound is best-effort, and neither path claims audible delivery without a live test.
 - Delayed generations, older timestamps, mismatched turn IDs, and duplicate event IDs cannot repaint newer state.
 - Shared surfaces have one deterministic owner. Releasing one session reveals the next owner; final release resets only Side Glance-owned state.
 - TTY targets must be owned character devices. tmux options are captured and restored exactly, with phase-specific non-color markers. `--terminal-title` is an explicit, phase-only fallback for direct terminals.
@@ -24,22 +24,68 @@ explicit `beta` channel. Source commits are not releases: a version becomes
 installable only after its matching protected-tag workflow completes. Confirm the
 resolved version from npm before installing it.
 
+The recommended installed path is Homebrew followed by guided setup:
+
 ```bash
-# Homebrew tap (Apple Silicon macOS or glibc Linux; Intel macOS is experimental)
+# Apple Silicon macOS or glibc Linux; Intel macOS is experimental
 brew install AndrewUlloa/tap/side-glance
-side-glance --version
+side-glance init
+```
 
-# Public prerelease channel
+During the beta, the public discovery and bootstrap path is:
+
+```bash
+npx side-glance@beta init
+```
+
+Use `npx side-glance@latest init` only after the stable package owns npm's
+`latest` tag. The temporary npx runner performs read-only discovery, then either
+hands off to an exact-version durable executable or asks before installing one. It
+never writes its npm-cache path into provider hooks.
+
+Global npm remains the durable fallback. Pin the beta channel, then run the same
+setup:
+
+```bash
 npm install --global side-glance@beta
-npm view side-glance@beta version
-
-# Ephemeral diagnostics or preview only
-npx side-glance@beta doctor --json
+side-glance init
+side-glance --version
 ```
 
 The Homebrew formula installs the corresponding standalone archive from the
 immutable GitHub release. Direct archive downloads remain available there; verify
 the matching release, provenance, and `SHA256SUMS` before using one manually.
+
+## Guided setup
+
+`side-glance init` detects supported providers without executing them and presents
+a read-only preview of the executable, target paths, create/update/unchanged
+actions, notification choices, warnings, and launch commands. It writes nothing
+until the whole plan is confirmed. `side-glance setup` is its exact alias; both are
+safe to re-run. For automation, start with:
+
+```bash
+side-glance setup --dry-run
+side-glance setup --providers claude,codex --notifications none --yes --json
+```
+
+Provider hooks supply lifecycle events, but they do not identify which Terminal.app,
+iTerm, Ghostty, or tmux surface should change color. Launch each interactive session
+through the wrapper to supply that stable surface identity:
+
+```bash
+side-glance run --label "Claude" -- claude
+side-glance run --label "Codex" -- codex
+```
+
+Advanced commands remain available for one-provider changes and diagnosis:
+
+```bash
+side-glance doctor --json
+side-glance install claude --json
+side-glance uninstall claude --json
+side-glance run -- your-coding-cli
+```
 
 ## Try it from source
 
@@ -61,7 +107,7 @@ side-glance run --surface test:demo -- your-command
 side-glance run --terminal-title -- claude
 ```
 
-Native setup is intentionally a separate action because it edits provider configuration:
+Direct native setup is still available when a guided multi-provider plan is not wanted:
 
 ```bash
 side-glance install claude --json
@@ -74,10 +120,28 @@ Do not install over the existing `stoplight.sh` setup until you have reviewed `s
 
 ## Desktop notifications and sound
 
-Side Glance notifications are disabled by default. Enable them only on
-Side Glance-owned hooks, with an optional macOS sound name. Codex native TUI
-notifications are enabled by default while unfocused; `doctor` and installation
-warnings expose that overlap before opt-in.
+Setup treats provider-native and Side Glance notifications as separate channels.
+When provider-native notifications are ready, Side Glance defaults off and warns
+about duplicate alerts. When the native notification state is unknown, Side Glance
+defaults off and explains the uncertainty. When native notifications are disabled
+or not configured, Side Glance defaults on only if its OS backend is available. An
+unavailable backend defaults off; an unsupported platform makes the option
+unselectable. Explicit automation choices that cannot be delivered fail before any
+configuration changes.
+
+Coverage is provider-specific:
+
+- Claude reports attention and failure; its pre-final Ready event stays silent.
+- Codex and Gemini report attention; their pre-final Ready events stay silent, and
+  Side Glance does not claim a final failure/completion signal for those hooks.
+- OpenCode v1 experimentally reports Ready, attention, and failure.
+- Aider completion needs an explicit static bridge. Setup never overwrites an
+  existing Aider notification command; it prints conflict-aware manual guidance.
+- The generic wrapper reports only process exit when `--notify-on-exit` is selected.
+
+macOS uses the installed sound name `Glass` by default and accepts another bounded
+safe name. Linux sound is best-effort. Setup does not fire a test notification, and
+configuration alone is not proof that the computer played a sound.
 
 ```bash
 side-glance install claude --notifications --notification-sound Glass --json
@@ -111,9 +175,9 @@ side-glance run --label "Aider worker" -- aider --notifications \
   --notifications-command 'side-glance notify --source aider --kind completed --json'
 ```
 
-Claude, Codex, and Gemini do not expose a post-aggregate completion event, so their
-managed completion hooks are deliberately silent. Keep provider-native completion
-alerts enabled, or use process exit as the truthful boundary for a one-shot command:
+Claude, Codex, and Gemini do not expose a post-aggregate completion event. Keep
+provider-native completion alerts enabled, or use process exit as the truthful
+boundary for a one-shot command:
 
 ```bash
 side-glance run --label "Release build" --notify-on-exit -- your-command
@@ -126,13 +190,35 @@ verification. On macOS, Notifications settings and Focus can suppress delivery o
 sound; notification clicks are not guaranteed to select the originating terminal,
 tab, or tmux pane.
 
-## Recovery contract
+## Smoke test and recovery
+
+Use a temporary or deliberately chosen provider first. Preview, apply, supervise one
+session, inspect, then remove only the Side Glance-owned entry:
+
+```bash
+side-glance setup --providers claude --notifications none --dry-run
+side-glance setup --providers claude --notifications none --yes
+side-glance run --label "Side Glance smoke" -- claude
+side-glance doctor --json
+side-glance uninstall claude --json
+side-glance reset --all --json
+```
+
+If a caught multi-provider write or verification failure occurs, setup rolls back
+already-applied providers in reverse order, but only while their files still match
+what that setup wrote. It reports a rollback conflict instead of overwriting a newer
+external edit.
 
 Normal `SessionEnd`, child exit, `SIGINT`, `SIGTERM`, `SIGHUP`, and manual reset paths release through the serialized controller. No software can synchronously clean up after every component receives `SIGKILL`, after power loss, or after the terminal emulator disappears. Side Glance bounds those cases with ownership reconciliation on the next affected event and explicit recovery:
 
 ```bash
 side-glance reset --all --json
 ```
+
+A power loss or `SIGKILL` between separate provider-file renames can leave setup
+partial. The next `side-glance init` or `side-glance doctor` reports that state so
+the idempotent setup can repair it; Side Glance does not retain a secret crash
+journal of provider configuration.
 
 OSC 111 restores the terminal's configured default background; terminals do not expose a portable way to recover an arbitrary dynamic OSC 11 value. Terminal.app OSC 11 remains manually unverified, so `doctor` warns and `--terminal-title` offers an opt-in phase-only fallback. Title mutation is disabled by default.
 

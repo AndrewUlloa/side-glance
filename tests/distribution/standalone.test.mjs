@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -85,6 +85,71 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     wash: "4d3510",
     accent: "f0a726",
   });
+  const help = await command(executable, ["--help"], {
+    cwd: extracted,
+    env: strippedEnvironment,
+  });
+  assert.match(help.stdout, /side-glance init/u);
+  assert.match(help.stdout, /side-glance setup/u);
+
+  const setupHome = path.join(extracted, "guided-home");
+  const providerBin = path.join(extracted, "provider-bin");
+  await mkdir(setupHome, { recursive: true });
+  await mkdir(providerBin, { recursive: true });
+  const claude = path.join(providerBin, "claude");
+  await writeFile(claude, "#!/bin/sh\nexit 0\n");
+  await chmod(claude, 0o700);
+  const setup = await command(
+    executable,
+    [
+      "setup",
+      "--dry-run",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--home",
+      setupHome,
+      "--json",
+    ],
+    {
+      cwd: extracted,
+      env: {
+        ...strippedEnvironment,
+        PATH: `${providerBin}${path.delimiter}/usr/bin:/bin`,
+      },
+    },
+  );
+  assert.equal(JSON.parse(setup.stdout).kind, "setup-plan");
+
+  const applied = await command(
+    executable,
+    [
+      "setup",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--home",
+      setupHome,
+      "--yes",
+      "--json",
+    ],
+    {
+      cwd: extracted,
+      env: {
+        ...strippedEnvironment,
+        PATH: `${providerBin}${path.delimiter}/usr/bin:/bin`,
+      },
+    },
+  );
+  assert.equal(JSON.parse(applied.stdout).kind, "setup-result");
+  const settings = await readFile(
+    path.join(setupHome, ".claude", "settings.json"),
+    "utf8",
+  );
+  assert.match(settings, new RegExp(escapeRegularExpression(executable), "u"));
+  assert.doesNotMatch(settings, /(?:^|[/\\])_npx(?:[/\\]|$)/u);
 });
 
 test("refuses a different embedded Node release runtime", async () => {
@@ -144,4 +209,8 @@ function command(executable, args, options) {
       reject(new Error(`${executable} failed (${signal ?? code}):\n${stderr}${stdout}`));
     });
   });
+}
+
+function escapeRegularExpression(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }

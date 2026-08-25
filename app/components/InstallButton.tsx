@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useMeasure } from "../hooks/useMeasure";
 
-const INSTALL_COMMAND = "npm install -g side-glance@beta";
+const INSTALL_COMMAND =
+  "brew install AndrewUlloa/tap/side-glance\nside-glance init";
 
 const SWAP_MOTION = {
   animate: { opacity: 1, scale: 1, filter: "blur(0px)" },
@@ -53,7 +54,7 @@ export function InstallButton({ idleAriaLabel }: InstallButtonProps) {
     resetRef.current = setTimeout(() => setCopied(false), 1400);
   }, []);
 
-  const label = copied ? "Copied npm" : "Install";
+  const label = copied ? "Copied setup" : "Install";
   const transition = shouldReduceMotion
     ? SWAP_MOTION.reduced
     : SWAP_MOTION.spring;
@@ -62,7 +63,7 @@ export function InstallButton({ idleAriaLabel }: InstallButtonProps) {
   return (
     <motion.button
       animate={{ width: targetWidth }}
-      aria-label={copied ? "npm install command copied" : idleAriaLabel}
+      aria-label={copied ? "guided setup commands copied" : idleAriaLabel}
       className="minimal-install rounded-header-action text-header-action!"
       data-copied={copied}
       onClick={copyInstallCommand}

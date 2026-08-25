@@ -1,23 +1,36 @@
-import { constants } from "node:fs";
-import {
-  chmod,
-  copyFile,
-  lstat,
-  mkdir,
-  open,
-  readFile,
-  rename,
-  stat,
-  unlink,
-} from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 
 import { MAX_NOTIFICATION_SOUND_CODE_POINTS } from "../notifications/policy.ts";
+import {
+  captureExecutableIdentity,
+  detectEphemeralNpmExecution,
+  revalidateExecutableIdentity,
+  type ExecutableIdentityToken,
+} from "../cli/executable.ts";
+import {
+  applyConfigTargetPlan,
+  backupConfigTargetPlan,
+  captureConfigTarget,
+  planConfigTarget,
+  planConfigTargetRemoval,
+  revalidateConfigTargetPlan,
+  restoreConfigTargetApplication,
+  sensitiveConfigTargetSnapshotBytes,
+  verifyConfigTargetApplication,
+  verifyConfigTargetPlan,
+  withConfigWriterLock,
+  type ConfigTargetApplication,
+  type ConfigTargetPlan,
+  type ConfigTargetSnapshot,
+} from "./config-target.ts";
 
 const MANAGED_MARKER = "SIDE_GLANCE_MANAGED_HOOK=1";
 const LEGACY_MANAGED_MARKER = "SIGNAL_MANAGED_HOOK=1";
 const MAX_CONFIG_BYTES = 2 * 1_048_576;
+const executableIdentities = new WeakMap<
+  ProviderHookMutationPlan,
+  ExecutableIdentityToken
+>();
 
 export type InstallableProvider = "claude" | "codex" | "gemini";
 
@@ -54,6 +67,21 @@ export interface ProviderInspection {
     timeoutUnit: "seconds" | "milliseconds";
   }>;
   notifyConfigured?: boolean;
+}
+
+export interface ProviderHookMutationPlan {
+  readonly provider: InstallableProvider;
+  readonly operation: "install" | "uninstall";
+  readonly configPath: string;
+  readonly changed: boolean;
+  readonly action: "create" | "update" | "unchanged";
+  readonly installedHooks: number;
+  readonly targetPlan: ConfigTargetPlan;
+}
+
+export interface ProviderHookMutationApplication {
+  readonly result: InstallerResult;
+  readonly targetApplication: ConfigTargetApplication;
 }
 
 interface HookCommand {
@@ -104,7 +132,7 @@ export async function inspectProviderHooks(options: {
   }
   const homeDirectory = path.resolve(options.homeDirectory);
   const configPath = configPathFor(homeDirectory, options.provider);
-  const loaded = await readConfiguration(configPath);
+  const loaded = await readConfiguration(homeDirectory, configPath);
   const hooks = readHooks(loaded.value);
   const groups = Object.values(hooks).flat();
   const managedHooks = Object.entries(hooks).flatMap(([event, eventGroups]) =>
@@ -160,8 +188,38 @@ export async function inspectProviderHooks(options: {
 export async function installProviderHooks(
   options: InstallerOptions,
 ): Promise<InstallerResult> {
+  return withConfigWriterLock(options.homeDirectory, () =>
+    installProviderHooksUnlocked(options),
+  );
+}
+
+export async function installProviderHooksUnlocked(
+  options: InstallerOptions,
+): Promise<InstallerResult> {
+  const plan = await planProviderHookInstall(options);
+  const applied = await applyProviderHookPlan(plan);
+  try {
+    await verifyProviderHookApplication(applied);
+    return applied.result;
+  } catch (error) {
+    await restoreProviderHookApplication(applied).catch((rollbackError: unknown) => {
+      throw new AggregateError(
+        [error, rollbackError],
+        "Provider hook verification failed and rollback encountered a conflict.",
+      );
+    });
+    throw error;
+  }
+}
+
+export async function planProviderHookInstall(
+  options: InstallerOptions,
+): Promise<ProviderHookMutationPlan> {
   const validated = await validateOptions(options, true);
-  const loaded = await readConfiguration(validated.configPath);
+  const loaded = await readConfiguration(
+    path.resolve(options.homeDirectory),
+    validated.configPath,
+  );
   const configuration = loaded.value;
   const hooks = readHooks(configuration);
   const command = managedCommand(
@@ -184,23 +242,32 @@ export async function installProviderHooks(
   configuration.hooks = hooks;
 
   const serialized = serializeConfiguration(configuration);
-  if (serialized === loaded.serialized) {
-    return result(options.provider, validated.configPath, false);
-  }
-
-  const backupPath = loaded.exists
-    ? await backupConfiguration(validated.configPath)
-    : undefined;
-  await writeConfigurationAtomic(
-    validated.configPath,
-    serialized,
-    loaded.mode,
+  const changed = serialized !== loaded.serialized;
+  const targetPlan = planConfigTarget(
+    loaded.snapshot,
+    changed ? serialized : loaded.raw,
+    { backupExisting: changed && loaded.exists, mode: loaded.mode },
   );
-  return {
-    ...result(options.provider, validated.configPath, true),
-    ...(backupPath ? { backupPath } : {}),
-    installedHooks: PROVIDER_EVENTS[options.provider].length,
-  };
+  const plan = Object.freeze({
+    provider: options.provider,
+    operation: "install" as const,
+    configPath: validated.configPath,
+    changed: targetPlan.changed,
+    action: !targetPlan.changed
+      ? ("unchanged" as const)
+      : loaded.exists
+        ? ("update" as const)
+        : ("create" as const),
+    installedHooks: targetPlan.changed
+      ? PROVIDER_EVENTS[options.provider].length
+      : 0,
+    targetPlan,
+  });
+  if (!validated.executableIdentity) {
+    throw new Error("Side Glance executable validation was incomplete.");
+  }
+  executableIdentities.set(plan, validated.executableIdentity);
+  return plan;
 }
 
 function managedHook(
@@ -227,11 +294,38 @@ function managedHook(
 export async function uninstallProviderHooks(
   options: InstallerOptions,
 ): Promise<InstallerResult> {
-  const validated = await validateOptions(options, false);
-  const loaded = await readConfiguration(validated.configPath);
-  if (!loaded.exists) {
-    return result(options.provider, validated.configPath, false);
+  return withConfigWriterLock(options.homeDirectory, () =>
+    uninstallProviderHooksUnlocked(options),
+  );
+}
+
+export async function uninstallProviderHooksUnlocked(
+  options: InstallerOptions,
+): Promise<InstallerResult> {
+  const plan = await planProviderHookUninstall(options);
+  const applied = await applyProviderHookPlan(plan);
+  try {
+    await verifyProviderHookApplication(applied);
+    return applied.result;
+  } catch (error) {
+    await restoreProviderHookApplication(applied).catch((rollbackError: unknown) => {
+      throw new AggregateError(
+        [error, rollbackError],
+        "Provider hook verification failed and rollback encountered a conflict.",
+      );
+    });
+    throw error;
   }
+}
+
+export async function planProviderHookUninstall(
+  options: InstallerOptions,
+): Promise<ProviderHookMutationPlan> {
+  const validated = await validateOptions(options, false);
+  const loaded = await readConfiguration(
+    path.resolve(options.homeDirectory),
+    validated.configPath,
+  );
   const configuration = loaded.value;
   const hooks = readHooks(configuration);
 
@@ -243,20 +337,70 @@ export async function uninstallProviderHooks(
   configuration.hooks = hooks;
 
   const serialized = serializeConfiguration(configuration);
-  if (serialized === loaded.serialized) {
-    return result(options.provider, validated.configPath, false);
-  }
+  const changed = loaded.exists && serialized !== loaded.serialized;
+  const targetPlan = loaded.exists
+    ? planConfigTarget(loaded.snapshot, changed ? serialized : loaded.raw, {
+        backupExisting: changed,
+        mode: loaded.mode,
+      })
+    : planConfigTargetRemoval(loaded.snapshot);
+  return Object.freeze({
+    provider: options.provider,
+    operation: "uninstall" as const,
+    configPath: validated.configPath,
+    changed: targetPlan.changed,
+    action: targetPlan.changed ? ("update" as const) : ("unchanged" as const),
+    installedHooks: 0,
+    targetPlan,
+  });
+}
 
-  const backupPath = await backupConfiguration(validated.configPath);
-  await writeConfigurationAtomic(
-    validated.configPath,
-    serialized,
-    loaded.mode,
-  );
-  return {
-    ...result(options.provider, validated.configPath, true),
-    backupPath,
+export async function applyProviderHookPlan(
+  plan: ProviderHookMutationPlan,
+): Promise<ProviderHookMutationApplication> {
+  await revalidateProviderExecutable(plan);
+  const targetApplication = await applyConfigTargetPlan(plan.targetPlan);
+  const resultValue: InstallerResult = {
+    provider: plan.provider,
+    configPath: plan.configPath,
+    changed: targetApplication.changed,
+    installedHooks: plan.installedHooks,
+    ...(targetApplication.backupPath
+      ? { backupPath: targetApplication.backupPath }
+      : {}),
   };
+  return Object.freeze({ result: resultValue, targetApplication });
+}
+
+export async function backupProviderHookPlan(
+  plan: ProviderHookMutationPlan,
+): Promise<string | undefined> {
+  return backupConfigTargetPlan(plan.targetPlan);
+}
+
+export async function revalidateProviderHookPlan(
+  plan: ProviderHookMutationPlan,
+): Promise<void> {
+  await revalidateConfigTargetPlan(plan.targetPlan);
+  await revalidateProviderExecutable(plan);
+}
+
+export async function verifyProviderHookPlan(
+  plan: ProviderHookMutationPlan,
+): Promise<void> {
+  await verifyConfigTargetPlan(plan.targetPlan);
+}
+
+export async function verifyProviderHookApplication(
+  application: ProviderHookMutationApplication,
+): Promise<void> {
+  await verifyConfigTargetApplication(application.targetApplication);
+}
+
+export async function restoreProviderHookApplication(
+  application: ProviderHookMutationApplication,
+): Promise<void> {
+  await restoreConfigTargetApplication(application.targetApplication);
 }
 
 function configPathFor(homeDirectory: string, provider: InstallableProvider): string {
@@ -272,20 +416,14 @@ function configPathFor(homeDirectory: string, provider: InstallableProvider): st
 
 async function inspectCodexNotify(homeDirectory: string): Promise<boolean> {
   const configPath = path.join(homeDirectory, ".codex", "config.toml");
-  let metadata;
-  try {
-    metadata = await lstat(configPath);
-  } catch (error) {
-    if (hasCode(error, "ENOENT")) return false;
-    throw error;
-  }
-  if (metadata.isSymbolicLink() || !metadata.isFile()) {
-    throw new Error("Codex config.toml must be a regular file, not a link.");
-  }
-  if (metadata.size > MAX_CONFIG_BYTES) {
-    throw new Error("Codex config.toml is too large to inspect safely.");
-  }
-  const raw = await readFile(configPath, "utf8");
+  const snapshot = await captureConfigTarget({
+    rootDirectory: homeDirectory,
+    targetPath: configPath,
+    label: "Codex config.toml",
+    maxBytes: MAX_CONFIG_BYTES,
+  });
+  const raw = sensitiveConfigTargetSnapshotBytes(snapshot)?.toString("utf8");
+  if (raw === undefined) return false;
   return /^\s*notify\s*=/mu.test(raw);
 }
 
@@ -295,6 +433,7 @@ async function validateOptions(
 ): Promise<{
   configPath: string;
   executablePath: string;
+  executableIdentity?: ExecutableIdentityToken;
 }> {
   if (!path.isAbsolute(options.homeDirectory)) {
     throw new Error("Installer home directory must be absolute.");
@@ -303,58 +442,48 @@ async function validateOptions(
     throw new Error("Side Glance executable path must be absolute.");
   }
   const executablePath = path.resolve(options.executablePath);
+  let executableIdentity: ExecutableIdentityToken | undefined;
   if (requireExecutable) {
-    const executableMetadata = await stat(executablePath);
-    if (!executableMetadata.isFile()) {
-      throw new Error("Side Glance executable must resolve to a regular file.");
-    }
-    if ((executableMetadata.mode & 0o111) === 0) {
-      throw new Error("Side Glance executable must have an executable permission bit.");
-    }
+    executableIdentity = await captureRetainableExecutable(executablePath);
   }
 
   return {
     configPath: configPathFor(path.resolve(options.homeDirectory), options.provider),
     executablePath,
+    ...(executableIdentity ? { executableIdentity } : {}),
   };
 }
 
-async function readConfiguration(configPath: string): Promise<{
+async function readConfiguration(homeDirectory: string, configPath: string): Promise<{
   exists: boolean;
   value: Record<string, unknown>;
   serialized: string;
   mode: number;
+  raw: Buffer;
+  snapshot: ConfigTargetSnapshot;
 }> {
-  let metadata;
-  try {
-    metadata = await lstat(configPath);
-  } catch (error) {
-    if (hasCode(error, "ENOENT")) {
-      const value = {};
-      return {
-        exists: false,
-        value,
-        serialized: serializeConfiguration(value),
-        mode: 0o600,
-      };
-    }
-    throw error;
+  const snapshot = await captureConfigTarget({
+    rootDirectory: homeDirectory,
+    targetPath: configPath,
+    label: "Provider configuration",
+    maxBytes: MAX_CONFIG_BYTES,
+    defaultMode: 0o600,
+  });
+  const raw = sensitiveConfigTargetSnapshotBytes(snapshot) ?? Buffer.alloc(0);
+  if (!snapshot.exists) {
+    const value = {};
+    return {
+      exists: false,
+      value,
+      serialized: serializeConfiguration(value),
+      mode: snapshot.mode,
+      raw,
+      snapshot,
+    };
   }
-
-  if (metadata.isSymbolicLink()) {
-    throw new Error("Provider configuration may not be a symbolic link.");
-  }
-  if (!metadata.isFile()) {
-    throw new Error("Provider configuration must be a regular file.");
-  }
-  if (metadata.size > MAX_CONFIG_BYTES) {
-    throw new Error("Provider configuration is too large to update safely.");
-  }
-
-  const raw = await readFile(configPath, "utf8");
   let value: unknown;
   try {
-    value = JSON.parse(raw);
+    value = JSON.parse(raw.toString("utf8"));
   } catch {
     throw new Error("Provider configuration contains malformed JSON; no changes made.");
   }
@@ -365,7 +494,9 @@ async function readConfiguration(configPath: string): Promise<{
     exists: true,
     value,
     serialized: serializeConfiguration(value),
-    mode: metadata.mode & 0o777,
+    mode: snapshot.mode,
+    raw,
+    snapshot,
   };
 }
 
@@ -378,27 +509,56 @@ function readHooks(configuration: Record<string, unknown>): HookConfiguration {
   const parsed: HookConfiguration = {};
   for (const [eventName, value] of Object.entries(configuration.hooks)) {
     if (!Array.isArray(value)) {
-      throw new Error(`Provider hook event ${eventName} must contain an array.`);
+      throw new Error("Provider hook event must contain an array.");
     }
-    parsed[eventName] = value.map((group) => parseHookGroup(group, eventName));
+    parsed[eventName] = value.map((group) => parseHookGroup(group));
   }
   return parsed;
 }
 
-function parseHookGroup(value: unknown, eventName: string): HookGroup {
+function parseHookGroup(value: unknown): HookGroup {
   if (!isRecord(value) || !Array.isArray(value.hooks)) {
-    throw new Error(`Provider hook group ${eventName} must contain a hooks array.`);
+    throw new Error("Provider hook group must contain a hooks array.");
   }
   const hooks = value.hooks.map((hook) => {
     if (!isRecord(hook) || typeof hook.type !== "string") {
-      throw new Error(`Provider hook command ${eventName} has an invalid shape.`);
+      throw new Error("Provider hook command has an invalid shape.");
     }
     if (hook.command !== undefined && typeof hook.command !== "string") {
-      throw new Error(`Provider hook command ${eventName} must be a string.`);
+      throw new Error("Provider hook command must be a string.");
     }
     return { ...hook } as HookCommand;
   });
   return { ...value, hooks } as HookGroup;
+}
+
+async function captureRetainableExecutable(
+  executablePath: string,
+): Promise<ExecutableIdentityToken> {
+  const identity = await captureExecutableIdentity(executablePath);
+  if (
+    detectEphemeralNpmExecution({
+      environment: process.env,
+      invocationPath: identity.invocationPath,
+      realPath: identity.realPath,
+    })
+  ) {
+    throw new Error(
+      "Permanent provider hooks require a durable Side Glance executable outside temporary npm execution and cache paths.",
+    );
+  }
+  return identity;
+}
+
+async function revalidateProviderExecutable(
+  plan: ProviderHookMutationPlan,
+): Promise<void> {
+  if (plan.operation !== "install") return;
+  const identity = executableIdentities.get(plan);
+  if (!identity) {
+    throw new Error("The retained Side Glance executable identity is unavailable.");
+  }
+  await revalidateExecutableIdentity(identity, { environment: process.env });
 }
 
 function removeManagedHandlers(
@@ -473,69 +633,10 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
-async function backupConfiguration(configPath: string): Promise<string> {
-  const backupPath = `${configPath}.side-glance-backup-${Date.now()}-${randomUUID()}`;
-  await copyFile(configPath, backupPath, constants.COPYFILE_EXCL);
-  const metadata = await stat(configPath);
-  await chmod(backupPath, metadata.mode & 0o777);
-  return backupPath;
-}
-
-async function writeConfigurationAtomic(
-  configPath: string,
-  serialized: string,
-  mode: number,
-): Promise<void> {
-  await mkdir(path.dirname(configPath), { recursive: true, mode: 0o700 });
-  const temporaryPath = path.join(
-    path.dirname(configPath),
-    `.${path.basename(configPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  let handle;
-  try {
-    handle = await open(
-      temporaryPath,
-      constants.O_CREAT |
-        constants.O_EXCL |
-        constants.O_WRONLY |
-        constants.O_NOFOLLOW,
-      mode,
-    );
-    await handle.writeFile(serialized, "utf8");
-    await handle.sync();
-    await handle.close();
-    handle = undefined;
-    await rename(temporaryPath, configPath);
-    await chmod(configPath, mode);
-  } finally {
-    if (handle) await handle.close();
-    await unlink(temporaryPath).catch((error: unknown) => {
-      if (!hasCode(error, "ENOENT")) throw error;
-    });
-  }
-}
-
 function serializeConfiguration(value: Record<string, unknown>): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-function result(
-  provider: InstallableProvider,
-  configPath: string,
-  changed: boolean,
-): InstallerResult {
-  return { provider, configPath, changed, installedHooks: 0 };
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function hasCode(error: unknown, code: string): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === code
-  );
 }
