@@ -41,6 +41,7 @@ import {
   detectEphemeralNpmExecution,
   findDurableExecutableOnPath,
   revalidateExecutableIdentity,
+  resolveExecutableInvocationPath,
 } from "./executable.ts";
 import {
   inspectProviderCapabilities,
@@ -352,7 +353,14 @@ async function runGuidedSetupCommand(
   command: "init" | "setup",
   args: readonly string[],
 ): Promise<number> {
-  const invocationPath = path.resolve(process.argv[1] ?? process.execPath);
+  const reportedInvocationPath = process.argv[1] ?? process.execPath;
+  const recoveredInvocationPath = await resolveExecutableInvocationPath({
+    reportedInvocationPath,
+    processExecutablePath: process.execPath,
+    environment: process.env,
+  });
+  const invocationPath =
+    recoveredInvocationPath ?? path.resolve(reportedInvocationPath);
   const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
   if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
     if (
@@ -420,7 +428,7 @@ async function runGuidedSetupCommand(
       discover: (request) =>
         createDurableSetupDiscovery(request, {
           defaultHomeDirectory: homedir(),
-          defaultExecutablePath: invocationPath,
+          defaultExecutablePath: recoveredInvocationPath,
           expectedVersion: SIDE_GLANCE_VERSION,
           environment: process.env,
           platform: process.platform,

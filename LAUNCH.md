@@ -1,9 +1,9 @@
 # Launch and rollback
 
-Side Glance is a beta. Version `0.1.0-beta.4` is the release candidate for the
-guided setup and durable npx bootstrap integrated on `staging`. Preparing this
-candidate does not create a version tag or GitHub Release, publish to npm, update
-a Homebrew tap, or migrate live provider configuration.
+Side Glance is a beta. Version `0.1.0-beta.5` is the release candidate for the
+bare Homebrew guided-init hotfix. Preparing this candidate does not create a
+version tag or GitHub Release, publish to npm, update a Homebrew tap, or migrate
+live provider configuration.
 
 ## Production deployment status
 
@@ -34,13 +34,14 @@ historical deployment identifiers are not rewritten during a product rename.
 
 ## npm beta release candidate
 
-- Candidate: `side-glance@0.1.0-beta.4`
+- Candidate: `side-glance@0.1.0-beta.5`
 - Channel: `beta`
 - Status: unpublished; pending protected `main` promotion and matching annotated tag
-- Previously published: `side-glance@0.1.0-beta.3` and `side-glance@0.1.0-beta.1`
+- Previously published: `side-glance@0.1.0-beta.4`, `side-glance@0.1.0-beta.3`,
+  and `side-glance@0.1.0-beta.1`
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
   dry-run; no npm package or GitHub Release was published.
-- Previous beta.3 integrity: `sha512-0nAPqWKR8ujwq5v78MC2oXaMrwXLsZEXT7dRDE0CJv5Jl6gd9V/U3rswXeW8kCMFeMRaVDXlXTTrh/tIg04Q1A==`
+- Previous beta.4 integrity: `sha512-3PhZqnIWwL1/s6n2dXNbOArcFcT01a/3SvdGpciHhx6cg/atL/ZLNBne6vn+cRBNA8Pvb6hLIAm/dbCpHGf66Q==`
 - The candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
 
@@ -53,10 +54,11 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-Beta.3 passed the protected tag workflow and is public on npm, GitHub Releases,
-and the Homebrew tap. Beta.4 adds guided setup and a durable npx bootstrap. The
-release preparation must repeat every local gate and protected CI must pass before
-tagging. Turbopack has previously reported a non-blocking missing
+Beta.4 passed the protected tag workflow and is public on npm, GitHub Releases,
+and the Homebrew tap. Its post-release Homebrew smoke test exposed a bare-command
+path recovery defect; beta.5 fixes that first-run boundary. The release preparation
+must repeat every local gate and protected CI must pass before tagging. Turbopack
+has previously reported a non-blocking missing
 fallback-override warning for Alan Sans; compilation, type checking, static
 generation, and rendered HTML verification still completed successfully.
 
@@ -123,23 +125,23 @@ journal is retained.
 Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
 release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
-remaining beta.4 gates are:
+remaining beta.5 gates are:
 
 - merge the release preparation through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;
 - let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
-- verify `beta` points to beta.4, then remove the stale beta.1 `latest` tag through
+- verify `beta` points to beta.5, then remove the stale beta.1 `latest` tag through
   an approved interactive npm session; trusted-publishing OIDC cannot perform
   dist-tag mutations;
 - open a separate Homebrew tap pull request after the immutable artifact URLs exist.
 
 ## Prepared pull request sequence
 
-The guided-setup feature landed on `staging` through PR #52. Prepare beta.4 in a
-separate, narrowly scoped PR that updates the CLI and lockfile version, changelog,
-launch record, and current-version fixtures. After that PR is green and merged,
-open a fresh `staging` → `main` PR titled **Promote Side Glance 0.1.0-beta.4**.
-Tag only the exact green merge commit on `main`.
+Prepare beta.5 as a narrowly scoped hotfix PR into `staging`, including the retained
+debug record, red/green standalone regression, executable-identity fix, version,
+changelog, launch record, and current-version fixtures. After that PR is green and
+merged, open a fresh `staging` → `main` PR titled **Promote Side Glance
+0.1.0-beta.5**. Tag only the exact green merge commit on `main`.
 
 ## Controlled migration from stoplight.sh
 

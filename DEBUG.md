@@ -490,3 +490,111 @@ fixture replaces that owner with a guaranteed-dead PID, construct a second store
 the normal 5-second production timeout and retain the same stale-lock and post-recovery
 assertions. This changes no product timeout or lock-safety semantics and makes the test
 exercise each contract with an appropriate budget.
+
+---
+
+# Homebrew guided init loses the stable executable identity
+
+## Observations
+
+- The public `v0.1.0-beta.4` Homebrew formula installs successfully, reports the expected
+  version, passes `brew test side-glance`, and exposes `/opt/homebrew/bin/side-glance` as
+  a symlink to `../Cellar/side-glance/0.1.0-beta.4/bin/side-glance`.
+- The canonical first-run command `side-glance init --providers claude --notifications
+  none --dry-run --json --home <empty-home>` returns a `planning-failed` setup error.
+- `side-glance doctor --json` for the same empty home reports supported Node and eligible
+  Claude/Codex binaries, with absent but valid target configuration files.
+- Repeating the same init command with only `--executable
+  /opt/homebrew/bin/side-glance` added succeeds and produces a safe setup plan whose
+  executable path is the stable Homebrew symlink.
+- The CLI currently derives the default setup executable from `process.argv[1]`, which
+  for a compiled standalone can be the resolved versioned Cellar payload rather than
+  the stable path used to invoke it.
+
+## Hypotheses
+
+### H1: Standalone startup loses the Homebrew symlink invocation path (PRIMARY)
+
+- Supports: the stable symlink is present on `PATH`; explicit selection of that exact
+  path is the only change needed for setup planning to succeed; and the default is
+  derived from the compiled process rather than recovered from `PATH`.
+- Conflicts: none observed yet.
+- Test: invoke a standalone through a Homebrew-shaped stable symlink and assert that bare
+  guided init selects the stable path without `--executable`.
+
+### H2: The empty temporary home is rejected by setup safety checks
+
+- Supports: the failure occurs while producing a setup plan for an empty synthetic home.
+- Conflicts: the identical home succeeds when only `--executable` is supplied, and doctor
+  reports its target configuration paths as valid.
+- Test: hold the home, provider, notification mode, and dry-run options constant while
+  changing only `--executable`.
+
+### H3: Claude discovery or capability eligibility prevents planning
+
+- Supports: planning validates provider eligibility before generating mutations.
+- Conflicts: doctor finds Claude, and the identical Claude selection succeeds with the
+  explicit stable executable.
+- Test: compare doctor output and the paired bare/explicit init commands for one home.
+
+### H4: A stale beta or shadowed executable is running
+
+- Supports: multiple distribution channels and an earlier beta were installed during the
+  release sequence.
+- Conflicts: `command -v`, `side-glance --version`, `brew info`, and the formula checksum
+  all identify the freshly released Homebrew beta.4 artifact.
+- Test: record the resolved command, reported version, formula URL, and installed Cellar
+  path before reproducing.
+
+## Experiments
+
+- H2/H3 falsification: ran bare and explicit init against the same empty home with the
+  same Claude and notification options. Bare failed; adding only the stable executable
+  succeeded. H2 and H3 are rejected.
+- H4 falsification: verified `/opt/homebrew/bin/side-glance`, beta.4 version output, the
+  beta.4 formula URL/checksum, and the beta.4 Cellar target. H4 is rejected.
+- Planned H1 falsification: add an observable regression test around a Homebrew-shaped
+  symlink invocation before changing production code. A failure that selects the Cellar
+  payload or cannot plan confirms the executable-identity boundary.
+- H1 confirmed with a one-line diagnostic SEA: direct symlink invocation reports the
+  stable absolute path in `process.argv[1]`, but bare `PATH` invocation reports only
+  `side-glance`; `process.execPath` is the resolved Cellar payload in both cases.
+- The new standalone distribution regression invokes `side-glance` by bare name through
+  a Homebrew-shaped `PATH`. It fails red with `planning-failed`, matching the public
+  beta.4 behavior exactly.
+
+## Root Cause
+
+Node SEA preserves a bare shell invocation as `process.argv[1] === "side-glance"` while
+`process.execPath` resolves to the versioned Homebrew Cellar payload. Guided setup always
+applied `path.resolve()` to `process.argv[1]`, so a bare invocation became a nonexistent
+`<cwd>/side-glance` candidate. Setup then failed durable-executable validation before it
+could produce a provider plan. Direct absolute invocation happened to work and concealed
+the missing `PATH` recovery path in the original standalone smoke test.
+
+## Fix Direction
+
+When the reported standalone invocation is a bare command name, scan `PATH` for a
+non-Cellar entry whose followed file identity matches the already-running executable,
+then retain that stable invocation path. Preserve absolute and explicitly relative
+invocations unchanged. If no identity match exists, fail closed through the existing
+durable-executable validation rather than retaining an unrelated executable.
+
+## Fix
+
+Added a bounded invocation-path resolver for guided setup. Absolute and explicitly
+relative paths retain their prior behavior. Bare command names are recovered only from
+`PATH` entries whose followed executable identity matches `process.execPath`; versioned
+Homebrew Cellar entries are skipped so the stable bin symlink is retained. A changed or
+unrelated `PATH` shadow is never executed during resolution, and no match falls through
+to existing validation failure. The unit identity test and the full standalone
+Homebrew-shaped regression now pass.
+
+The pre-commit security review found two additional fail-closed requirements. First,
+returning `<cwd>/side-glance` after a failed scan could select an unrelated decoy, so
+bare resolution now returns no default unless a candidate actually matches; explicit
+`--executable` remains available, and otherwise setup fails through its existing safe
+planning-error path. Second, the PATH candidate now matches the full target identity
+(device, inode, mode, size, timestamps, and kind), not only device/inode. Red tests for
+both a current-directory decoy and an in-place identity change now pass green alongside
+the standalone regression.

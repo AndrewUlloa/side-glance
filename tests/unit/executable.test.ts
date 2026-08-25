@@ -18,12 +18,15 @@ import {
   detectEphemeralNpmExecution,
   findDurableExecutableOnPath,
   revalidateExecutableIdentity,
+  resolveExecutableInvocationPath,
   sanitizeDelegatedEnvironment,
   validateDurableExecutable,
+  type ExecutableFileSystem,
+  type ExecutableMetadata,
   type VersionProbe,
 } from "../../src/cli/executable.ts";
 
-const EXPECTED_VERSION = "0.1.0-beta.4";
+const EXPECTED_VERSION = "0.1.0-beta.5";
 
 async function fixtureDirectory(context: test.TestContext): Promise<string> {
   const directory = await mkdtemp(path.join(tmpdir(), "side-glance-executable-"));
@@ -137,6 +140,93 @@ test("validates an exact-version regular executable while preserving its stable 
   ]);
   await revalidateExecutableIdentity(validated);
 });
+
+test("recovers a stable PATH invocation that identifies the running executable", async (context) => {
+  const directory = await fixtureDirectory(context);
+  const target = path.join(directory, "Cellar", "side-glance", EXPECTED_VERSION, "bin", "side-glance");
+  const stable = path.join(directory, "bin", "side-glance");
+  const shadow = path.join(directory, "shadow", "side-glance");
+  await executableFile(target);
+  await executableFile(shadow);
+  await mkdir(path.dirname(stable), { recursive: true });
+  await symlink(target, stable);
+
+  const resolved = await resolveExecutableInvocationPath({
+    reportedInvocationPath: "side-glance",
+    processExecutablePath: target,
+    environment: {
+      PATH: [path.dirname(shadow), path.dirname(target), path.dirname(stable)].join(path.delimiter),
+    },
+  });
+
+  assert.equal(resolved, stable);
+});
+
+test("does not fall back to an unrelated current-directory executable", async (context) => {
+  const directory = await fixtureDirectory(context);
+  const running = path.join(directory, "running", "side-glance");
+  const decoy = path.join(directory, "side-glance");
+  await executableFile(running);
+  await executableFile(decoy);
+
+  const resolved = await resolveExecutableInvocationPath({
+    reportedInvocationPath: "side-glance",
+    processExecutablePath: running,
+    environment: { PATH: path.join(directory, "missing") },
+    cwd: directory,
+  });
+
+  assert.equal(resolved, undefined);
+});
+
+test("rejects a PATH target whose full identity changed after runner capture", async () => {
+  const running = "/cellar/side-glance";
+  const stable = "/bin/side-glance";
+  const original = executableMetadata(1);
+  const changed = executableMetadata(2);
+  let runningStats = 0;
+  const fileSystem: ExecutableFileSystem = {
+    access: async () => undefined,
+    lstat: async (candidate) => candidate === stable ? symlinkMetadata() : original,
+    realpath: async () => running,
+    stat: async (candidate) => {
+      if (candidate === stable) return changed;
+      runningStats += 1;
+      return runningStats <= 2 ? original : changed;
+    },
+  };
+
+  const resolved = await resolveExecutableInvocationPath({
+    reportedInvocationPath: "side-glance",
+    processExecutablePath: running,
+    environment: { PATH: "/bin" },
+    fileSystem,
+    cwd: "/work",
+  });
+
+  assert.equal(resolved, undefined);
+});
+
+function executableMetadata(seed: number): ExecutableMetadata {
+  return {
+    dev: 1,
+    ino: 1,
+    mode: 0o100755,
+    size: seed,
+    mtimeMs: seed,
+    ctimeMs: seed,
+    isFile: () => true,
+    isSymbolicLink: () => false,
+  };
+}
+
+function symlinkMetadata(): ExecutableMetadata {
+  return {
+    ...executableMetadata(1),
+    mode: 0o120755,
+    isSymbolicLink: () => true,
+  };
+}
 
 test("rejects non-absolute, control-bearing, non-file, and non-executable candidates before probing", async (context) => {
   const directory = await fixtureDirectory(context);
