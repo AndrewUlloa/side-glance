@@ -39,13 +39,14 @@ The release workflow rejects private repositories, forks, unprotected tags, tags
 ## npm dist-tag policy
 
 Prereleases update only npm's `beta` tag. The initial beta.1 publication also left
-`latest` pointing at beta.1, so an unqualified install currently resolves to that old
-build. Do not move `latest` to another prerelease: [npm's dist-tag
+`latest` pointing at beta.1, so an unqualified install can resolve that old build
+until the stale tag is removed. Check the live dist-tags instead of encoding their
+current value in release copy. Do not move `latest` to another prerelease: [npm's dist-tag
 contract](https://docs.npmjs.com/cli/v11/commands/npm-dist-tag/) recommends channels
 such as `beta` for unstable versions and reserves `latest` for the normal unqualified
 install path.
 
-After beta.3 is verified, the package owner should remove the stale `latest` tag with
+After a newer beta is verified, the package owner should remove the stale `latest` tag with
 an interactive, two-factor-authenticated npm session. [Trusted-publishing
 OIDC](https://docs.npmjs.com/trusted-publishers/) supports `npm publish`, not
 `npm dist-tag`, so the release workflow must not gain a long-lived token merely to

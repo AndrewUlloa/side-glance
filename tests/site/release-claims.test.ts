@@ -24,8 +24,17 @@ test("keeps public beta, provider, terminal, and domain claims within verified e
 
   assert.match(
     readme,
-    /npm beta tag currently resolves\s+to `0\.1\.0-beta\.1`/u
+    /Prereleases are published on npm's\s+explicit `beta` channel/u
   );
+  assert.doesNotMatch(
+    readme,
+    /currently beta\.1|unpublished source candidate/u
+  );
+  assert.match(
+    packageReadme,
+    /confirm the installed build with\s+`side-glance --version`/u
+  );
+  assert.doesNotMatch(packageReadme, /currently resolves|unreleased beta\.3/u);
   assert.match(readme, /Claude Code and Codex are locally contract-audited/u);
   assert.match(readme, /Gemini, OpenCode v1, and Aider remain experimental/u);
   assert.match(packageReadme, /pre-final/u);
@@ -39,7 +48,7 @@ test("keeps public beta, provider, terminal, and domain claims within verified e
   );
   assert.match(protocol, /OpenCode v1/u);
   assert.match(protocol, /no JSON event producer/u);
-  assert.match(changelog, /0\.1\.0-beta\.3 candidate \(unreleased\)/u);
+  assert.match(changelog, /\[0\.1\.0-beta\.3\] — 2026-08-24/u);
   assert.match(
     launch,
     /Custom apex status: not configured; DNS does not resolve/u
