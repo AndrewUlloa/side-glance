@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -150,6 +150,31 @@ test("builds and smokes the exact versioned standalone archive without Node on P
   );
   assert.match(settings, new RegExp(escapeRegularExpression(executable), "u"));
   assert.doesNotMatch(settings, /(?:^|[/\\])_npx(?:[/\\]|$)/u);
+
+  const homebrewRoot = path.join(extracted, "homebrew");
+  const cellarExecutable = path.join(
+    homebrewRoot, "Cellar", "side-glance", version, "bin", "side-glance",
+  );
+  const stableExecutable = path.join(homebrewRoot, "bin", "side-glance");
+  const homebrewHome = path.join(extracted, "homebrew-home");
+  await mkdir(path.dirname(cellarExecutable), { recursive: true });
+  await mkdir(path.dirname(stableExecutable), { recursive: true });
+  await mkdir(homebrewHome, { recursive: true });
+  await copyFile(executable, cellarExecutable);
+  await chmod(cellarExecutable, 0o755);
+  await symlink(path.relative(path.dirname(stableExecutable), cellarExecutable), stableExecutable);
+  const homebrewSetup = await command(
+    "side-glance",
+    ["init", "--dry-run", "--providers", "claude", "--notifications", "none", "--home", homebrewHome, "--json"],
+    {
+      cwd: homebrewHome,
+      env: {
+        ...strippedEnvironment,
+        PATH: `${path.dirname(stableExecutable)}${path.delimiter}${providerBin}${path.delimiter}/usr/bin:/bin`,
+      },
+    },
+  );
+  assert.equal(JSON.parse(homebrewSetup.stdout).executablePath, stableExecutable);
 });
 
 test("refuses a different embedded Node release runtime", async () => {

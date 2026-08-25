@@ -32,7 +32,7 @@ import type {
   ValidatedDurableExecutable,
 } from "../../src/cli/executable.ts";
 
-const EXACT_VERSION = "0.1.0-beta.4";
+const EXACT_VERSION = "0.1.0-beta.5";
 
 function fileIdentity(seed: number): ExecutableFileIdentity {
   return {
