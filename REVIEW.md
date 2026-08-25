@@ -4,7 +4,7 @@ Date: 2026-08-25
 
 Branch: `codex/add-guided-setup`
 
-Status: PR #52 is mergeable; Phase 16 passes local and hosted required gates
+Status: PR #52 merged into `staging`; Phase 16 passed local and hosted required gates
 
 ## Phase 16 guided onboarding review
 
@@ -67,7 +67,7 @@ writes can require the documented idempotent `side-glance init` / `side-glance d
 repair path. A persistent journal containing private configuration was intentionally
 rejected by the approved privacy contract.
 
-## Beta release-readiness verdict
+## Beta.3 release-readiness verdict (completed 2026-08-24)
 
 No unresolved Critical or required source finding remains in the reviewed branch.
 Thermal units and adaptation, physical tmux ownership, surface migration, stale-session
@@ -85,10 +85,10 @@ because the approved contract explicitly measures reply latency from completion 
 next acknowledgement or turn start, which the reducer already implements. The generic
 80% docstring warning is not a repository gate or a published-TypeScript-API contract.
 
-The candidate is not published. PR #40 has a verified Vercel preview, the live main
-ruleset now includes `require-staging-head`, and one clearly labeled macOS notification
-completed through the real CLI backend with the `Glass` sound. The remaining required
-actions are deliberately external:
+Before beta.3 was published, PR #40 had a verified Vercel preview, the live main
+ruleset included `require-staging-head`, and one clearly labeled macOS notification
+completed through the real CLI backend with the `Glass` sound. The required external
+actions recorded for that release were:
 
 1. Merge reviewed PR #40 into protected `staging`, refresh PR #37 from `staging`
    to `main`, and require new protected CI/Vercel results.
