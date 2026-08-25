@@ -21,7 +21,7 @@ test("generates a validated Homebrew formula from immutable release metadata", a
 
   const formula = await readFile(formulaPath, "utf8");
   assert.match(formula, /class SideGlance < Formula/u);
-  assert.match(formula, /version "0\.1\.0-beta\.3"/u);
+  assert.doesNotMatch(formula, /^\s*version\s/mu);
   assert.match(formula, /license "Apache-2\.0"/u);
   for (const artifact of manifest.artifacts) {
     assert.ok(formula.includes(artifact.url));
@@ -31,6 +31,7 @@ test("generates a validated Homebrew formula from immutable release metadata", a
   assert.match(formula, /bin\.install "side-glance"/u);
   assert.match(formula, /assert_equal version\.to_s/u);
   assert.match(formula, /preview --phase waiting --elapsed 60 --json/u);
+  assert.match(formula, /assert_match '"phase":"waiting"'/u);
   await command("/usr/bin/ruby", ["-c", formulaPath]);
   await verifyWithHomebrewWhenAvailable(formulaPath);
 });
