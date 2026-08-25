@@ -56,7 +56,7 @@ import {
 
 export interface DurableSetupDiscoveryOptions {
   defaultHomeDirectory: string;
-  defaultExecutablePath: string;
+  defaultExecutablePath?: string;
   expectedVersion: string;
   environment: Readonly<Record<string, string | undefined>>;
   platform: NodeJS.Platform;
@@ -78,9 +78,12 @@ export async function createDurableSetupDiscovery(
   const homeDirectory = path.resolve(
     request.homeDirectory ?? options.defaultHomeDirectory,
   );
-  const executablePath = path.resolve(
-    request.executablePath ?? options.defaultExecutablePath,
-  );
+  const candidateExecutablePath =
+    request.executablePath ?? options.defaultExecutablePath;
+  if (!candidateExecutablePath) {
+    throw new Error("No stable executable invocation path was available.");
+  }
+  const executablePath = path.resolve(candidateExecutablePath);
   const durableExecutable = await validateDurableExecutable({
     invocationPath: executablePath,
     expectedVersion: options.expectedVersion,

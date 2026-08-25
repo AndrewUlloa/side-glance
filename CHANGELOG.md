@@ -4,6 +4,15 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.5] — 2026-08-25
+
+### Fixed
+
+- Bare Homebrew invocations now recover and retain the stable `side-glance` bin
+  symlink by matching it to the running executable identity, so the canonical
+  `side-glance init` journey can create a safe provider plan without requiring
+  an explicit `--executable` path.
+
 ## [0.1.0-beta.4] — 2026-08-25
 
 ### Added
@@ -92,7 +101,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.4...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.5...HEAD
+[0.1.0-beta.5]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/AndrewUlloa/side-glance/tree/v0.1.0-beta.2

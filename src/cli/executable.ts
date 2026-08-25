@@ -108,6 +108,14 @@ export interface FindDurableExecutableOptions
   readonly commandName?: string;
 }
 
+export interface ResolveExecutableInvocationPathOptions {
+  readonly reportedInvocationPath: string;
+  readonly processExecutablePath: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly fileSystem?: ExecutableFileSystem;
+  readonly cwd?: string;
+}
+
 export class ExecutableValidationError extends Error {
   readonly code:
     | "invalid-path"
@@ -194,6 +202,41 @@ export async function captureExecutableIdentity(
   }
 }
 
+export async function resolveExecutableInvocationPath(
+  options: ResolveExecutableInvocationPathOptions,
+): Promise<string | undefined> {
+  const cwd = options.cwd ?? process.cwd();
+  const reported = options.reportedInvocationPath;
+  if (
+    path.isAbsolute(reported) ||
+    reported.includes("/") ||
+    reported.includes("\\")
+  ) {
+    return path.resolve(cwd, reported);
+  }
+  validateCommandName(reported);
+
+  const fileSystem = options.fileSystem ?? defaultFileSystem;
+  const running = await captureExecutableIdentity(
+    options.processExecutablePath,
+    fileSystem,
+  );
+  const visited = new Set<string>();
+  for (const directory of options.environment.PATH?.split(path.delimiter) ?? []) {
+    const candidate = path.resolve(cwd, directory || ".", reported);
+    if (visited.has(candidate)) continue;
+    visited.add(candidate);
+    if (HOMEBREW_CELLAR_SIDE_GLANCE.test(candidate)) continue;
+    try {
+      const identity = await captureExecutableIdentity(candidate, fileSystem);
+      if (sameFileIdentity(identity.target, running.target)) return candidate;
+    } catch {
+      // A PATH entry is usable only when it still identifies this running executable.
+    }
+  }
+  return undefined;
+}
+
 export async function validateDurableExecutable(
   options: ValidateDurableExecutableOptions,
 ): Promise<ValidatedDurableExecutable> {
@@ -262,17 +305,7 @@ export async function findDurableExecutableOnPath(
   options: FindDurableExecutableOptions,
 ): Promise<ValidatedDurableExecutable | undefined> {
   const commandName = options.commandName ?? "side-glance";
-  if (
-    commandName.length === 0 ||
-    commandName.includes("/") ||
-    commandName.includes("\\") ||
-    CONTROL_CHARACTER.test(commandName)
-  ) {
-    throw new ExecutableValidationError(
-      "invalid-path",
-      "The executable command name is invalid.",
-    );
-  }
+  validateCommandName(commandName);
   const cwd = options.cwd ?? process.cwd();
   const visited = new Set<string>();
   for (const directory of (options.environment.PATH ?? "").split(path.delimiter)) {
@@ -292,6 +325,20 @@ export async function findDurableExecutableOnPath(
     }
   }
   return undefined;
+}
+
+function validateCommandName(commandName: string): void {
+  if (
+    commandName.length === 0 ||
+    commandName.includes("/") ||
+    commandName.includes("\\") ||
+    CONTROL_CHARACTER.test(commandName)
+  ) {
+    throw new ExecutableValidationError(
+      "invalid-path",
+      "The executable command name is invalid.",
+    );
+  }
 }
 
 export async function revalidateExecutableIdentity(
