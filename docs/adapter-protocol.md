@@ -28,7 +28,7 @@ Adapters submit one JSON object on stdin to `side-glance event --json`, or trans
 | `turn.started` | working | Acknowledges prior attention and advances local generation |
 | `attention.waiting` | waiting | Permission or idle input is required |
 | `attention.acknowledged` | working | Permission/input was answered |
-| `turn.completed` | completed | Ready state; short completions may suppress the visual |
+| `turn.completed` | completed | Ready state; only Heat may suppress a completion under 10 seconds |
 | `turn.failed` | failed | Provider-reported failure |
 | `turn.cancelled` | failed | Cancellation remains attention-worthy |
 | `work.started` | working | Adds one bounded child/background identity to the parent aggregate |

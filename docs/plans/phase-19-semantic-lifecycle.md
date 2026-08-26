@@ -132,7 +132,7 @@ and follow the protected feature/release/promotion/tag sequence.
   - **Depends on:** Tasks 3, 5, 8
   - **Size:** M
 
-- [ ] **Task 10: Run real-browser and experience storyboard review**
+- [x] **Task 10: Run real-browser and experience storyboard review**
   - **Acceptance:** Desktop/mobile, keyboard, reduced-motion, overflow,
     console, and network checks pass; the journey from install to recovery has
     no required experience-design finding.
@@ -140,7 +140,7 @@ and follow the protected feature/release/promotion/tag sequence.
   - **Depends on:** Task 9
   - **Size:** M
 
-- [ ] **Task 11: Run every repository gate and five-axis review**
+- [x] **Task 11: Run every repository gate and five-axis review**
   - **Acceptance:** Unit, integration, coverage, lint, typecheck, build, full
     test, diff check, package, SEA, correctness, simplicity, architecture,
     security, and performance reviews have no required finding.

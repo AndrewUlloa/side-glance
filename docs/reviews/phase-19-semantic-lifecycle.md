@@ -2,7 +2,7 @@
 
 > Spec: `docs/specs/phase-19-semantic-lifecycle.md`
 > Plan: `docs/plans/phase-19-semantic-lifecycle.md`
-> Status: verification in progress; awaiting final browser preview
+> Status: feature preview and storyboard verified; protected release in progress
 > Reviewed: 2026-08-26
 
 ## Outcome
@@ -23,14 +23,15 @@ fixed/custom theme values now explain the constraint and retry in place, and
 of making adaptation invisible. Real-browser review found and fixed both a
 duplicate React key in the Failed transcript and an animation race that could
 replace a person's manual lifecycle selection four seconds later. Manual
-pointer and keyboard selections now pause the demo. No required finding remains.
+pointer and keyboard selections now pause the demo. The final experience-design
+storyboard returned SHIP with no behavioral or release-blocking finding.
 
 ## Journey storyboard
 
 | Moment | User action and visible response | Feeling | Evidence |
 |---|---|---|---|
 | Discover | The homepage opens on a focused terminal with Working, Waiting, Ready short, Ready long, and Failed moments. Choosing a moment pauses the automatic tour so it stays inspectable. | Clarity 5/5 | Both Ready moments share `#3fa84e`; Failed uses `#f33533`; browser and source contracts prove the manual pause. |
-| Install | `npx side-glance@beta init` keeps the recommended provider path short, then reviews `Colors: Status · Ready green · Waiting amber · Failed red`. | Confidence 5/5 | Existing arrow-key/static setup and PTY contracts remain green. |
+| Install | `npx side-glance@beta init` keeps the recommended provider path short, then reviews `Colors: Status (default) · Working cyan · Ready green · Waiting amber · Failed red`. | Confidence 5/5 | Existing arrow-key/static setup and PTY contracts remain green. |
 | Work fans out | Claude emits a bounded `SubagentStart`; a parent Stop and an empty background registry cannot erase that separate evidence. | Trust 5/5 | Reducer and installed-hook integration remain Working until matching `SubagentStop`. |
 | Work finishes | A later parent Stop with no known registry work produces Ready. Long and short success use the same green; the effective post-reducer phase gates alerts. | Relief 5/5 | Controller tests prevent paint/notification while aggregate work remains. |
 | Work fails | Failed is immediately red, carries a distinct `×` marker, and the site transcript says publication stopped. | Urgency 5/5 | Core renderer and live browser show `#732018`/`#f33533`. |
@@ -39,8 +40,9 @@ pointer and keyboard selections now pause the demo. No required finding remains.
 | Config breaks | Runtime falls back to Status without rewriting the invalid file; `doctor --json` reports the bounded error. | Recovery 5/5 | Linked, oversized, unknown-field, permission, and atomic-write contracts pass. |
 
 The exact adaptive formula remains progressive disclosure: the homepage teaches
-lifecycle state and says Heat learns from recent local turns, while the README
-and CLI expose the 12-turn window, sample count, and learned ceiling.
+lifecycle state and says Heat learns from recent local turns; both READMEs
+document the formula and rate limits; the CLI discloses Heat's under-10-second
+silence, 12-turn window, provider-local sample counts, and learned ceilings.
 
 ## Five-axis review
 
@@ -93,19 +95,27 @@ and CLI expose the 12-turn window, sample count, and learned ceiling.
 
 ## Browser evidence
 
-- Desktop: 1280×720, zero horizontal overflow, short/long Ready both
-  `#173326`/`#3fa84e`, Failed `#732018`/`#f33533`.
-- Mobile: 390×844, terminal and all five lifecycle controls fit with zero
-  horizontal overflow.
-- Keyboard: native buttons retain visible `:focus-visible` treatment; manual
-  pointer or keyboard activation pauses playback instead of racing the timer.
-- Console/assets: the post-feature browser pass had no page errors or failed
-  images. The final local server emitted only the known non-fatal Alan Sans
-  fallback-generation warning; the production build and rendered HTML passed.
-- Reduced motion: the browser runtime reported the normal preference; the
-  reduced path is separately enforced by `useReducedMotion`, media-query, first
-  hydration, and rendered-CSS tests because this browser backend cannot emulate
-  the OS preference.
+- Exact-SHA preview: PR #61 deployed commit `b3af99d` to Vercel and returned
+  HTTP 200 with HSTS and a cached static Next.js response.
+- Desktop: 1280×720. Computed washes were Working `rgb(22, 53, 47)`, Waiting
+  `rgb(77, 53, 16)`, both Ready moments `rgb(23, 51, 38)`, and Failed
+  `rgb(115, 32, 24)`. A manual selection remained selected after the four-second
+  automatic advance interval.
+- Mobile/overflow: at 390×844 and the 320×800 stress width, document scroll
+  width equaled viewport width, the terminal and all five controls stayed in
+  bounds, and the input retained a 16px font size.
+- Keyboard: the semantic buttons receive focus and their production
+  `:focus-visible`/activation contracts pass. The preview-only Agentation
+  toolbar intercepted native Enter in this browser session; production is
+  tested again after promotion, where that toolbar is intentionally absent.
+- Console/assets: the preview had no console warning or error, install copy
+  feedback changed to `Copied setup`, and no image failed. The build emitted
+  only the known non-fatal Alan Sans fallback-generation warning.
+- Reduced motion: the browser reported the normal OS preference and the host
+  denied changing the protected macOS accessibility preference. The reduced
+  path is enforced by `useReducedMotion`, media-query, first-hydration, and
+  rendered-CSS tests; this evidence limitation is explicit rather than an
+  emulated claim.
 
 ## Required findings resolved
 
@@ -128,15 +138,19 @@ and CLI expose the 12-turn window, sample count, and learned ceiling.
 16. Preselect current theme values, review all Custom pairs, add help, repair
     backups, cancellation, accessible fallback, and packed artifact coverage.
 17. Pause the website's automatic tour after a manual lifecycle choice.
+18. Make provider-local `preview --source` report the learned ceiling and basis.
+19. Disclose Heat's under-10-second quiet behavior in guided review and docs.
+20. Keep the autoplay status text out of the screen-reader live region while
+    retaining announcements for manual selections.
 
 ## Verification gates
 
-- Unit: 181 passing.
-- Integration: 124 passing; one intentional live-tmux skip.
+- Unit: 187 passing.
+- Integration: 133 passing; one intentional live-tmux skip.
 - Distribution: 19 passing, including packed npm and standalone theme smokes.
 - Site: 37 passing; rendered HTML: 2 passing.
-- Coverage: 305 passing and one skip; 93.05% lines, 82.69% branches,
-  96.99% functions.
+- Coverage: 320 passing and one skip; 93.36% lines, 83.97% branches,
+  96.97% functions.
 - Lint, typecheck, production build, aggregate `npm test`, and
   `git diff --check`: passing.
 
