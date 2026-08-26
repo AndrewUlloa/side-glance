@@ -2,9 +2,8 @@
 
 Side Glance is a beta. Version `0.1.0-beta.6` is public on npm, GitHub Releases,
 and the Homebrew tap. Semantic lifecycle colors, aggregate Claude readiness,
-adaptive Heat, and user theme control are the next feature candidate; release
-preparation will use the still-unused `0.1.0-beta.7` only after the protected
-feature PR reaches `staging`.
+adaptive Heat, and user theme control are merged to protected `staging` and
+prepared as the still-unpublished `0.1.0-beta.7` release candidate.
 
 ## Production deployment status
 
@@ -37,10 +36,10 @@ historical deployment identifiers are not rewritten during a product rename.
 ## npm beta status and next candidate
 
 - Current public release: `side-glance@0.1.0-beta.6`
-- Next planned candidate: `side-glance@0.1.0-beta.7` (unused; not prepared)
+- Prepared candidate: `side-glance@0.1.0-beta.7` (unused; not published)
 - Channel: `beta`
-- Status: beta.6 published 2026-08-25; `beta` points to beta.6 and `latest`
-  remains beta.1 until the first stable release
+- Status: beta.7 is prepared for protected review; until its tag workflow
+  succeeds, `beta` points to beta.6 and `latest` remains beta.1
 - Previously published: `side-glance@0.1.0-beta.5`, `side-glance@0.1.0-beta.4`,
   `side-glance@0.1.0-beta.3`, and `side-glance@0.1.0-beta.1`
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
@@ -131,7 +130,7 @@ release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
 remaining beta.7 gates are:
 
-- merge the semantic-lifecycle feature PR to protected `staging`;
+- semantic-lifecycle feature PR #64 is merged to protected `staging`;
 - merge the release preparation through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;
 - let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
@@ -141,10 +140,10 @@ remaining beta.7 gates are:
 
 ## Prepared pull request sequence
 
-The arrow-key feature and beta.6 release are complete. Merge the Phase 19 feature
-PR to `staging`, then prepare beta.7 in a separate, narrowly scoped PR that updates
+The arrow-key feature and beta.6 release are complete, and the Phase 19 feature
+is merged to `staging`. This separate release branch prepares beta.7 by updating
 the CLI and lockfile version, changelog, launch record, and current-version
-fixtures. After that PR is green and merged, open a fresh `staging` → `main` PR
+fixtures. After this PR is green and merged, open a fresh `staging` → `main` PR
 titled **Promote Side Glance 0.1.0-beta.7**. Tag only the exact green merge commit
 on `main`.
 

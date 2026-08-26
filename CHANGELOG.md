@@ -4,6 +4,8 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.7] — 2026-08-26
+
 ### Added
 
 - Guided `side-glance theme` control with semantic Status, adaptive or fixed
@@ -139,7 +141,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.6...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.7...HEAD
+[0.1.0-beta.7]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.7
 [0.1.0-beta.6]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.6
 [0.1.0-beta.5]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.4

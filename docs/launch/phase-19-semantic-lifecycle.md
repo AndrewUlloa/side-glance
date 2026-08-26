@@ -1,6 +1,6 @@
 # Launch: Semantic lifecycle colors and aggregate readiness
 
-> Status: feature candidate ready for protected review; not published
+> Status: feature merged to `staging`; beta.7 release preparation in progress
 > Date: 2026-08-26
 
 ## Candidate behavior
@@ -47,7 +47,7 @@ Both changes preserve compatible state and unrelated provider configuration.
 
 ## Public verification checklist
 
-- [ ] Protected feature PR merged to `staging` with exact-SHA checks green.
+- [x] Protected feature PR #64 merged to `staging` with exact-SHA checks green.
 - [ ] Next unused beta preparation merged to `staging` with full gates green.
 - [ ] Literal `staging` promoted to `main`; production Vercel SHA verified.
 - [ ] Protected annotated tag workflow green.

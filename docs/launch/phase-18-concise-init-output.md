@@ -1,6 +1,6 @@
 # Launch: Concise guided setup output
 
-> Status: merged to `staging` in PR #60; awaiting the next protected beta
+> Status: merged to `staging` in PR #60; included in the beta.7 candidate
 > Date: 2026-08-26
 
 ## Candidate behavior
