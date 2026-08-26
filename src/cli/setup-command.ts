@@ -1,3 +1,4 @@
+import type { SideGlanceConfigInspection } from "../core/appearance.ts";
 import { DEFAULT_NOTIFICATION_SOUND } from "../notifications/policy.ts";
 import {
   createReadlineSetupPrompter,
@@ -37,6 +38,7 @@ export interface SetupCommandOptions {
   writeStderr(value: string): void;
   prompter?: SetupPrompter;
   signal?: AbortSignal;
+  appearance?: SideGlanceConfigInspection;
 }
 
 export async function runSetupCommand(
@@ -260,7 +262,7 @@ async function runInteractiveSetup(
     const finalPlan = await discoverPlan(request, options);
     if (!finalPlan.ok) return finalPlan.code;
     if (options.signal?.aborted) return interruptedSetup(options, false);
-    renderPlanNotes(finalPlan.plan, prompter);
+    renderPlanNotes(finalPlan.plan, prompter, options.appearance);
     const confirmation = await prompter.confirm("Apply this setup plan?", true);
     if (confirmation.status === "cancelled") {
       return cancellationCode(confirmation);
@@ -279,7 +281,8 @@ async function runInteractiveSetup(
           "Provider configuration could not be verified.",
           false,
         ),
-      renderResult: humanInteractiveSetupResult,
+      renderResult: (plan, result) =>
+        humanInteractiveSetupResult(plan, result, options.appearance),
     });
   } finally {
     prompter.close();
@@ -416,7 +419,11 @@ export function projectSetupPlan(plan: SetupPlan) {
   };
 }
 
-function renderPlanNotes(plan: SetupPlan, prompter: SetupPrompter): void {
+function renderPlanNotes(
+  plan: SetupPlan,
+  prompter: SetupPrompter,
+  appearance?: SideGlanceConfigInspection,
+): void {
   prompter.note("Review");
   prompter.note("");
   writePromptDetail(
@@ -428,6 +435,10 @@ function renderPlanNotes(plan: SetupPlan, prompter: SetupPrompter): void {
     plan.selectedNotifications.length === 0
       ? "  Computer notifications: Off"
       : `  Computer notifications: ${humanList(plan.selectedNotifications.map(providerLabel))} · ${plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND}`,
+  );
+  writePromptDetail(
+    prompter,
+    `  ${setupColorSummary(appearance)}`,
   );
   writePromptDetail(prompter, "  Configuration:");
   for (const provider of plan.providers) {
@@ -573,6 +584,7 @@ function humanSetupResult(
 function humanInteractiveSetupResult(
   plan: SetupPlan,
   result: SetupTransactionResult,
+  appearance?: SideGlanceConfigInspection,
 ): string[] {
   const projected = projectSetupResult(plan, result);
   const lines = ["✓ Side Glance is ready", ""];
@@ -585,6 +597,8 @@ function humanInteractiveSetupResult(
     plan.selectedNotifications.length > 0
       ? `  Computer notifications enabled · ${plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND} (delivery not tested)`
       : "  Computer notifications off",
+    `  ${setupColorSummary(appearance)}`,
+    "  Change anytime: side-glance theme",
   );
 
   const launchCommands = projected.providers.flatMap((provider) =>
@@ -614,6 +628,16 @@ function humanInteractiveSetupResult(
     }
   }
   return lines.map(sanitizePromptDetail);
+}
+
+function setupColorSummary(inspection?: SideGlanceConfigInspection): string {
+  if (inspection && !inspection.valid) {
+    return "Colors: Status fallback · configuration needs attention";
+  }
+  const preset = inspection?.config.appearance.preset ?? "status";
+  if (preset === "heat") return "Colors: Heat (unchanged)";
+  if (preset === "custom") return "Colors: Custom (unchanged)";
+  return "Colors: Status (default) · Working cyan · Ready green · Waiting amber · Failed red";
 }
 
 function appendGuidanceLines(lines: string[], plan: SetupPlan): void {

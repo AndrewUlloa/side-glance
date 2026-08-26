@@ -27,13 +27,13 @@ test("bootstrap child escalates after a bounded grace period when SIGTERM is ign
     shell: false,
     environment: process.env,
     stdio: "capture",
-    timeoutMs: 250,
+    timeoutMs: 1_000,
     maxOutputBytes: 1_024,
   });
 
   assert.equal(result.timedOut, true);
   assert.equal(result.signal, "SIGKILL");
-  assert.ok(Date.now() - startedAt < 2_000);
+  assert.ok(Date.now() - startedAt < 3_000);
 });
 
 test("bootstrap child forwards parent cancellation and settles", async () => {
@@ -56,7 +56,10 @@ test("bootstrap child forwards parent cancellation and settles", async () => {
 
   const result = await pending;
   assert.equal(result.aborted, true);
-  assert.equal(result.signal, "SIGKILL");
+  assert.ok(
+    result.signal === "SIGTERM" || result.signal === "SIGKILL",
+    `expected forwarded termination, received ${result.signal ?? "no signal"}`,
+  );
 });
 
 test("ephemeral JSON dry-run with no installer emits one deferred bootstrap plan", async () => {

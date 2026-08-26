@@ -17,7 +17,7 @@ export function visualForPhase(
   phase: PlaygroundPhase,
   elapsedSeconds: number
 ): PlaygroundVisual {
-  const visual = coreVisualForPhase(phase, elapsedSeconds, 120);
+  const visual = coreVisualForPhase(phase, elapsedSeconds, 300);
   switch (phase) {
     case "working":
       return {

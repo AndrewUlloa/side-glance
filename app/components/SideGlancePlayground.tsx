@@ -145,7 +145,7 @@ export function SideGlancePlayground() {
             style={{ backgroundColor: `#${visual.accent}` }}
           />
           <strong>{visual.label}</strong>
-          <span>{visual.urgency / 10}% heat</span>
+          <span>{visual.urgency / 10}% duration signal</span>
         </div>
         <code>#{visual.wash}</code>
       </div>

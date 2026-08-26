@@ -70,6 +70,7 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     ...process.env,
     PATH: "/usr/bin:/bin",
     SIDE_GLANCE_STATE_DIR: path.join(extracted, "state"),
+    SIDE_GLANCE_CONFIG_DIR: path.join(extracted, "theme-config"),
   };
   const versionResult = await command(executable, ["--version"], {
     cwd: extracted,
@@ -86,6 +87,9 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     urgency: 0,
     wash: "4d3510",
     accent: "f0a726",
+    suppressed: false,
+    completionCeilingSeconds: 300,
+    completionCeilingBasis: "semantic-default",
   });
   const help = await command(executable, ["--help"], {
     cwd: extracted,
@@ -93,6 +97,21 @@ test("builds and smokes the exact versioned standalone archive without Node on P
   });
   assert.match(help.stdout, /side-glance init/u);
   assert.match(help.stdout, /side-glance setup/u);
+  assert.match(help.stdout, /side-glance theme/u);
+  const themeSet = await command(
+    executable,
+    ["theme", "set", "heat", "--ceiling", "adaptive", "--yes", "--json"],
+    { cwd: extracted, env: strippedEnvironment },
+  );
+  assert.equal(JSON.parse(themeSet.stdout).config.appearance.preset, "heat");
+  const themeShow = await command(executable, ["theme", "show", "--json"], {
+    cwd: extracted,
+    env: strippedEnvironment,
+  });
+  assert.deepEqual(JSON.parse(themeShow.stdout).config.appearance, {
+    preset: "heat",
+    ceiling: { mode: "adaptive" },
+  });
 
   const setupHome = path.join(extracted, "guided-home");
   const providerBin = path.join(extracted, "provider-bin");

@@ -180,6 +180,10 @@ test("interactive init offers recommended settings first and applies planner def
   assert.match(rendered, /Review/u);
   assert.match(rendered, /Providers: Claude, Codex, and Gemini/u);
   assert.match(rendered, /Computer notifications: Claude · Glass/u);
+  assert.match(
+    rendered,
+    /Colors: Status.*Working cyan.*Ready green.*Waiting amber.*Failed red/u,
+  );
   assert.match(rendered, /Configuration:/u);
   assert.match(rendered, /Claude: ~\/\.claude\/settings\.json/u);
   assert.doesNotMatch(rendered, /attention.*failure|launch:/u);
@@ -198,6 +202,7 @@ test("interactive init offers recommended settings first and applies planner def
   assert.match(stdout, /Claude configured/u);
   assert.match(stdout, /Computer notifications enabled · Glass/u);
   assert.match(stdout, /delivery not tested/iu);
+  assert.match(stdout, /Change anytime: side-glance theme/u);
   assert.match(stdout, /Next\s+side-glance run --label "Claude" -- claude/u);
   assert.match(
     stdout,
@@ -207,6 +212,39 @@ test("interactive init offers recommended settings first and applies planner def
   assert.equal(stdout.match(/Side Glance is ready/gu)?.length, 1);
   assert.doesNotMatch(stdout, /Setup complete|Durable executable/u);
   assert.doesNotMatch(stdout, /attention.*failure|Manual and wrapper guidance/iu);
+});
+
+test("interactive setup reports an existing Heat theme as unchanged", async () => {
+  let stdout = "";
+  const prompter = scriptedPrompter([
+    { status: "value", value: "recommended" },
+    { status: "value", value: true },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    appearance: {
+      configPath: "/Users/example/.config/side-glance/config.json",
+      exists: true,
+      valid: true,
+      config: {
+        schemaVersion: 1,
+        appearance: { preset: "heat", ceiling: { mode: "adaptive" } },
+      },
+    },
+    discover: async () => discovery(),
+    prompter,
+    writeStdout: (value) => {
+      stdout += value;
+    },
+    writeStderr: () => assert.fail("setup must not fail"),
+  });
+
+  assert.equal(code, 0);
+  assert.match(prompter.rendered.join("\n"), /Colors: Heat \(unchanged\)/u);
+  assert.match(stdout, /Colors: Heat \(unchanged\)/u);
+  assert.doesNotMatch(stdout, /Colors: Status/u);
 });
 
 test("interactive progress starts after approval and never reports success on failure", async () => {

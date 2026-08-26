@@ -1,4 +1,5 @@
 export const SIDE_GLANCE_PROTOCOL_VERSION = 1 as const;
+export const SIDE_GLANCE_ACTIVE_WORK_LIMIT = 32;
 
 export type SideGlanceSource =
   | "claude"
@@ -16,6 +17,8 @@ export type SideGlanceEventKind =
   | "turn.completed"
   | "turn.failed"
   | "turn.cancelled"
+  | "work.started"
+  | "work.finished"
   | "session.ended";
 
 export type SideGlancePhase =
@@ -37,6 +40,31 @@ export interface SideGlanceTarget {
   tmuxPane?: string;
 }
 
+export type SideGlanceWorkKind =
+  | "subagent"
+  | "background-task"
+  | "session-cron";
+
+export interface SideGlanceWorkRef {
+  id: string;
+  kind: SideGlanceWorkKind;
+}
+
+export const SIDE_GLANCE_SUBAGENT_OVERFLOW_WORK: Readonly<SideGlanceWorkRef> = {
+  id: "subagent:overflow",
+  kind: "subagent",
+};
+
+export const SIDE_GLANCE_BACKGROUND_OVERFLOW_WORK: Readonly<SideGlanceWorkRef> = {
+  id: "background:overflow",
+  kind: "background-task",
+};
+
+export const SIDE_GLANCE_CRON_OVERFLOW_WORK: Readonly<SideGlanceWorkRef> = {
+  id: "cron:overflow",
+  kind: "session-cron",
+};
+
 export interface SideGlanceEvent {
   v: typeof SIDE_GLANCE_PROTOCOL_VERSION;
   eventId: string;
@@ -50,6 +78,8 @@ export interface SideGlanceEvent {
   reason?: string;
   confidence?: SideGlanceConfidence;
   target?: SideGlanceTarget;
+  work?: SideGlanceWorkRef;
+  activeWork?: SideGlanceWorkRef[];
 }
 
 export interface SideGlanceSessionState {
@@ -65,8 +95,20 @@ export interface SideGlanceSessionState {
   startedAt?: number;
   completedAt?: number;
   responseEwmaSeconds?: number;
+  completionCeilingSeconds?: number;
+  completionSnapshotKey?: string;
+  activeWork?: SideGlanceWorkRef[];
+  activeWorkUpdatedAt?: number;
+  durationSampleKey?: string;
+  endedAt?: number;
   leaseExpiresAt?: number;
   updatedAt: number;
+}
+
+export interface SideGlanceDurationProfile {
+  algorithmVersion: 1;
+  samplesSeconds: number[];
+  ceilingSeconds: number;
 }
 
 export interface SideGlanceTmuxOptionSnapshot {
@@ -97,10 +139,11 @@ export interface SideGlanceSurfaceState {
 }
 
 export interface SideGlanceState {
-  schemaVersion: 1;
+  schemaVersion: 2;
   sessions: Record<string, SideGlanceSessionState>;
   surfaces: Record<string, SideGlanceSurfaceState>;
   seenEventIds: string[];
+  durationProfiles: Partial<Record<SideGlanceSource, SideGlanceDurationProfile>>;
 }
 
 export function sessionKey(source: SideGlanceSource, sessionId: string): string {

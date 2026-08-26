@@ -10,13 +10,20 @@ test("each visible terminal moment tells the truth about lifecycle and thermal s
     read("app/components/InteractiveClaudeTerminal.tsx"),
   ]);
 
-  for (const moment of ["working", "waiting", "ready-short", "ready-long"]) {
+  for (const moment of [
+    "working",
+    "waiting",
+    "ready-short",
+    "ready-long",
+    "failed",
+  ]) {
     assert.match(showcase, new RegExp(`id: "${moment}"`, "u"));
   }
   assert.match(showcase, /phase:\s*"completed"[\s\S]*elapsedSeconds:\s*18/u);
   assert.match(showcase, /phase:\s*"completed"[\s\S]*elapsedSeconds:\s*1122/u);
-  assert.doesNotMatch(showcase, /phase:\s*"failed"|phase:\s*"inactive"/u);
-  assert.doesNotMatch(showcase, /terminalId:\s*"tmux_05"/u);
+  assert.match(showcase, /phase:\s*"failed"/u);
+  assert.doesNotMatch(showcase, /phase:\s*"inactive"/u);
+  assert.match(showcase, /terminalId:\s*"tmux_05"/u);
   assert.match(showcase, /aria-pressed=\{activeState\.id === state\.id\}/u);
   assert.match(
     showcase,
@@ -28,6 +35,9 @@ test("each visible terminal moment tells the truth about lifecycle and thermal s
   assert.match(terminal, /Which route should win\?/u);
   assert.match(terminal, /all focused adapter tests pass/u);
   assert.match(terminal, /All release checks pass/u);
+  assert.match(terminal, /Release verification stopped before completion/u);
   assert.match(terminal, /visualForPhase\(phase, elapsedSeconds\)/u);
   assert.match(terminal, /data-scenario=\{scenario\}/u);
+  assert.doesNotMatch(terminal, /<p key=\{action\}>/u);
+  assert.match(terminal, /key=\{`\$\{action\}:\$\{detail\}`\}/u);
 });

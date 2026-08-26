@@ -4,6 +4,13 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- Guided `side-glance theme` control with semantic Status, adaptive or fixed
+  Heat, validated Custom lifecycle pairs, JSON automation, and safe reset.
+- Claude subagent start/stop coverage plus bounded background-task and
+  session-cron snapshots so known work in flight delays Ready.
+
 ### Changed
 
 - Interactive setup now names provider CLI commands found or skipped on the
@@ -12,6 +19,14 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 - An existing durable installation now owns the complete human `npx init`
   transcript without a redundant bootstrap footer; failed handoffs report a
   bounded cause and direct retry and diagnostic commands.
+- Status is now the default lifecycle palette: Ready stays green at every turn
+  duration and Failed alone is red. The earlier completion ramp remains an
+  explicit Heat preset.
+- Adaptive Heat now learns a private provider-local ceiling from the newest 12
+  eligible completed-turn durations using a bounded, rate-limited p80. It no
+  longer substitutes response latency for turn-duration history.
+- Runtime state migrates from schema 1 to schema 2 without losing sessions,
+  surface snapshots, replay IDs, or compatible legacy timing data.
 
 ## [0.1.0-beta.6] — 2026-08-25
 

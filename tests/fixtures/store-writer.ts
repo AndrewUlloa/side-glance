@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { SideGlanceController } from "../../src/core/controller.ts";
 import { FileSideGlanceStore } from "../../src/core/store.ts";
 
@@ -7,7 +9,7 @@ if (!directory || !writerId || !countText) {
 }
 
 const controller = new SideGlanceController(
-  new FileSideGlanceStore({ directory }),
+  new FileSideGlanceStore({ directory, rootDirectory: path.dirname(directory) }),
 );
 const count = Number.parseInt(countText, 10);
 

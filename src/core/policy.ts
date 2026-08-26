@@ -65,6 +65,10 @@ export function validateUrgencyPolicy(policy: UrgencyPolicy): void {
     theme.waitingWash,
     theme.workingAccent,
     theme.waitingAccent,
+    theme.failedWash,
+    theme.failedAccent,
+    theme.inactiveWash,
+    theme.inactiveAccent,
   ];
 
   if (colors.some((color) => !/^[0-9a-f]{6}$/i.test(color))) {
@@ -74,7 +78,7 @@ export function validateUrgencyPolicy(policy: UrgencyPolicy): void {
 
 export function urgencyFromElapsed(
   elapsedSeconds: number,
-  responseEwmaSeconds = 120,
+  completionCeilingSeconds = 300,
   policy = DEFAULT_URGENCY_POLICY,
 ): UrgencyResult {
   validateUrgencyPolicy(policy);
@@ -82,52 +86,41 @@ export function urgencyFromElapsed(
   const elapsed = Number.isFinite(elapsedSeconds)
     ? Math.max(0, elapsedSeconds)
     : 0;
-  const effectiveElapsed = elapsed / adaptiveDurationFactor(responseEwmaSeconds, policy);
-  const urgency = urgencyRatio(effectiveElapsed, policy);
+  const ceiling = Number.isFinite(completionCeilingSeconds)
+    ? Math.min(7_200, Math.max(60, completionCeilingSeconds))
+    : policy.maximumSeconds;
+  const urgency = urgencyRatio(elapsed, policy, ceiling);
 
   return {
-    suppressed: effectiveElapsed < policy.suppressBelowSeconds,
+    suppressed: elapsed < policy.suppressBelowSeconds,
     urgency: Math.round(urgency * 1_000),
     wash: interpolatePalette(policy.theme.washStops, urgency),
     accent: interpolatePalette(policy.theme.tmuxStops, urgency),
   };
 }
 
-function adaptiveDurationFactor(
-  responseEwmaSeconds: number,
-  policy: UrgencyPolicy,
-): number {
-  if (!policy.adaptive || !Number.isFinite(responseEwmaSeconds)) {
-    return 1;
-  }
-
-  const responseTime = Math.max(0, responseEwmaSeconds);
-  if (responseTime >= 60) return 1;
-  if (responseTime <= 15) return 1.5;
-
-  return 1 + (0.5 * (60 - responseTime)) / 45;
-}
-
 function urgencyRatio(
-  effectiveElapsed: number,
+  elapsed: number,
   policy: UrgencyPolicy,
+  ceiling: number,
 ): number {
-  const { suppressBelowSeconds, midpointSeconds, maximumSeconds } = policy;
+  const { suppressBelowSeconds } = policy;
+  const midpointSeconds = Math.max(20, ceiling / 5);
 
-  if (effectiveElapsed < suppressBelowSeconds) return 0;
-  if (effectiveElapsed >= maximumSeconds) return 1;
+  if (elapsed < suppressBelowSeconds) return 0;
+  if (elapsed >= ceiling) return 1;
 
-  if (effectiveElapsed < midpointSeconds) {
+  if (elapsed < midpointSeconds) {
     return (
-      (0.5 * Math.log(effectiveElapsed / suppressBelowSeconds)) /
+      (0.5 * Math.log(elapsed / suppressBelowSeconds)) /
       Math.log(midpointSeconds / suppressBelowSeconds)
     );
   }
 
   return (
     0.5 +
-    (0.5 * Math.log(effectiveElapsed / midpointSeconds)) /
-      Math.log(maximumSeconds / midpointSeconds)
+    (0.5 * Math.log(elapsed / midpointSeconds)) /
+      Math.log(ceiling / midpointSeconds)
   );
 }
 

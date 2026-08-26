@@ -12,6 +12,10 @@ import {
 import { reduceSideGlanceEvent } from "./reducer.ts";
 import type { FileSideGlanceStore } from "./store.ts";
 import { visualForPhase, type SurfaceVisual } from "./visual.ts";
+import {
+  resolveAppearance,
+  type SideGlanceAppearance,
+} from "./appearance.ts";
 import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
 import {
   shouldNotifyForEvent,
@@ -40,15 +44,18 @@ export class SideGlanceController {
   private readonly store: FileSideGlanceStore;
   private readonly renderer: SurfaceRenderer;
   private readonly notifier?: EventNotifier;
+  private readonly appearance: SideGlanceAppearance;
 
   constructor(
     store: FileSideGlanceStore,
     renderer: SurfaceRenderer = createDefaultSurfaceRenderer(),
     notifier?: EventNotifier,
+    appearance: SideGlanceAppearance = { preset: "status" },
   ) {
     this.store = store;
     this.renderer = renderer;
     this.notifier = notifier;
+    this.appearance = appearance;
   }
 
   async submit(event: SideGlanceEvent): Promise<SideGlanceState> {
@@ -57,16 +64,24 @@ export class SideGlanceController {
     const result = await this.store.update(async (state) => {
       const key = sessionKey(event.source, event.sessionId);
       const previousSession = state.sessions[key];
-      const reconciledExpired = ["session.started", "turn.started"].includes(
+      const candidate = reduceSideGlanceEvent(state, event);
+      accepted = candidate !== state;
+      if (!accepted) return state;
+      const reconciledExpired = ["session.started", "turn.started", "work.started"].includes(
         event.kind,
       )
         ? reconcileExpiredSessions(state, event.occurredAt, key)
         : { state, surfaceIds: [] };
       const next = reduceSideGlanceEvent(reconciledExpired.state, event);
-      accepted = next !== reconciledExpired.state;
+      const effectiveSession = next.sessions[key];
       notifyAccepted =
-        accepted && !isSemanticNotificationDuplicate(previousSession, event);
-      if (!accepted && reconciledExpired.state === state) return state;
+        accepted &&
+        effectiveSession?.phase === notificationPhase(event.kind) &&
+        !(
+          event.kind === "turn.completed" &&
+          effectiveSession?.confidence === "heuristic"
+        ) &&
+        !isSemanticNotificationDuplicate(previousSession, event);
       const nextSession = next.sessions[key];
       const affectedSurfaceIds = [
         ...reconciledExpired.surfaceIds,
@@ -102,19 +117,20 @@ export class SideGlanceController {
     if (!resolution) {
       if (!previous) return state;
       await this.renderer.reset(previous.target, previous);
+      const resetPrevious = { ...previous };
+      delete resetPrevious.tmuxSnapshot;
+      delete resetPrevious.ownerKey;
       return {
         ...state,
         surfaces: {
           ...state.surfaces,
           [surfaceId]: {
-            ...previous,
+            ...resetPrevious,
             phase: "inactive",
             generation: Math.max(previous.generation, event.generation ?? 0),
             updatedAt: event.occurredAt,
             terminalPainted: false,
             terminalTitlePainted: false,
-            tmuxSnapshot: undefined,
-            ownerKey: undefined,
           },
         },
       };
@@ -127,7 +143,7 @@ export class SideGlanceController {
     const rendered = await this.renderer.paint(
       target,
       resolution.session,
-      visualForSession(resolution.session),
+      visualForSession(resolution.session, this.appearance),
       previous,
     );
     return {
@@ -186,6 +202,8 @@ function notificationPhase(
     case "turn.started":
     case "attention.acknowledged":
     case "session.ended":
+    case "work.started":
+    case "work.finished":
       return undefined;
   }
 }
@@ -227,7 +245,10 @@ function reconcileExpiredSessions(
   };
 }
 
-function visualForSession(session: SideGlanceSessionState): SurfaceVisual {
+function visualForSession(
+  session: SideGlanceSessionState,
+  appearance: SideGlanceAppearance,
+): SurfaceVisual {
   if (session.phase === "inactive") {
     throw new Error("Inactive sessions cannot own a rendered surface.");
   }
@@ -235,9 +256,15 @@ function visualForSession(session: SideGlanceSessionState): SurfaceVisual {
     session.phase === "completed" && session.startedAt !== undefined
       ? Math.max(0, session.updatedAt - session.startedAt) / 1_000
       : 90;
+  const resolvedAppearance = resolveAppearance(
+    appearance,
+    session.completionCeilingSeconds ?? 300,
+  );
   return visualForPhase(
     session.phase,
     elapsedSeconds,
-    session.responseEwmaSeconds ?? 120,
+    resolvedAppearance.completionCeilingSeconds,
+    resolvedAppearance.theme,
+    resolvedAppearance.suppressQuickCompletions,
   );
 }

@@ -1,6 +1,9 @@
-import { urgencyFromElapsed } from "./policy.ts";
+import { DEFAULT_URGENCY_POLICY, urgencyFromElapsed } from "./policy.ts";
 import type { SideGlancePhase } from "./protocol.ts";
-import { DEFAULT_SIDE_GLANCE_THEME } from "./theme.ts";
+import {
+  DEFAULT_SIDE_GLANCE_THEME,
+  type SideGlanceTheme,
+} from "./theme.ts";
 
 export interface SurfaceVisual {
   wash: string;
@@ -12,36 +15,46 @@ export interface SurfaceVisual {
 export function visualForPhase(
   phase: SideGlancePhase,
   elapsedSeconds = 0,
-  responseEwmaSeconds = 120,
+  completionCeilingSeconds = 300,
+  theme: SideGlanceTheme = DEFAULT_SIDE_GLANCE_THEME,
+  suppressQuickCompletions = false,
 ): SurfaceVisual {
   switch (phase) {
     case "working":
       return {
-        wash: DEFAULT_SIDE_GLANCE_THEME.workingWash,
-        accent: DEFAULT_SIDE_GLANCE_THEME.workingAccent,
+        wash: theme.workingWash,
+        accent: theme.workingAccent,
         urgency: 0,
         suppressed: false,
       };
     case "waiting":
       return {
-        wash: DEFAULT_SIDE_GLANCE_THEME.waitingWash,
-        accent: DEFAULT_SIDE_GLANCE_THEME.waitingAccent,
+        wash: theme.waitingWash,
+        accent: theme.waitingAccent,
         urgency: 0,
         suppressed: false,
       };
-    case "completed":
-      return urgencyFromElapsed(elapsedSeconds, responseEwmaSeconds);
+    case "completed": {
+      const visual = urgencyFromElapsed(elapsedSeconds, completionCeilingSeconds, {
+        ...DEFAULT_URGENCY_POLICY,
+        theme,
+      });
+      return {
+        ...visual,
+        suppressed: suppressQuickCompletions && visual.suppressed,
+      };
+    }
     case "failed":
       return {
-        wash: DEFAULT_SIDE_GLANCE_THEME.washStops.at(-1) ?? "732018",
-        accent: DEFAULT_SIDE_GLANCE_THEME.tmuxStops.at(-1) ?? "f33533",
+        wash: theme.failedWash,
+        accent: theme.failedAccent,
         urgency: 1_000,
         suppressed: false,
       };
     case "inactive":
       return {
-        wash: "101313",
-        accent: "71807d",
+        wash: theme.inactiveWash,
+        accent: theme.inactiveAccent,
         urgency: 0,
         suppressed: false,
       };

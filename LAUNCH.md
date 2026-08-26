@@ -1,19 +1,21 @@
 # Launch and rollback
 
-Side Glance is a beta. Version `0.1.0-beta.6` is the release candidate for the
-arrow-key guided setup integrated on `staging`. Preparing this candidate does not
-create a version tag or GitHub Release, publish to npm, update a Homebrew tap, or
-migrate live provider configuration.
+Side Glance is a beta. Version `0.1.0-beta.6` is public on npm, GitHub Releases,
+and the Homebrew tap. Semantic lifecycle colors, aggregate Claude readiness,
+adaptive Heat, and user theme control are the next feature candidate; release
+preparation will use the still-unused `0.1.0-beta.7` only after the protected
+feature PR reaches `staging`.
 
 ## Production deployment status
 
 - Current public URL: <https://side-glance.vercel.app> (HTTP 200 verified 2026-08-24)
-- Custom apex status: not configured; DNS does not resolve for `sideglance.ai`
+- Custom apex status: aliases are configured in Vercel, but public DNS does not
+  resolve for `sideglance.ai` or `www.sideglance.ai` as of 2026-08-26
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
-- Production deployment: `dpl_877rCZQP8w1VVbcRTPNqVMjqT9xM`
-- Immutable deployment URL: <https://side-glance-llhw4t004-andrew-243s-projects.vercel.app>
-- Source commit: `53cf9429a6af669063d9611b9a4b791358d066c3`
+- Production deployment: `dpl_7i8HYGBsNfeVPFiYNyUURpUptMRh`
+- Immutable deployment URL: <https://side-glance-r5nutd8bn-andrew-243s-projects.vercel.app>
+- Current protected `main`: `759d92811f38fbc0e3df15eda3257599a42cf133`
 - The canonical Vercel `npm run build` path passed on Node 24 and the public URL
   returned HTTP 200 with Side Glance metadata and rendered copy.
 - Vercel's Git integration creates previews for pull-request commits; the recorded
@@ -32,17 +34,19 @@ The prior known-good production deployment is
 `dpl_12hgQd7peRczGnDuY4diahzdsbWE`. It remains Vercel rollback evidence; immutable
 historical deployment identifiers are not rewritten during a product rename.
 
-## npm beta release candidate
+## npm beta status and next candidate
 
-- Candidate: `side-glance@0.1.0-beta.6`
+- Current public release: `side-glance@0.1.0-beta.6`
+- Next planned candidate: `side-glance@0.1.0-beta.7` (unused; not prepared)
 - Channel: `beta`
-- Status: unpublished; pending protected `main` promotion and matching annotated tag
+- Status: beta.6 published 2026-08-25; `beta` points to beta.6 and `latest`
+  remains beta.1 until the first stable release
 - Previously published: `side-glance@0.1.0-beta.5`, `side-glance@0.1.0-beta.4`,
   `side-glance@0.1.0-beta.3`, and `side-glance@0.1.0-beta.1`
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
   dry-run; no npm package or GitHub Release was published.
-- Previous beta.5 integrity: `sha512-Li+6qHTl1COUcP4yZgJcm4bBHEELh01F6e8cgdSZu8SkfXnj4qMXhmAu+y+bUOPsRAvQk/YsuOW1W2f6EAA97g==`
-- The candidate tarball must contain only `LICENSE`, `README.md`,
+- Current beta.6 integrity: `sha512-C+S/sIve3sizGocjYPai+c3wDADIt6OQavCiFsdgr6/MalTzWJKHjqLYAjI5aepFis+NSS2lpbzR70vhVkMbQg==`
+- Every candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
 
 ## Local rename verification
@@ -54,9 +58,9 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-Beta.5 passed the protected tag workflow and is public on npm and GitHub Releases;
-its generated formula is the current Homebrew tap version. Beta.6 adds progressive
-arrow-key setup with a protected static fallback. The release preparation must
+Beta.6 passed the protected tag workflow and is public on npm and GitHub Releases;
+its generated formula is the current Homebrew tap version. It adds progressive
+arrow-key setup with a protected static fallback. The next release preparation must
 repeat every local gate and protected CI must pass before tagging. Turbopack has
 previously reported a non-blocking missing
 fallback-override warning for Alan Sans; compilation, type checking, static
@@ -125,23 +129,24 @@ journal is retained.
 Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
 release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
-remaining beta.6 gates are:
+remaining beta.7 gates are:
 
+- merge the semantic-lifecycle feature PR to protected `staging`;
 - merge the release preparation through protected `staging` and `main`;
 - create the matching protected annotated tag only after `main` is green;
 - let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
-- verify `beta` points to beta.6, then remove the stale beta.1 `latest` tag through
-  an approved interactive npm session; trusted-publishing OIDC cannot perform
-  dist-tag mutations;
+- verify `beta` points to beta.7 while `latest` remains beta.1; npm rejects
+  removing `latest`, so beta examples must stay explicit about `@beta`;
 - open a separate Homebrew tap pull request after the immutable artifact URLs exist.
 
 ## Prepared pull request sequence
 
-The arrow-key feature landed on `staging` through PR #57. Prepare beta.6 in a
-separate, narrowly scoped PR that updates the CLI and lockfile version, changelog,
-launch record, and current-version fixtures. After that PR is green and merged,
-open a fresh `staging` → `main` PR titled **Promote Side Glance
-0.1.0-beta.6**. Tag only the exact green merge commit on `main`.
+The arrow-key feature and beta.6 release are complete. Merge the Phase 19 feature
+PR to `staging`, then prepare beta.7 in a separate, narrowly scoped PR that updates
+the CLI and lockfile version, changelog, launch record, and current-version
+fixtures. After that PR is green and merged, open a fresh `staging` → `main` PR
+titled **Promote Side Glance 0.1.0-beta.7**. Tag only the exact green merge commit
+on `main`.
 
 ## Controlled migration from stoplight.sh
 

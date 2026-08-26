@@ -1,6 +1,6 @@
 # Launch: Concise guided setup output
 
-> Status: feature candidate ready for protected review; not published
+> Status: merged to `staging` in PR #60; awaiting the next protected beta
 > Date: 2026-08-26
 
 ## Candidate behavior
@@ -17,7 +17,7 @@ supported platforms, or npm's `latest` tag.
 
 ## Release sequence
 
-1. Merge the reviewed feature through protected `staging`.
+1. Completed: merge the reviewed feature through protected `staging`.
 2. Prepare the next unused beta version in a release-only branch: manifest,
    lockfile, changelog section/link, launch record, and version fixtures.
 3. Merge release preparation into protected `staging`, then promote that exact
@@ -41,7 +41,7 @@ supported platforms, or npm's `latest` tag.
 
 ## Public verification checklist
 
-- [ ] Protected feature PR merged to `staging`.
+- [x] Protected feature PR merged to `staging` in PR #60.
 - [ ] Next beta release preparation merged to `staging`.
 - [ ] `staging` promoted to `main`; required checks green.
 - [ ] Protected annotated tag workflow green.

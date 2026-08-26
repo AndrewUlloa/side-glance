@@ -5,9 +5,26 @@ export interface SideGlanceTheme {
   waitingWash: string;
   workingAccent: string;
   waitingAccent: string;
+  failedWash: string;
+  failedAccent: string;
+  inactiveWash: string;
+  inactiveAccent: string;
 }
 
 export const DEFAULT_SIDE_GLANCE_THEME: SideGlanceTheme = {
+  washStops: ["173326", "173326"],
+  tmuxStops: ["3fa84e", "3fa84e"],
+  workingWash: "16352f",
+  waitingWash: "4d3510",
+  workingAccent: "009d89",
+  waitingAccent: "f0a726",
+  failedWash: "732018",
+  failedAccent: "f33533",
+  inactiveWash: "101313",
+  inactiveAccent: "71807d",
+};
+
+export const HEAT_SIDE_GLANCE_THEME: SideGlanceTheme = {
   washStops: [
     "142e2d",
     "173326",
@@ -30,4 +47,8 @@ export const DEFAULT_SIDE_GLANCE_THEME: SideGlanceTheme = {
   waitingWash: "4d3510",
   workingAccent: "009d89",
   waitingAccent: "f0a726",
+  failedWash: "732018",
+  failedAccent: "f33533",
+  inactiveWash: "101313",
+  inactiveAccent: "71807d",
 };

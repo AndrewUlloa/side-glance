@@ -152,6 +152,14 @@ test("installs optional notification flags into every managed hook", async (cont
   assert.ok(inspection.managedHooks.every((hook) => hook.notifications));
   assert.ok(inspection.managedHooks.every((hook) => hook.soundConfigured));
   assert.ok(inspection.managedHooks.every((hook) => hook.timeout !== null));
+  assert.equal(inspection.expectedEvents, 9);
+  assert.deepEqual(
+    inspection.managedHooks
+      .map(({ event }) => event)
+      .filter((event) => event.startsWith("Subagent"))
+      .sort(),
+    ["SubagentStart", "SubagentStop"],
+  );
 });
 
 test("reports partial integration when duplicate hooks hide missing events", async (context) => {
@@ -162,7 +170,7 @@ test("reports partial integration when duplicate hooks hide missing events", asy
     targetPath,
     JSON.stringify({
       hooks: {
-        Stop: Array.from({ length: 7 }, () => ({
+        Stop: Array.from({ length: 9 }, () => ({
           hooks: [
             {
               type: "command",

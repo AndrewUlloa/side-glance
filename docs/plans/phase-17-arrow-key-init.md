@@ -1,7 +1,7 @@
 # Plan: Arrow-key guided setup
 
 > Derived from: `docs/specs/phase-17-arrow-key-init.md`
-> Status: approved
+> Status: completed in 0.1.0-beta.6
 > Last updated: 2026-08-25
 
 ## Overview
@@ -162,7 +162,7 @@ full-screen TUI framework, or making enhanced prompts mandatory for automation.
   - **Files:** `docs/reviews/phase-17-arrow-key-init.md`, `docs/launch/phase-17-arrow-key-init.md`
   - **Size:** S
 
-- [ ] **Task 10: Ship the protected prerelease**
+- [x] **Task 10: Ship the protected prerelease**
   - **Description:** Bump the next beta, merge feature and release preparation
     through protected staging/main, create the annotated tag, publish npm/GitHub,
     update the tap, and verify fresh npx and Homebrew arrow-key journeys.

@@ -45,19 +45,19 @@ The release workflow rejects private repositories, forks, unprotected tags, tags
 ## npm dist-tag policy
 
 Prereleases update only npm's `beta` tag. The initial beta.1 publication also left
-`latest` pointing at beta.1, so an unqualified install can resolve that old build
-until the stale tag is removed. Check the live dist-tags instead of encoding their
-current value in release copy. Do not move `latest` to another prerelease: [npm's dist-tag
+`latest` pointing at beta.1, so an unqualified install resolves that old build until
+the first stable release deliberately replaces it. Check the live dist-tags instead
+of encoding their current value in release copy. Do not move `latest` to another prerelease: [npm's dist-tag
 contract](https://docs.npmjs.com/cli/v11/commands/npm-dist-tag/) recommends channels
 such as `beta` for unstable versions and reserves `latest` for the normal unqualified
 install path.
 
-After a newer beta is verified, the package owner should remove the stale `latest` tag with
-an interactive, two-factor-authenticated npm session. [Trusted-publishing
-OIDC](https://docs.npmjs.com/trusted-publishers/) supports `npm publish`, not
-`npm dist-tag`, so the release workflow must not gain a long-lived token merely to
-automate this cleanup. Until the first stable release creates a new `latest`, every
-public installation example remains explicit about `side-glance@beta`.
+npm rejects removing this package's `latest` tag, so cleanup is not a beta release
+step. [Trusted-publishing OIDC](https://docs.npmjs.com/trusted-publishers/) supports
+`npm publish`, not arbitrary dist-tag maintenance; the release workflow must not gain
+a long-lived token for that purpose. Until the first stable release creates a new
+`latest`, every public installation example remains explicit about
+`side-glance@beta`.
 
 ## Artifact policy
 
@@ -79,7 +79,7 @@ appropriate only when the tagged workflow and its assembled bytes remain valid.
 
 After the release finishes, verify GitHub's immutable-release attestation,
 download the public artifacts again, verify `SHA256SUMS`, execute the Linux x64
-binary, compare npm integrity, verify the `beta` and `latest` dist-tags, perform the
-approved interactive stale-`latest` cleanup, and open a separate pull request in
+binary, compare npm integrity, verify that `beta` moved while `latest` did not, and
+open a separate pull request in
 `AndrewUlloa/homebrew-tap` using the generated `side-glance.rb`. Merge that pull
 request only after every `brew test-bot` platform passes.
