@@ -331,7 +331,7 @@ test("interactive durable handoff resolves once and releases the parent TTY firs
   assert.equal(closedBeforeHandoff, true);
 });
 
-test("interactive durable handoff never guesses that a zero-exit setup mutated configuration", async () => {
+test("interactive durable handoff lets the durable command own successful human output", async () => {
   let stdout = "";
   const durablePath = "/opt/homebrew/bin/side-glance";
   const prompter = scriptedPrompter([]);
@@ -355,8 +355,68 @@ test("interactive durable handoff never guesses that a zero-exit setup mutated c
   });
 
   assert.equal(code, 0);
-  assert.doesNotMatch(stdout, /setup applied:\s*yes/iu);
-  assert.match(stdout, /setup outcome.*durable/iu);
+  assert.equal(stdout, "");
+});
+
+test("human durable handoff failures report a bounded cause and recovery commands", async () => {
+  const durablePath = "/opt/homebrew/bin/side-glance";
+  const fixtures = [
+    {
+      child: { exitCode: 1 },
+      expectedCode: 1,
+      message: /setup exited with code 1/iu,
+    },
+    {
+      child: { exitCode: null, signal: "SIGTERM" },
+      expectedCode: 1,
+      message: /setup stopped after signal SIGTERM/iu,
+    },
+    {
+      child: { exitCode: null, signal: "SIGKILL", timedOut: true },
+      expectedCode: 1,
+      message: /setup timed out/iu,
+    },
+    {
+      child: { exitCode: 1, outputExceeded: true },
+      expectedCode: 1,
+      message: /setup produced more output than could be handled safely/iu,
+    },
+    {
+      child: { exitCode: 130 },
+      expectedCode: 130,
+      message: /setup was interrupted/iu,
+    },
+  ] as const;
+
+  for (const fixture of fixtures) {
+    let stderr = "";
+    const prompter = scriptedPrompter([]);
+    const code = await runBootstrapInit([], {
+      ...options(
+        {
+          findDurableExecutable: async () => ({
+            invocationPath: durablePath,
+            realPath: "/opt/homebrew/Cellar/side-glance/bin/side-glance",
+            version: exactVersion,
+            identity: identity(durablePath, 10),
+          }),
+          runCommand: async () => fixture.child,
+        },
+        () => undefined,
+      ),
+      interactive: true,
+      prompter,
+      writeStderr: (value) => {
+        stderr += value;
+      },
+    });
+
+    assert.equal(code, fixture.expectedCode);
+    assert.match(stderr, fixture.message);
+    assert.match(stderr, /Try again:\s+side-glance init/u);
+    assert.match(stderr, /For details:\s+side-glance doctor --json/u);
+    assert.doesNotMatch(stderr, /nothing (?:was )?changed|rolled back/iu);
+  }
 });
 
 test("Homebrew dry-run never executes the package manager", async () => {

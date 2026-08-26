@@ -32,11 +32,19 @@ Use `npx side-glance@latest init` only after the stable package owns npm's
 `latest` tag. The beta npx flow performs discovery and can ask to bootstrap an
 exact-version durable install. Side Glance deliberately refuses permanent provider installation from `npx` because npm's ephemeral cache is not a durable lifecycle-hook location.
 
-`side-glance init` shows a read-only preview of detected providers, owned target
-paths, create/update/unchanged actions, notification choices, warnings, and launch
-commands before it asks for one confirmation. `side-glance setup` is its exact alias
-and is safe to re-run. On an interactive terminal, **Use recommended settings** is
-focused first; choose **Customize** for provider and notification controls.
+`side-glance init` shows a concise read-only review of the selected providers,
+notification choices, warnings, and owned configuration paths before it asks for
+one confirmation, then finishes with the launch command to run next.
+`side-glance setup` is its exact alias and is safe to re-run. On an interactive
+terminal, **Recommended** is focused first; choose **Customize** for provider and
+notification controls.
+
+Side Glance considers a provider available only when its CLI command (`claude`,
+`codex`, `gemini`, or `opencode`) is executable on the `PATH` of the shell running
+setup. “Not found” refers only to that CLI command; the provider account or desktop
+app may still be usable. A desktop app does not count unless it exposes its CLI to
+that shell. Install or expose the command, then rerun `side-glance init`.
+
 Use Up/Down to move, Space to toggle multiple choices, and Enter to continue. Set
 `SIDE_GLANCE_ACCESSIBLE=1` for static numbered prompts; `NO_COLOR`, `TERM=dumb`,
 select that same no-ANSI fallback automatically. Non-TTY input stays

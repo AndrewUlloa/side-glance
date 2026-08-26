@@ -4,6 +4,15 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+### Changed
+
+- Interactive setup now names provider CLI commands found or skipped on the
+  invoking Terminal's `PATH`, presents a decision-only review, abbreviates home
+  paths, and finishes with one readiness summary plus the next launch command.
+- An existing durable installation now owns the complete human `npx init`
+  transcript without a redundant bootstrap footer; failed handoffs report a
+  bounded cause and direct retry and diagnostic commands.
+
 ## [0.1.0-beta.6] — 2026-08-25
 
 ### Added

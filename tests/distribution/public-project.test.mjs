@@ -47,6 +47,8 @@ test("documents only durable installation and truthful beta availability", async
   assert.match(readme, /npm install --global \.\/packages\/cli/u);
   assert.match(readme, /available as a beta package/iu);
   assert.match(readme, /https:\/\/side-glance\.vercel\.app/u);
+  assert.match(readme, /CLI command[\s\S]{0,200}`PATH`/iu);
+  assert.match(readme, /desktop\s+app[\s\S]{0,120}may still be usable/iu);
 
   const packageReadme = await text("packages/cli/README.md");
   assert.match(packageReadme, /Node\.js 22 or newer/u);
@@ -54,6 +56,8 @@ test("documents only durable installation and truthful beta availability", async
   assert.match(packageReadme, /Intel macOS is experimental/u);
   assert.match(packageReadme, /refuses permanent provider installation from `npx`/u);
   assert.match(packageReadme, /Windows and musl\/Alpine are not supported/u);
+  assert.match(packageReadme, /CLI command[\s\S]{0,200}`PATH`/iu);
+  assert.match(packageReadme, /desktop\s+app[\s\S]{0,120}may still be usable/iu);
 
   const page = await text("app/page.tsx");
   assert.match(page, /public beta · v0\.1/u);

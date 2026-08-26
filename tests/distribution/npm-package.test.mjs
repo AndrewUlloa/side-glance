@@ -201,7 +201,8 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     ],
   });
   assert.match(arrowSetup.output, /↑\/↓ move/u);
-  assert.match(arrowSetup.output, /Setup complete/u);
+  assert.match(arrowSetup.output, /Side Glance is ready/u);
+  assert.match(arrowSetup.output, /Next[\s\S]*side-glance run --label "Claude" -- claude/u);
   assert.match(
     await readFile(path.join(arrowHome, ".claude", "settings.json"), "utf8"),
     new RegExp(escapeRegularExpression(executable), "u"),
@@ -233,7 +234,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     ],
   });
   assert.equal(staticSetup.output.includes(String.fromCodePoint(27)), false);
-  assert.match(staticSetup.output, /Setup complete/u);
+  assert.match(staticSetup.output, /Side Glance is ready/u);
   const setupPreview = await command(
     executable,
     [
@@ -321,6 +322,51 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     },
   );
   assert.equal(npxVersion.stdout.trim(), packageVersion);
+  const existingDurableHome = path.join(temporary, "npx-existing-durable-home");
+  await mkdir(existingDurableHome, { recursive: true });
+  const existingDurable = await runInteractivePty({
+    executable: npmExecutable,
+    arguments: [
+      "exec",
+      "--yes",
+      "--offline",
+      "--package",
+      archive,
+      "--",
+      "side-glance",
+      "init",
+      "--home",
+      existingDurableHome,
+    ],
+    cwd: temporary,
+    environment: {
+      ...npmEnvironment,
+      NO_COLOR: undefined,
+      SIDE_GLANCE_ACCESSIBLE: undefined,
+      SIDE_GLANCE_NOTIFICATION_BACKEND: "none",
+      TERM: "xterm-256color",
+      PATH: [
+        path.dirname(executable),
+        providerBin,
+        path.dirname(process.execPath),
+        "/usr/bin",
+        "/bin",
+      ].join(path.delimiter),
+    },
+    interactions: [
+      { prompt: "How would you like to continue?", answer: "\r" },
+      { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
+    ],
+  });
+  assert.match(existingDurable.output, /Side Glance is ready/u);
+  assert.doesNotMatch(existingDurable.output, /Durable bootstrap complete/u);
+  assert.match(
+    await readFile(
+      path.join(existingDurableHome, ".claude", "settings.json"),
+      "utf8",
+    ),
+    new RegExp(escapeRegularExpression(executable), "u"),
+  );
   const npxInteractiveHome = path.join(temporary, "npx-interactive-home");
   await mkdir(npxInteractiveHome, { recursive: true });
   const npxInteractive = await runInteractivePty({

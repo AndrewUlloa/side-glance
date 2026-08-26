@@ -123,7 +123,8 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     ],
   });
   assert.match(arrowSetup.output, /↑\/↓ move/u);
-  assert.match(arrowSetup.output, /Setup complete/u);
+  assert.match(arrowSetup.output, /Side Glance is ready/u);
+  assert.match(arrowSetup.output, /Next[\s\S]*side-glance run --label "Claude" -- claude/u);
   assert.match(
     await readFile(path.join(arrowHome, ".claude", "settings.json"), "utf8"),
     new RegExp(escapeRegularExpression(executable), "u"),
@@ -149,7 +150,7 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     ],
   });
   assert.equal(staticSetup.output.includes(String.fromCodePoint(27)), false);
-  assert.match(staticSetup.output, /Setup complete/u);
+  assert.match(staticSetup.output, /Side Glance is ready/u);
   const setup = await command(
     executable,
     [
