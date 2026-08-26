@@ -156,7 +156,7 @@ and follow the protected feature/release/promotion/tag sequence.
   - **Depends on:** Task 11
   - **Size:** M
 
-- [ ] **Task 13: Prepare and merge the next unused beta release PR**
+- [x] **Task 13: Prepare and merge the next unused beta release PR**
   - **Acceptance:** Version, lockfile, changelog, launch record, fixtures, and
     beta publish channel agree; full gates rerun.
   - **Depends on:** Task 12

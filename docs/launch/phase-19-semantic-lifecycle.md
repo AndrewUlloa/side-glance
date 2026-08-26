@@ -1,6 +1,7 @@
 # Launch: Semantic lifecycle colors and aggregate readiness
 
-> Status: feature merged to `staging`; beta.7 release preparation in progress
+> Status: feature and beta.7 release preparation merged to `staging`; protected
+> `staging` → `main` promotion in progress
 > Date: 2026-08-26
 
 ## Candidate behavior
@@ -22,8 +23,8 @@ Both changes preserve compatible state and unrelated provider configuration.
 2. Recheck the registry and tags, then prepare the next unused beta in a fresh
    release-only branch from current `staging`: package version, lockfile,
    changelog section/link, launch record, and current-version fixtures.
-3. Merge release preparation to protected `staging`, rerun every gate, and open
-   the literal `staging` → `main` promotion PR.
+3. Release preparation PR #65 merged to protected `staging`; rerun every gate
+   and merge literal `staging` → `main` promotion PR #66.
 4. Merge-commit the exact green staging head to protected `main`; verify main CI
    and Vercel production at `https://side-glance.vercel.app` for that SHA.
 5. Create and push one protected annotated version tag at the verified main SHA.
