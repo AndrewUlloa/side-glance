@@ -95,7 +95,7 @@ silence, 12-turn window, provider-local sample counts, and learned ceilings.
 
 ## Browser evidence
 
-- Exact-SHA preview: PR #62 deployed the reviewed tree to Vercel and returned
+- Exact-SHA preview: the feature PR deployed the reviewed tree to Vercel and returned
   HTTP 200 with HSTS and a cached static Next.js response.
 - Desktop: 1280×720. Computed washes were Working `rgb(22, 53, 47)`, Waiting
   `rgb(77, 53, 16)`, both Ready moments `rgb(23, 51, 38)`, and Failed
