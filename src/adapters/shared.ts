@@ -3,6 +3,7 @@ import type {
   SideGlanceEvent,
   SideGlanceEventKind,
   SideGlanceSource,
+  SideGlanceWorkRef,
 } from "../core/protocol.ts";
 import { parseSideGlanceEvent } from "../core/validation.ts";
 import type { AdapterContext } from "./types.ts";
@@ -41,6 +42,8 @@ export function buildAdapterEvent(options: {
   confidence?: SideGlanceConfidence;
   turnId?: string;
   reason?: string;
+  work?: SideGlanceWorkRef;
+  activeWork?: SideGlanceWorkRef[];
 }): SideGlanceEvent {
   return parseSideGlanceEvent({
     v: 1,
@@ -57,6 +60,10 @@ export function buildAdapterEvent(options: {
       ? { wrapperSessionId: options.context.wrapperSessionId }
       : {}),
     ...(options.reason ? { reason: options.reason } : {}),
+    ...(options.work ? { work: options.work } : {}),
+    ...(options.activeWork !== undefined
+      ? { activeWork: options.activeWork }
+      : {}),
     confidence: options.confidence ?? "native",
     ...(options.context.target ? { target: options.context.target } : {}),
   });

@@ -1,6 +1,8 @@
+import type { SideGlanceConfigInspection } from "../core/appearance.ts";
 import { DEFAULT_NOTIFICATION_SOUND } from "../notifications/policy.ts";
 import {
   createReadlineSetupPrompter,
+  sanitizePromptDetail,
   type PromptOutcome,
   type SetupPrompter,
 } from "./prompts.ts";
@@ -36,6 +38,7 @@ export interface SetupCommandOptions {
   writeStderr(value: string): void;
   prompter?: SetupPrompter;
   signal?: AbortSignal;
+  appearance?: SideGlanceConfigInspection;
 }
 
 export async function runSetupCommand(
@@ -123,15 +126,20 @@ async function runInteractiveSetup(
     const preliminary = await discoverPlan(initialRequest, options);
     if (!preliminary.ok) return preliminary.code;
     if (options.signal?.aborted) return interruptedSetup(options, false);
-    prompter.note("Side Glance setup");
+    prompter.note("Side Glance");
+    prompter.note("");
     renderProviderSummary(preliminary.plan, prompter);
     const eligible = preliminary.plan.providers.filter(
       ({ state }) => state === "eligible",
     );
     if (eligible.length === 0) {
-      renderProviderDiscovery(preliminary.plan, prompter);
+      const everyProviderCommandIsMissing = preliminary.plan.providers.every(
+        ({ reason }) => reason?.code === "binary-not-found",
+      );
       prompter.note(
-        "No safely eligible provider integrations were found. Nothing was changed.",
+        everyProviderCommandIsMissing
+          ? "No provider CLI commands were found. Nothing was changed."
+          : "No provider integrations can be configured safely. Nothing was changed.",
       );
       renderGuidance(preliminary.plan, prompter);
       return 0;
@@ -254,7 +262,7 @@ async function runInteractiveSetup(
     const finalPlan = await discoverPlan(request, options);
     if (!finalPlan.ok) return finalPlan.code;
     if (options.signal?.aborted) return interruptedSetup(options, false);
-    renderPlanNotes(finalPlan.plan, prompter);
+    renderPlanNotes(finalPlan.plan, prompter, options.appearance);
     const confirmation = await prompter.confirm("Apply this setup plan?", true);
     if (confirmation.status === "cancelled") {
       return cancellationCode(confirmation);
@@ -267,12 +275,14 @@ async function runInteractiveSetup(
     prompter.startProgress?.("Writing and verifying provider configuration…");
     return await applyPlan(finalPlan.discovery, finalPlan.plan, false, options, {
       success: () =>
-        prompter.stopProgress?.("Provider configuration verified.", true),
+        prompter.stopProgress?.("Configuration saved.", true),
       failure: () =>
         prompter.stopProgress?.(
           "Provider configuration could not be verified.",
           false,
         ),
+      renderResult: (plan, result) =>
+        humanInteractiveSetupResult(plan, result, options.appearance),
     });
   } finally {
     prompter.close();
@@ -324,12 +334,16 @@ async function applyPlan(
   plan: SetupPlan,
   json: boolean,
   options: SetupCommandOptions,
-  progress?: { success(): void; failure(): void },
+  presentation?: {
+    success(): void;
+    failure(): void;
+    renderResult?(plan: SetupPlan, result: SetupTransactionResult): string[];
+  },
 ): Promise<number> {
   let progressFinished = false;
   try {
     if (options.signal?.aborted) {
-      progress?.failure();
+      presentation?.failure();
       progressFinished = true;
       return interruptedSetup(options, json);
     }
@@ -337,13 +351,13 @@ async function applyPlan(
     const projected = projectSetupResult(plan, result);
     const output = json
       ? `${JSON.stringify(projected)}\n`
-      : `${humanSetupResult(plan, result).join("\n")}\n`;
-    progress?.success();
+      : `${(presentation?.renderResult ?? humanSetupResult)(plan, result).join("\n")}\n`;
+    presentation?.success();
     progressFinished = true;
     options.writeStdout(output);
     return 0;
   } catch (error) {
-    if (!progressFinished) progress?.failure();
+    if (!progressFinished) presentation?.failure();
     const code =
       error instanceof SetupTransactionError ? error.code : "apply-failed";
     const failure = writeSetupFailure(options, json, code);
@@ -405,45 +419,51 @@ export function projectSetupPlan(plan: SetupPlan) {
   };
 }
 
-function renderPlanNotes(plan: SetupPlan, prompter: SetupPrompter): void {
-  prompter.note("Review setup");
-  writePromptDetail(prompter, `  Side Glance: ${plan.executablePath}`);
+function renderPlanNotes(
+  plan: SetupPlan,
+  prompter: SetupPrompter,
+  appearance?: SideGlanceConfigInspection,
+): void {
+  prompter.note("Review");
+  prompter.note("");
+  writePromptDetail(
+    prompter,
+    `  Providers: ${humanList(plan.selectedProviders.map(providerLabel))}`,
+  );
+  writePromptDetail(
+    prompter,
+    plan.selectedNotifications.length === 0
+      ? "  Computer notifications: Off"
+      : `  Computer notifications: ${humanList(plan.selectedNotifications.map(providerLabel))} · ${plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND}`,
+  );
+  writePromptDetail(
+    prompter,
+    `  ${setupColorSummary(appearance)}`,
+  );
+  writePromptDetail(prompter, "  Configuration:");
   for (const provider of plan.providers) {
     if (!provider.selected || !provider.target) continue;
     writePromptDetail(
       prompter,
-      `  ${providerLabel(provider.provider)}: ${provider.target.action} ${provider.target.path}${provider.maturity === "experimental" ? " (experimental integration)" : ""}`,
+      `    ${providerLabel(provider.provider)}: ${displayHomeRelativePath(provider.target.path, plan.homeDirectory)}${provider.maturity === "experimental" ? " (experimental)" : ""}`,
     );
-    writePromptDetail(
-      prompter,
-      provider.notifications.selected
-        ? `    ${providerLabel(provider.provider)} alerts: ${coverageDescription(provider)}`
-        : `    ${providerLabel(provider.provider)} alerts: off`,
-    );
+  }
+  for (const provider of plan.providers) {
+    if (!provider.selected) continue;
     for (const warning of provider.warnings) {
-      writePromptDetail(prompter, `    warning: ${warning.message}`);
-    }
-    if (provider.launchCommand) {
-      writePromptDetail(prompter, `    launch: ${provider.launchCommand}`);
+      writePromptDetail(
+        prompter,
+        `  Warning: ${interactiveWarningMessage(warning.code)}`,
+      );
     }
   }
-  const notifications = plan.selectedNotifications.map(providerLabel);
-  writePromptDetail(
-    prompter,
-    notifications.length === 0
-      ? "  Computer notifications: off"
-      : `  Computer notifications: ${notifications.join(", ")} (sound ${plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND})`,
-  );
-  if (notifications.length > 0) {
+  if (plan.selectedNotifications.length > 0) {
     writePromptDetail(
       prompter,
-      "  Setup configures notification hooks but does not send a live test alert.",
+      "  No live notification will be sent during setup.",
     );
   }
-  writePromptDetail(
-    prompter,
-    "  Side Glance will write this configuration, verify it, and roll back caught failures when safe.",
-  );
+  prompter.note("");
 }
 
 function humanSetupPlan(plan: SetupPlan, dryRun = true): string[] {
@@ -561,6 +581,65 @@ function humanSetupResult(
   return lines;
 }
 
+function humanInteractiveSetupResult(
+  plan: SetupPlan,
+  result: SetupTransactionResult,
+  appearance?: SideGlanceConfigInspection,
+): string[] {
+  const projected = projectSetupResult(plan, result);
+  const lines = ["✓ Side Glance is ready", ""];
+  for (const provider of projected.providers) {
+    lines.push(
+      `  ${providerLabel(provider.id as SetupProvider)} ${provider.changed ? "configured" : "already configured"}`,
+    );
+  }
+  lines.push(
+    plan.selectedNotifications.length > 0
+      ? `  Computer notifications enabled · ${plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND} (delivery not tested)`
+      : "  Computer notifications off",
+    `  ${setupColorSummary(appearance)}`,
+    "  Change anytime: side-glance theme",
+  );
+
+  const launchCommands = projected.providers.flatMap((provider) =>
+    provider.launchCommand ? [provider.launchCommand] : [],
+  );
+  const fallbackCommand = plan.guidance.find(
+    ({ kind }) => kind === "generic",
+  )?.command;
+  const nextCommands =
+    launchCommands.length > 0
+      ? launchCommands
+      : fallbackCommand
+        ? [fallbackCommand]
+        : [];
+  if (nextCommands.length > 0) {
+    lines.push("", "Next", "");
+    for (const command of nextCommands) lines.push(`  ${command}`);
+  }
+
+  const backups = projected.providers.flatMap((provider) =>
+    provider.backupPath ? [provider.backupPath] : [],
+  );
+  if (backups.length > 0) {
+    lines.push("", backups.length === 1 ? "Backup saved to:" : "Backups saved to:");
+    for (const backup of backups) {
+      lines.push(`  ${displayHomeRelativePath(backup, plan.homeDirectory)}`);
+    }
+  }
+  return lines.map(sanitizePromptDetail);
+}
+
+function setupColorSummary(inspection?: SideGlanceConfigInspection): string {
+  if (inspection && !inspection.valid) {
+    return "Colors: Status fallback · configuration needs attention";
+  }
+  const preset = inspection?.config.appearance.preset ?? "status";
+  if (preset === "heat") return "Colors: Heat (unchanged)";
+  if (preset === "custom") return "Colors: Custom (unchanged)";
+  return "Colors: Status (default) · Working cyan · Ready green · Waiting amber · Failed red";
+}
+
 function appendGuidanceLines(lines: string[], plan: SetupPlan): void {
   if (plan.guidance.length === 0) return;
   lines.push("Manual and wrapper guidance:");
@@ -575,41 +654,58 @@ function renderGuidance(plan: SetupPlan, prompter: SetupPrompter): void {
   for (const line of lines) writePromptDetail(prompter, line);
 }
 
-function renderProviderDiscovery(
-  plan: SetupPlan,
-  prompter: SetupPrompter,
-): void {
-  writePromptDetail(prompter, "Detected providers:");
-  for (const provider of plan.providers) {
-    const reason = provider.reason ? `; ${provider.reason.message}` : "";
+function renderProviderSummary(plan: SetupPlan, prompter: SetupPrompter): void {
+  const eligible = plan.providers.filter(({ state }) => state === "eligible");
+  for (const provider of eligible) {
     writePromptDetail(
       prompter,
-      `  ${providerLabel(provider.provider)}: ${provider.state}; ${provider.maturity}; current integration ${provider.integrationStatus}${reason}`,
+      `  ✓ ${providerLabel(provider.provider)} CLI found`,
     );
   }
-}
 
-function renderProviderSummary(plan: SetupPlan, prompter: SetupPrompter): void {
-  const eligible = plan.providers
-    .filter(({ state }) => state === "eligible")
-    .map(({ provider }) => providerLabel(provider));
-  const unavailable = plan.providers.length - eligible.length;
-  prompter.note(
-    eligible.length === 0
-      ? "No available provider commands were found."
-      : `Found ${eligible.length} available ${eligible.length === 1 ? "provider" : "providers"}: ${eligible.join(", ")}.`,
+  const missing = plan.providers.filter(
+    (provider) =>
+      provider.state !== "eligible" &&
+      provider.reason?.code === "binary-not-found",
   );
-  if (unavailable > 0) {
-    prompter.note(
-      `${unavailable} ${unavailable === 1 ? "provider is" : "providers are"} unavailable and will be skipped.`,
+  if (missing.length > 0) {
+    writePromptDetail(
+      prompter,
+      `  – ${humanList(missing.map(({ provider }) => providerLabel(provider)))} skipped`,
+    );
+    writePromptDetail(prompter, "    Not found on this Terminal's PATH");
+  }
+
+  for (const provider of plan.providers) {
+    if (
+      provider.state === "eligible" ||
+      provider.reason?.code === "binary-not-found"
+    ) {
+      continue;
+    }
+    writePromptDetail(
+      prompter,
+      `  ! ${providerLabel(provider.provider)} skipped${provider.reason ? ` · ${provider.reason.message}` : ""}`,
     );
   }
+  prompter.note("");
 }
 
 function recommendedChoiceLabel(plan: SetupPlan): string {
-  const providers = plan.selectedProviders.map(providerLabel).join(", ");
-  const notifications = plan.selectedNotifications.map(providerLabel).join(", ");
-  return `Use recommended — ${providers}; alerts: ${notifications.length > 0 ? notifications : "off"}`;
+  const providers = humanList(plan.selectedProviders.map(providerLabel));
+  const notificationProviders = plan.selectedNotifications;
+  if (notificationProviders.length === 0) {
+    return `Recommended — ${providers} · notifications off`;
+  }
+  if (
+    notificationProviders.length === plan.selectedProviders.length &&
+    notificationProviders.every(
+      (provider, index) => provider === plan.selectedProviders[index],
+    )
+  ) {
+    return `Recommended — ${providers} with computer notifications`;
+  }
+  return `Recommended — ${providers} · notifications for ${humanList(notificationProviders.map(providerLabel))}`;
 }
 
 async function promptForProviders(
@@ -726,6 +822,50 @@ function providerLabel(provider: SetupProvider): string {
     opencode: "OpenCode",
   };
   return labels[provider];
+}
+
+function humanList(values: readonly string[]): string {
+  if (values.length === 0) return "none";
+  if (values.length === 1) return values[0] as string;
+  if (values.length === 2) return `${values[0]} and ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
+}
+
+function displayHomeRelativePath(
+  candidate: string,
+  homeDirectory: string,
+): string {
+  if (candidate === homeDirectory) return "~";
+  const prefix = homeDirectory.endsWith("/")
+    ? homeDirectory
+    : `${homeDirectory}/`;
+  return candidate.startsWith(prefix)
+    ? `~/${candidate.slice(prefix.length)}`
+    : candidate;
+}
+
+function interactiveWarningMessage(
+  code: SetupPlan["providers"][number]["warnings"][number]["code"],
+): string {
+  const messages: Readonly<Record<typeof code, string>> = {
+    "codex-effective-default":
+      "Codex native alerts are on while the terminal is unfocused.",
+    "codex-custom-notify":
+      "Codex has a custom notify command that may also send alerts.",
+    "gemini-higher-precedence":
+      "Gemini project settings may override this user setting.",
+    "opencode-v1-command-unverified":
+      "OpenCode v1 was detected without a live version check.",
+    "duplicate-native-notifications":
+      "Side Glance may produce duplicate alerts.",
+    "native-notification-status-unknown":
+      "Native alert status is unknown; Side Glance alerts stay off.",
+    "side-glance-notifications-unavailable":
+      "Computer notifications are temporarily unavailable.",
+    "side-glance-notifications-unsupported":
+      "Computer notifications are unsupported on this platform.",
+  };
+  return messages[code];
 }
 
 function notificationChoiceLabel(

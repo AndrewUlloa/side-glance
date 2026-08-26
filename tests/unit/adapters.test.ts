@@ -53,6 +53,142 @@ test("maps Claude lifecycle, waiting, failure, and teardown hooks", () => {
   );
 });
 
+test("maps Claude subagent work and bounded aggregate snapshots without content", () => {
+  const started = adaptClaudeHook(
+    {
+      hook_event_name: "SubagentStart",
+      session_id: "claude-session",
+      agent_id: "agent-7",
+      agent_type: "Explore",
+      prompt: "private subagent prompt",
+    },
+    context,
+  );
+  const stopped = adaptClaudeHook(
+    {
+      hook_event_name: "SubagentStop",
+      session_id: "claude-session",
+      agent_id: "agent-7",
+      background_tasks: [],
+      session_crons: [],
+      transcript_path: "/private/transcript.jsonl",
+    },
+    context,
+  );
+  const parentStop = adaptClaudeHook(
+    {
+      hook_event_name: "Stop",
+      session_id: "claude-session",
+      background_tasks: [
+        {
+          id: "task-9",
+          type: "shell",
+          status: "running",
+          description: "private command description",
+        },
+      ],
+      session_crons: [
+        { id: "cron-4", schedule: "* * * * *", prompt: "private cron prompt" },
+      ],
+    },
+    context,
+  );
+
+  assert.deepEqual(started?.work, { id: "subagent:agent-7", kind: "subagent" });
+  assert.equal(started?.kind, "work.started");
+  assert.deepEqual(stopped?.work, { id: "subagent:agent-7", kind: "subagent" });
+  assert.equal(stopped?.kind, "work.finished");
+  assert.equal(stopped?.confidence, "heuristic");
+  assert.deepEqual(stopped?.activeWork, []);
+  assert.deepEqual(parentStop?.activeWork, [
+    { id: "background:task-9", kind: "background-task" },
+    { id: "cron:cron-4", kind: "session-cron" },
+  ]);
+  const serialized = JSON.stringify([started, stopped, parentStop]);
+  for (const privateValue of [
+    "private subagent prompt",
+    "/private/transcript.jsonl",
+    "private command description",
+    "private cron prompt",
+  ]) {
+    assert.equal(serialized.includes(privateValue), false);
+  }
+});
+
+test("distinguishes unknown Claude registries from explicit empty work", () => {
+  const missing = adaptClaudeHook(
+    { hook_event_name: "Stop", session_id: "claude-session" },
+    context,
+  );
+  const malformed = adaptClaudeHook(
+    {
+      hook_event_name: "Stop",
+      session_id: "claude-session",
+      background_tasks: "unknown",
+      session_crons: [],
+    },
+    context,
+  );
+  const empty = adaptClaudeHook(
+    {
+      hook_event_name: "Stop",
+      session_id: "claude-session",
+      background_tasks: [],
+      session_crons: [],
+    },
+    context,
+  );
+
+  assert.equal(missing?.activeWork, undefined);
+  assert.equal(malformed?.activeWork, undefined);
+  assert.deepEqual(empty?.activeWork, []);
+});
+
+test("bounds Claude aggregate snapshots and rejects unsafe work identifiers", () => {
+  const overflow = adaptClaudeHook(
+    {
+      hook_event_name: "Stop",
+      session_id: "claude-session",
+      background_tasks: Array.from({ length: 40 }, (_, index) => ({
+        id: `task-${index}`,
+      })),
+      session_crons: [],
+    },
+    context,
+  );
+  const malformed = adaptClaudeHook(
+    {
+      hook_event_name: "SubagentStart",
+      session_id: "claude-session",
+      agent_id: "unsafe\u001b[31m",
+    },
+    context,
+  );
+
+  assert.equal(overflow?.activeWork?.length, 32);
+  assert.deepEqual(overflow?.activeWork?.at(-1), {
+    id: "background:overflow",
+    kind: "background-task",
+  });
+  assert.equal(malformed, undefined);
+
+  const cronOverflow = adaptClaudeHook(
+    {
+      hook_event_name: "Stop",
+      session_id: "claude-session",
+      background_tasks: [],
+      session_crons: Array.from({ length: 40 }, (_, index) => ({
+        id: `cron-${index}`,
+      })),
+    },
+    context,
+  );
+  assert.deepEqual(cronOverflow?.activeWork?.at(-1), {
+    id: "cron:overflow",
+    kind: "session-cron",
+  });
+});
+
 test("maps current Codex hooks and preserves turn IDs without replacing notify", () => {
   const started = adaptCodexHook(
     {

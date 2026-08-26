@@ -51,7 +51,7 @@ test("keeps public beta, provider, terminal, and domain claims within verified e
   assert.match(changelog, /\[0\.1\.0-beta\.3\] — 2026-08-24/u);
   assert.match(
     launch,
-    /Custom apex status: not configured; DNS does not resolve/u
+    /Custom apex status: aliases are configured in Vercel,[\s\S]{0,80}DNS does not\s+resolve/iu
   );
   assert.equal(
     manifest.defaultOrigin,
@@ -80,14 +80,21 @@ test("keeps guided setup, notification coverage, and recovery guidance aligned",
   }
 
   for (const guide of [readme, packageReadme]) {
-    assert.match(guide, /`side-glance setup`[^\n]*exact alias/u);
-    assert.match(guide, /read-only preview/u);
+    assert.match(guide, /`side-glance setup`[\s\S]{0,120}exact alias/u);
+    assert.match(guide, /read-only (?:review|preview)/u);
     assert.match(guide, /Up\/Down[^\n]*Space[^\n]*Enter/u);
     assert.match(guide, /SIDE_GLANCE_ACCESSIBLE=1/u);
     assert.match(guide, /Claude[^\n]*attention[^\n]*failure/u);
     assert.match(guide, /Codex and Gemini[^\n]*attention/u);
     assert.match(guide, /OpenCode v1[^\n]*Ready[^\n]*attention[^\n]*failure/u);
     assert.match(guide, /generic wrapper[^\n]*process exit/u);
+    assert.match(
+      guide,
+      /Status[\s\S]{0,180}Ready[\s\S]{0,80}green[\s\S]{0,80}Failed[\s\S]{0,80}red/u
+    );
+    assert.match(guide, /side-glance theme/u);
+    assert.match(guide, /newest 12[\s\S]{0,40}completed turns/u);
+    assert.match(guide, /known[^\n]*subagent[^\n]*work[^\n]*Ready/iu);
   }
 
   assert.match(

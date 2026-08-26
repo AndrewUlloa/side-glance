@@ -70,6 +70,7 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     ...process.env,
     PATH: "/usr/bin:/bin",
     SIDE_GLANCE_STATE_DIR: path.join(extracted, "state"),
+    SIDE_GLANCE_CONFIG_DIR: path.join(extracted, "theme-config"),
   };
   const versionResult = await command(executable, ["--version"], {
     cwd: extracted,
@@ -86,6 +87,9 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     urgency: 0,
     wash: "4d3510",
     accent: "f0a726",
+    suppressed: false,
+    completionCeilingSeconds: 300,
+    completionCeilingBasis: "semantic-default",
   });
   const help = await command(executable, ["--help"], {
     cwd: extracted,
@@ -93,6 +97,21 @@ test("builds and smokes the exact versioned standalone archive without Node on P
   });
   assert.match(help.stdout, /side-glance init/u);
   assert.match(help.stdout, /side-glance setup/u);
+  assert.match(help.stdout, /side-glance theme/u);
+  const themeSet = await command(
+    executable,
+    ["theme", "set", "heat", "--ceiling", "adaptive", "--yes", "--json"],
+    { cwd: extracted, env: strippedEnvironment },
+  );
+  assert.equal(JSON.parse(themeSet.stdout).config.appearance.preset, "heat");
+  const themeShow = await command(executable, ["theme", "show", "--json"], {
+    cwd: extracted,
+    env: strippedEnvironment,
+  });
+  assert.deepEqual(JSON.parse(themeShow.stdout).config.appearance, {
+    preset: "heat",
+    ceiling: { mode: "adaptive" },
+  });
 
   const setupHome = path.join(extracted, "guided-home");
   const providerBin = path.join(extracted, "provider-bin");
@@ -123,7 +142,8 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     ],
   });
   assert.match(arrowSetup.output, /↑\/↓ move/u);
-  assert.match(arrowSetup.output, /Setup complete/u);
+  assert.match(arrowSetup.output, /Side Glance is ready/u);
+  assert.match(arrowSetup.output, /Next[\s\S]*side-glance run --label "Claude" -- claude/u);
   assert.match(
     await readFile(path.join(arrowHome, ".claude", "settings.json"), "utf8"),
     new RegExp(escapeRegularExpression(executable), "u"),
@@ -149,7 +169,7 @@ test("builds and smokes the exact versioned standalone archive without Node on P
     ],
   });
   assert.equal(staticSetup.output.includes(String.fromCodePoint(27)), false);
-  assert.match(staticSetup.output, /Setup complete/u);
+  assert.match(staticSetup.output, /Side Glance is ready/u);
   const setup = await command(
     executable,
     [

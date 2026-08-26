@@ -16,7 +16,8 @@ export type TerminalScenario =
   | "working"
   | "waiting"
   | "ready-short"
-  | "ready-long";
+  | "ready-long"
+  | "failed";
 
 interface TerminalScenarioContent {
   actions: readonly (readonly [string, string])[];
@@ -72,6 +73,18 @@ const TERMINAL_SCENARIOS: Record<TerminalScenario, TerminalScenarioContent> = {
     ],
     final: "Ownership reconciliation is complete. All release checks pass.",
     activity: "✻ Worked for 18m 42s",
+  },
+  failed: {
+    prompt: "Publish the release after every protected check passes.",
+    opening: "I’ll verify the artifacts and stop if any gate disagrees.",
+    actions: [
+      ["Read", "release-manifest.json"],
+      ["Bash", "npm run verify:release"],
+      ["Bash", "gh attestation verify"],
+    ],
+    error: "Attestation mismatch · publication stopped",
+    final: "Release verification stopped before completion. No tag was moved.",
+    activity: "✻ Stopped after 6m 12s",
   },
 };
 
@@ -503,7 +516,7 @@ export function InteractiveClaudeTerminal({
 
             <div className="mock-claude-actions">
               {transcript.actions.map(([action, detail]) => (
-                <p key={action}>
+                <p key={`${action}:${detail}`}>
                   <span aria-hidden="true">⎿</span>
                   <strong>{action}</strong> {detail}
                 </p>

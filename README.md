@@ -7,7 +7,7 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 ## What is proven
 
 - Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider remain experimental until their live binary matrices pass. Setup previews every owned change and preserves unrelated settings.
-- Claude/Codex `Stop` and Gemini `AfterAgent` are pre-final hooks: they can paint the best-known Ready state, but do not ring a misleading final Ready alert while another provider hook can still block or retry.
+- Claude tracks bounded `SubagentStart`/`SubagentStop` identities plus current background-task and session-cron snapshots. Known work keeps the parent Working; a later parent `Stop` must report no known work before Ready. Claude/Codex `Stop` and Gemini `AfterAgent` remain pre-final hooks and do not ring a misleading final Ready alert while another provider hook can still block or retry.
 - OpenCode support targets the stable v1 plugin API and fails closed for the incompatible `opencode2` beta. Aider uses only its documented static notification command paired with the wrapper.
 - Opt-in macOS and Linux desktop alerts follow the provider-specific event coverage below. macOS supports a requested installed sound name; Linux sound is best-effort, and neither path claims audible delivery without a live test.
 - Delayed generations, older timestamps, mismatched turn IDs, and duplicate event IDs cannot repaint newer state.
@@ -59,11 +59,19 @@ the matching release, provenance, and `SHA256SUMS` before using one manually.
 ## Guided setup
 
 `side-glance init` detects supported providers without executing them and presents
-a read-only preview of the executable, target paths, create/update/unchanged
-actions, notification choices, warnings, and launch commands. It writes nothing
-until the whole plan is confirmed. `side-glance setup` is its exact alias; both are
-safe to re-run. On an interactive terminal, **Use recommended settings** is focused
-first; choose **Customize** to reveal provider and computer-notification choices.
+a concise read-only review of the selected providers, notification choices,
+warnings, and owned configuration paths. It writes nothing until the whole plan is
+confirmed, then finishes with the launch command to run next. `side-glance setup`
+is its exact alias; both are safe to re-run. On an interactive terminal,
+**Recommended** is focused first; choose **Customize** to reveal provider and
+computer-notification choices.
+
+Side Glance considers a provider available only when its CLI command (`claude`,
+`codex`, `gemini`, or `opencode`) is executable on the `PATH` of the shell running
+setup. “Not found” refers only to that CLI command; the provider account or desktop
+app may still be usable. A desktop app does not count unless it exposes its CLI to
+that shell. Install or expose the command, then rerun `side-glance init`.
+
 Use Up/Down to move, Space to toggle multiple choices, and Enter to continue.
 Set `SIDE_GLANCE_ACCESSIBLE=1` for the static numbered prompt; `NO_COLOR`,
 and `TERM=dumb` use that same no-ANSI fallback automatically. Non-TTY input stays
@@ -93,6 +101,55 @@ side-glance install claude --json
 side-glance uninstall claude --json
 side-glance run -- your-coding-cli
 ```
+
+## Colors and the sliding completion ceiling
+
+**Status** is the default theme: Working is cyan, Waiting is amber, Ready is
+green, Failed is red, and Inactive is neutral. A successful long turn remains
+green; red means failure. tmux also keeps the distinct `●`, `!`, `✓`, and `×`
+markers, so color is never the only state signal.
+
+Run `side-glance theme` for the same Up/Down and Enter experience as setup. Choose
+**Heat** only when you want successful completions to move from green through
+amber to red based on duration, or choose **Custom** for one validated wash/accent
+pair per lifecycle state. Automation and recovery are explicit:
+
+```bash
+side-glance theme show --json
+side-glance theme set status --yes --json
+side-glance theme set heat --ceiling adaptive --yes --json
+side-glance theme set heat --ceiling 300 --yes --json
+side-glance theme reset --yes --json
+side-glance preview --phase completed --elapsed 300 --source claude --json
+```
+
+Saved colors reach an already-open terminal on its next lifecycle event; Side
+Glance does not repaint a terminal merely because the config file changed.
+
+Adaptive Heat learns separately for each provider from the newest 12 eligible
+completed turns between one second and eight hours. It stays at a five-minute
+cold ceiling through seven samples, then recalculates after every eligible turn
+using the nearest-rank p80 × 1.5, bounded from one minute to two hours. Each update
+can rise by at most the larger of 20% or 30 seconds, or fall by at most the larger
+of 10% or 15 seconds. Heat keeps Ready turns under 10 seconds visually quiet. The
+turn that teaches the ceiling still uses the prior value; the next turn sees the
+slide. One outlier cannot set the ceiling, and a retried completion cannot train
+the same semantic turn twice. The adaptive profile stores duration numbers and
+a bounded turn identity only—never prompts, commands, responses, paths, or
+transcripts. `doctor --json`
+reports an invalid color configuration while runtime rendering safely falls back
+to Status. `side-glance theme show --json` exposes each provider's current sample
+count and learned ceiling so the adaptive behavior is inspectable.
+`preview --source <provider>` uses that provider's learned adaptive ceiling and
+reports its basis; without a source, adaptive Heat is explicitly a 300-second
+cold-start hypothetical.
+
+For Claude, known subagent work delays Ready. Side Glance stores only bounded work
+kind/ID pairs and treats missing or malformed background registries as unknown,
+not empty. Resume and compact session starts preserve known work; a child
+stopping cannot create Ready on its own. Claude still exposes
+no post-aggregate hook proving every parallel hook accepted a Stop, so Ready
+remains the best-known state rather than an absolute completion guarantee.
 
 ## Try it from source
 
@@ -182,9 +239,10 @@ side-glance run --label "Aider worker" -- aider --notifications \
   --notifications-command 'side-glance notify --source aider --kind completed --json'
 ```
 
-Claude, Codex, and Gemini do not expose a post-aggregate completion event. Keep
-provider-native completion alerts enabled, or use process exit as the truthful
-boundary for a one-shot command:
+Claude, Codex, and Gemini do not expose a post-aggregate hook proving every
+parallel completion decision committed. Claude's known subagent/background work
+now delays Ready; provider-native alerts or process exit remain the stronger
+boundary when an absolute one-shot completion signal is required:
 
 ```bash
 side-glance run --label "Release build" --notify-on-exit -- your-command

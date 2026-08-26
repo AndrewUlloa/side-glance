@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 import { SideGlanceController } from "../core/controller.ts";
 import type { SideGlanceTarget } from "../core/protocol.ts";
@@ -7,6 +8,7 @@ import { FileSideGlanceStore } from "../core/store.ts";
 import { discoverTerminalTarget } from "../core/target.ts";
 import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
 import { createNativeNotifier } from "../notifications/native.ts";
+import type { SideGlanceAppearance } from "../core/appearance.ts";
 import {
   sanitizeNotificationLabel,
   sanitizeNotificationSound,
@@ -22,6 +24,11 @@ export async function runSupervised(
   args: readonly string[],
   stateDirectory: string,
   legacyStateDirectory?: string,
+  appearance: SideGlanceAppearance = { preset: "status" },
+  stateRootDirectory = path.dirname(stateDirectory),
+  legacyRootDirectory = legacyStateDirectory
+    ? path.dirname(legacyStateDirectory)
+    : undefined,
 ): Promise<SupervisedRunResult> {
   const separatorIndex = args.indexOf("--");
   if (separatorIndex === -1 || separatorIndex === args.length - 1) {
@@ -40,13 +47,17 @@ export async function runSupervised(
   const sessionId = `wrapper-${process.pid}-${randomUUID()}`;
   const store = new FileSideGlanceStore({
     directory: stateDirectory,
+    rootDirectory: stateRootDirectory,
     ...(legacyStateDirectory ? { legacyDirectory: legacyStateDirectory } : {}),
+    ...(legacyRootDirectory ? { legacyRootDirectory } : {}),
   });
   const controller = new SideGlanceController(
     store,
     createDefaultSurfaceRenderer({
       terminalTitle: wrapperOptions.terminalTitle,
     }),
+    undefined,
+    appearance,
   );
   const notifier = configuredExitNotifier(wrapperOptions);
   await controller.submit({

@@ -6,6 +6,8 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
+  realpath,
   rename,
   rm,
   symlink,
@@ -108,6 +110,44 @@ async function stateDirectory(context: test.TestContext): Promise<string> {
   context.after(() => rm(directory, { recursive: true, force: true }));
   return directory;
 }
+
+test("version and help never inspect runtime configuration", async () => {
+  const env = { SIDE_GLANCE_CONFIG_DIR: "relative-must-not-be-inspected" };
+  const version = await runCli(["--version"], { env });
+  const help = await runCli(["--help"], { env });
+
+  assert.equal(version.code, 0, version.stderr);
+  assert.match(version.stdout, /^(?:development|\d+\.\d+\.\d+)/u);
+  assert.equal(help.code, 0, help.stderr);
+  assert.match(help.stdout, /side-glance theme/u);
+});
+
+test("CLI overrides reject intermediate linked state and config parents", async (context) => {
+  const root = await stateDirectory(context);
+  const outside = path.join(root, "outside");
+  const alias = path.join(root, "alias");
+  await mkdir(outside);
+  await symlink(outside, alias, "dir");
+
+  const state = await runCli(["status", "--json"], {
+    env: { SIDE_GLANCE_STATE_DIR: path.join(alias, "state") },
+  });
+  assert.equal(state.code, 1);
+  assert.match(state.stderr, /link/iu);
+
+  const config = await runCli(
+    ["theme", "set", "status", "--yes", "--json"],
+    {
+      env: {
+        SIDE_GLANCE_STATE_DIR: path.join(root, "safe-state"),
+        SIDE_GLANCE_CONFIG_DIR: path.join(alias, "config"),
+      },
+    },
+  );
+  assert.equal(config.code, 1);
+  assert.match(config.stderr, /link/iu);
+  assert.deepEqual(await readdir(outside), []);
+});
 
 test("acknowledges a normalized event minimally and reports status without prompt content", async (context) => {
   const directory = await stateDirectory(context);
@@ -273,6 +313,77 @@ test("uses the wrapper-provided surface for an installed hook command", async (c
   );
 });
 
+test("keeps Claude Working across the installed subagent hook sequence", async (context) => {
+  const directory = await stateDirectory(context);
+  const sessionId = "claude-aggregate-hooks";
+  const submit = (payload: Record<string, unknown>) =>
+    runCli(
+      ["hook", "--provider", "claude", "--surface", "test:aggregate", "--json"],
+      {
+        stateDirectory: directory,
+        input: JSON.stringify({ session_id: sessionId, ...payload }),
+      },
+    );
+
+  for (const payload of [
+    { hook_event_name: "UserPromptSubmit" },
+    { hook_event_name: "SubagentStart", agent_id: "agent-a" },
+    {
+      hook_event_name: "Stop",
+      background_tasks: [],
+      session_crons: [],
+    },
+  ]) {
+    const result = await submit(payload);
+    assert.equal(result.code, 0, result.stderr);
+  }
+
+  let status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  assert.equal(
+    JSON.parse(status.stdout).sessions[`claude:${sessionId}`].phase,
+    "working",
+  );
+
+  for (const payload of [
+    {
+      hook_event_name: "SubagentStop",
+      agent_id: "agent-a",
+      background_tasks: [{ id: "background-b" }],
+      session_crons: [],
+    },
+    { hook_event_name: "Stop" },
+  ]) {
+    const result = await submit(payload);
+    assert.equal(result.code, 0, result.stderr);
+  }
+
+  status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const busySession = JSON.parse(status.stdout).sessions[`claude:${sessionId}`];
+  assert.equal(busySession.phase, "working");
+  assert.deepEqual(busySession.activeWork, [
+    { id: "background:background-b", kind: "background-task" },
+  ]);
+
+  const finalStop = await submit({
+    hook_event_name: "Stop",
+    background_tasks: [],
+    session_crons: [],
+  });
+  assert.equal(finalStop.code, 0, finalStop.stderr);
+
+  status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  assert.equal(
+    JSON.parse(status.stdout).sessions[`claude:${sessionId}`].phase,
+    "completed",
+  );
+});
+
 test("emits only an empty JSON acknowledgement for Gemini hooks", async (context) => {
   const directory = await stateDirectory(context);
   const result = await runCli(
@@ -389,7 +500,7 @@ test("doctor and preview are deterministic and do not require a live terminal", 
   );
 
   assert.equal(doctor.code, 0, doctor.stderr);
-  assert.equal(JSON.parse(doctor.stdout).stateDirectory, directory);
+  assert.equal(JSON.parse(doctor.stdout).stateDirectory, await realpath(directory));
   assert.equal(JSON.parse(doctor.stdout).node.supported, true);
   assert.equal(preview.code, 0, preview.stderr);
   assert.deepEqual(JSON.parse(preview.stdout), {
@@ -397,7 +508,246 @@ test("doctor and preview are deterministic and do not require a live terminal", 
     urgency: 0,
     wash: "4d3510",
     accent: "f0a726",
+    suppressed: false,
+    completionCeilingSeconds: 300,
+    completionCeilingBasis: "semantic-default",
   });
+});
+
+test("legacy preview uses saved Heat suppression and provider-local ceilings", async (context) => {
+  const directory = await stateDirectory(context);
+  const configDirectory = path.join(directory, "appearance");
+  const env = { SIDE_GLANCE_CONFIG_DIR: configDirectory };
+  const configured = await runCli(
+    ["theme", "set", "heat", "--ceiling", "adaptive", "--yes", "--json"],
+    { env, stateDirectory: directory },
+  );
+  assert.equal(configured.code, 0, configured.stderr);
+  await writeFile(
+    path.join(directory, "side-glance-state.json"),
+    `${JSON.stringify({
+      schemaVersion: 2,
+      sessions: {},
+      surfaces: {},
+      seenEventIds: [],
+      durationProfiles: {
+        claude: {
+          algorithmVersion: 1,
+          samplesSeconds: Array.from({ length: 8 }, () => 400),
+          ceilingSeconds: 360,
+        },
+        codex: {
+          algorithmVersion: 1,
+          samplesSeconds: Array.from({ length: 8 }, () => 160),
+          ceilingSeconds: 270,
+        },
+      },
+    })}\n`,
+    { mode: 0o600 },
+  );
+
+  const coldStart = await runCli(
+    ["preview", "--phase", "completed", "--elapsed", "5", "--json"],
+    { env, stateDirectory: directory },
+  );
+  assert.equal(coldStart.code, 0, coldStart.stderr);
+  assert.equal(JSON.parse(coldStart.stdout).suppressed, true);
+  assert.equal(
+    JSON.parse(coldStart.stdout).completionCeilingBasis,
+    "cold-start-hypothetical",
+  );
+
+  const claude = await runCli(
+    [
+      "preview",
+      "--phase",
+      "completed",
+      "--elapsed",
+      "300",
+      "--source",
+      "claude",
+      "--json",
+    ],
+    { env, stateDirectory: directory },
+  );
+  const codex = await runCli(
+    [
+      "preview",
+      "--phase",
+      "completed",
+      "--elapsed",
+      "300",
+      "--source",
+      "codex",
+      "--json",
+    ],
+    { env, stateDirectory: directory },
+  );
+  assert.equal(claude.code, 0, claude.stderr);
+  assert.equal(codex.code, 0, codex.stderr);
+  assert.deepEqual(
+    {
+      source: JSON.parse(claude.stdout).source,
+      ceiling: JSON.parse(claude.stdout).completionCeilingSeconds,
+      basis: JSON.parse(claude.stdout).completionCeilingBasis,
+    },
+    { source: "claude", ceiling: 360, basis: "provider-profile" },
+  );
+  assert.deepEqual(
+    {
+      source: JSON.parse(codex.stdout).source,
+      ceiling: JSON.parse(codex.stdout).completionCeilingSeconds,
+      basis: JSON.parse(codex.stdout).completionCeilingBasis,
+    },
+    { source: "codex", ceiling: 270, basis: "provider-profile" },
+  );
+  assert.notEqual(
+    JSON.parse(claude.stdout).urgency,
+    JSON.parse(codex.stdout).urgency,
+  );
+});
+
+test("theme automation can show, set adaptive Heat, preview, and reset", async (context) => {
+  const directory = await stateDirectory(context);
+  const configDirectory = path.join(directory, "appearance");
+  const env = { SIDE_GLANCE_CONFIG_DIR: configDirectory };
+
+  for (const payload of [
+    {
+      v: 1,
+      eventId: "theme-duration-start",
+      source: "claude",
+      sessionId: "theme-duration",
+      kind: "turn.started",
+      occurredAt: 1_000,
+      confidence: "native",
+    },
+    {
+      v: 1,
+      eventId: "theme-duration-done",
+      source: "claude",
+      sessionId: "theme-duration",
+      kind: "turn.completed",
+      occurredAt: 61_000,
+      confidence: "native",
+    },
+  ]) {
+    const seeded = await runCli(["event", "--json"], {
+      input: JSON.stringify(payload),
+      stateDirectory: directory,
+    });
+    assert.equal(seeded.code, 0, seeded.stderr);
+  }
+
+  const initial = await runCli(["theme", "show", "--json"], {
+    env,
+    stateDirectory: directory,
+  });
+  assert.equal(initial.code, 0, initial.stderr);
+  const shown = JSON.parse(initial.stdout);
+  assert.equal(shown.config.appearance.preset, "status");
+  assert.deepEqual(shown.learnedCeilings, {
+    claude: { sampleCount: 1, completionCeilingSeconds: 300 },
+  });
+
+  const set = await runCli(
+    ["theme", "set", "heat", "--ceiling", "adaptive", "--yes", "--json"],
+    { env, stateDirectory: directory },
+  );
+  assert.equal(set.code, 0, set.stderr);
+  assert.deepEqual(JSON.parse(set.stdout).config.appearance, {
+    preset: "heat",
+    ceiling: { mode: "adaptive" },
+  });
+
+  const preview = await runCli(
+    [
+      "theme",
+      "preview",
+      "--preset",
+      "heat",
+      "--elapsed",
+      "600",
+      "--ceiling",
+      "360",
+      "--json",
+    ],
+    { env, stateDirectory: directory },
+  );
+  assert.equal(preview.code, 0, preview.stderr);
+  assert.equal(JSON.parse(preview.stdout).visual.accent, "f33533");
+  assert.equal(JSON.parse(preview.stdout).completionCeilingSeconds, 360);
+
+  const quickHeat = await runCli(
+    ["theme", "preview", "--preset", "heat", "--elapsed", "5", "--json"],
+    { env, stateDirectory: directory },
+  );
+  assert.equal(quickHeat.code, 0, quickHeat.stderr);
+  assert.equal(JSON.parse(quickHeat.stdout).visual.suppressed, true);
+
+  const reset = await runCli(["theme", "reset", "--yes", "--json"], {
+    env,
+    stateDirectory: directory,
+  });
+  assert.equal(reset.code, 0, reset.stderr);
+  assert.equal(JSON.parse(reset.stdout).config.appearance.preset, "status");
+
+  const customPairs = [
+    "--inactive",
+    "111111:aaaaaa",
+    "--working",
+    "122222:00aaaa",
+    "--waiting",
+    "332200:ffaa00",
+    "--ready",
+    "113311:44cc44",
+    "--failed",
+    "331111:ff4444",
+  ];
+  const custom = await runCli(
+    ["theme", "set", "custom", ...customPairs, "--yes", "--json"],
+    { env, stateDirectory: directory },
+  );
+  assert.equal(custom.code, 0, custom.stderr);
+  assert.deepEqual(JSON.parse(custom.stdout).config.appearance, {
+    preset: "custom",
+    colors: {
+      inactive: { wash: "111111", accent: "aaaaaa" },
+      working: { wash: "122222", accent: "00aaaa" },
+      waiting: { wash: "332200", accent: "ffaa00" },
+      ready: { wash: "113311", accent: "44cc44" },
+      failed: { wash: "331111", accent: "ff4444" },
+    },
+  });
+
+  const themeHelp = await runCli(["theme", "--help"], {
+    env,
+    stateDirectory: directory,
+  });
+  assert.equal(themeHelp.code, 0, themeHelp.stderr);
+  assert.match(themeHelp.stdout, /Status[\s\S]*Heat[\s\S]*Custom/u);
+  assert.match(themeHelp.stdout, /60[\s\S]*7200/u);
+});
+
+test("doctor reports invalid appearance while preserving safe Status fallback", async (context) => {
+  const directory = await stateDirectory(context);
+  const configDirectory = path.join(directory, "invalid-appearance");
+  await mkdir(configDirectory, { recursive: true });
+  const configPath = path.join(configDirectory, "config.json");
+  const invalid = '{"schemaVersion":1,"appearance":{"preset":"private-invalid"}}';
+  await writeFile(configPath, invalid);
+
+  const result = await runCli(["doctor", "--home", directory, "--json"], {
+    env: { SIDE_GLANCE_CONFIG_DIR: configDirectory },
+    stateDirectory: directory,
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.appearance.valid, false);
+  assert.equal(report.appearance.config.appearance.preset, "status");
+  assert.match(report.appearance.error, /preset/u);
+  assert.equal(await readFile(configPath, "utf8"), invalid);
 });
 
 test("doctor inspects Claude and Codex plans without mutating existing configuration", async (context) => {

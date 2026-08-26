@@ -103,6 +103,8 @@ const PROVIDER_EVENTS: Readonly<Record<InstallableProvider, readonly string[]>> 
     "UserPromptSubmit",
     "PermissionRequest",
     "Notification",
+    "SubagentStart",
+    "SubagentStop",
     "Stop",
     "StopFailure",
     "SessionEnd",

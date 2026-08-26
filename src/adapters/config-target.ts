@@ -141,6 +141,28 @@ export async function captureConfigTarget(
   return snapshot;
 }
 
+export async function captureConfigTargetParents(
+  descriptor: ConfigTargetDescriptor,
+): Promise<ConfigTargetSnapshot> {
+  const normalized = normalizeDescriptor(descriptor);
+  const { directories, missingDirectories } = await captureParentDirectories(
+    normalized.rootDirectory,
+    normalized.targetPath,
+    normalized.label,
+  );
+  const snapshot = Object.freeze({
+    targetPath: normalized.targetPath,
+    exists: false,
+    mode: normalized.defaultMode,
+  });
+  snapshotStates.set(snapshot, {
+    descriptor: normalized,
+    directories,
+    missingDirectories,
+  });
+  return snapshot;
+}
+
 /**
  * Returns a defensive copy of captured configuration bytes for adapter parsing only.
  * These bytes can contain private user configuration and must never enter CLI output,
@@ -211,6 +233,47 @@ export async function revalidateConfigTargetSnapshot(
   await verifyDirectories(state.directories);
   await verifyMissingDirectories(state.missingDirectories);
   await verifyFileMatchesSnapshot(state, state.directories);
+}
+
+export async function ensureConfigTargetParentDirectories(
+  snapshot: ConfigTargetSnapshot,
+  mode = 0o700,
+): Promise<void> {
+  validateMode(mode);
+  const state = requireSnapshotState(snapshot);
+  await revalidateConfigTargetSnapshot(snapshot);
+  const createdDirectories = await createMissingDirectories(state);
+  const effectiveDirectories = [...state.directories, ...createdDirectories];
+  try {
+    await verifyDirectories(effectiveDirectories);
+    const targetDirectory = effectiveDirectories.at(-1);
+    if (!targetDirectory) {
+      throw new Error("Configuration target must have a captured parent directory.");
+    }
+    const handle = await open(
+      targetDirectory.path,
+      constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+    );
+    try {
+      const metadata = await handle.stat({ bigint: true });
+      if (
+        !metadata.isDirectory() ||
+        metadata.dev !== targetDirectory.device ||
+        metadata.ino !== targetDirectory.inode
+      ) {
+        throw conflict("Configuration parent directory changed during update; no changes made.");
+      }
+      await handle.chmod(mode);
+    } finally {
+      await handle.close();
+    }
+    await verifyDirectories(effectiveDirectories);
+    state.directories = effectiveDirectories;
+    state.missingDirectories = [];
+  } catch (error) {
+    await removeCreatedDirectories(createdDirectories).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function revalidateConfigTargetPlan(

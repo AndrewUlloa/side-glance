@@ -29,6 +29,7 @@ test("the launch page follows the vertical Figma showcase while keeping the term
     ["waiting", "Waiting"],
     ["ready-short", "Ready · short"],
     ["ready-long", "Ready · long"],
+    ["failed", "Failed"],
   ]) {
     assert.match(showcase, new RegExp(`id: "${id}"`, "u"));
     assert.match(showcase, new RegExp(`label: "${label}"`, "u"));

@@ -18,6 +18,7 @@ import { type PlaygroundPhase, visualForPhase } from "./playground-model";
  * 2500ms   terminal settles; long-loop Ready ring fills 0 → 1
  * 6500ms   ring completes; next terminal state activates
  * 4000ms   each following ring fills before advancing again
+ * manual   a pointer or keyboard choice pauses playback on that state
  * ───────────────────────────────────────────────────────── */
 
 const MILLISECONDS_PER_SECOND = 1000;
@@ -86,10 +87,19 @@ const LIFECYCLE_STATES: ReadonlyArray<{
     scenario: "ready-long",
     terminalId: "tmux_04",
   },
+  {
+    id: "failed",
+    label: "Failed",
+    phase: "failed",
+    elapsedSeconds: 372,
+    scenario: "failed",
+    terminalId: "tmux_05",
+  },
 ];
 
 export function TerminalShowcase() {
   const [stage, setStage] = useState<number>(STORYBOARD_STAGE.waiting);
+  const [isPlaybackPaused, setPlaybackPaused] = useState(false);
   const shouldReduceMotion = useReducedMotion();
   const activeStateIndex =
     stage === STORYBOARD_STAGE.waiting
@@ -98,10 +108,12 @@ export function TerminalShowcase() {
   const activeState = LIFECYCLE_STATES[activeStateIndex];
   const phase = activeState.phase;
   const isPlaybackRunning =
-    stage !== STORYBOARD_STAGE.waiting && !shouldReduceMotion;
+    stage !== STORYBOARD_STAGE.waiting &&
+    !isPlaybackPaused &&
+    !shouldReduceMotion;
 
   useEffect(() => {
-    if (shouldReduceMotion) {
+    if (shouldReduceMotion || isPlaybackPaused) {
       return;
     }
 
@@ -129,10 +141,14 @@ export function TerminalShowcase() {
       }
       window.removeEventListener(PAGE_REVEAL_EVENT, startPlayback);
     };
-  }, [shouldReduceMotion]);
+  }, [isPlaybackPaused, shouldReduceMotion]);
 
   useEffect(() => {
-    if (stage === STORYBOARD_STAGE.waiting || shouldReduceMotion) {
+    if (
+      stage === STORYBOARD_STAGE.waiting ||
+      isPlaybackPaused ||
+      shouldReduceMotion
+    ) {
       return;
     }
 
@@ -142,23 +158,11 @@ export function TerminalShowcase() {
     );
 
     return () => clearTimeout(advanceTimer);
-  }, [shouldReduceMotion, stage]);
+  }, [isPlaybackPaused, shouldReduceMotion, stage]);
 
   const selectState = (index: number) => {
-    setStage((currentStage) => {
-      if (currentStage === STORYBOARD_STAGE.waiting) {
-        return index;
-      }
-
-      const cycleStart =
-        Math.floor(currentStage / LIFECYCLE_STATES.length) *
-        LIFECYCLE_STATES.length;
-      const selectedStage = cycleStart + index;
-
-      return selectedStage <= currentStage
-        ? selectedStage + LIFECYCLE_STATES.length
-        : selectedStage;
-    });
+    setPlaybackPaused(true);
+    setStage(index);
   };
 
   return (
@@ -207,7 +211,15 @@ export function TerminalShowcase() {
           })}
         </ul>
 
-        <span aria-live="polite" className="sr-only">
+        <p className="minimal-lifecycle-explanation">
+          Status keeps Ready green and failures red. Optional Heat adapts to
+          recent local turn durations.
+        </p>
+
+        <span
+          aria-live={isPlaybackRunning ? "off" : "polite"}
+          className="sr-only"
+        >
           Showing the {activeState.label} terminal moment.
         </span>
       </figcaption>

@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -73,11 +80,12 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   });
   const report = JSON.parse(doctor.stdout);
   assert.equal(report.node.supported, true);
-  assert.equal(report.stateDirectory, stateDirectory);
+  assert.equal(report.stateDirectory, path.join(await realpath(temporary), "state"));
   const installedHome = path.join(temporary, "installed-home");
   await mkdir(installedHome, { recursive: true });
   const runtimeEnvironment = {
     SIDE_GLANCE_STATE_DIR: stateDirectory,
+    SIDE_GLANCE_CONFIG_DIR: path.join(temporary, "theme-config"),
     SIDE_GLANCE_NOTIFICATION_BACKEND: "none",
     PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
   };
@@ -166,6 +174,37 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   );
   assert.match(help.stdout, /side-glance init/u);
   assert.match(help.stdout, /side-glance setup/u);
+  assert.match(help.stdout, /side-glance theme/u);
+  const themeSet = await command(
+    executable,
+    ["theme", "set", "heat", "--ceiling", "adaptive", "--yes", "--json"],
+    { cwd: temporary, env: runtimeEnvironment },
+  );
+  assert.deepEqual(JSON.parse(themeSet.stdout).config.appearance, {
+    preset: "heat",
+    ceiling: { mode: "adaptive" },
+  });
+  const themeShow = await command(executable, ["theme", "show", "--json"], {
+    cwd: temporary,
+    env: runtimeEnvironment,
+  });
+  assert.equal(JSON.parse(themeShow.stdout).config.appearance.preset, "heat");
+  const themePreview = await command(
+    executable,
+    [
+      "theme",
+      "preview",
+      "--preset",
+      "heat",
+      "--elapsed",
+      "360",
+      "--ceiling",
+      "360",
+      "--json",
+    ],
+    { cwd: temporary, env: runtimeEnvironment },
+  );
+  assert.equal(JSON.parse(themePreview.stdout).visual.accent, "f33533");
 
   const setupHome = path.join(temporary, "guided-setup-home");
   await mkdir(setupHome, { recursive: true });
@@ -201,7 +240,8 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     ],
   });
   assert.match(arrowSetup.output, /↑\/↓ move/u);
-  assert.match(arrowSetup.output, /Setup complete/u);
+  assert.match(arrowSetup.output, /Side Glance is ready/u);
+  assert.match(arrowSetup.output, /Next[\s\S]*side-glance run --label "Claude" -- claude/u);
   assert.match(
     await readFile(path.join(arrowHome, ".claude", "settings.json"), "utf8"),
     new RegExp(escapeRegularExpression(executable), "u"),
@@ -233,7 +273,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     ],
   });
   assert.equal(staticSetup.output.includes(String.fromCodePoint(27)), false);
-  assert.match(staticSetup.output, /Setup complete/u);
+  assert.match(staticSetup.output, /Side Glance is ready/u);
   const setupPreview = await command(
     executable,
     [
@@ -321,6 +361,51 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     },
   );
   assert.equal(npxVersion.stdout.trim(), packageVersion);
+  const existingDurableHome = path.join(temporary, "npx-existing-durable-home");
+  await mkdir(existingDurableHome, { recursive: true });
+  const existingDurable = await runInteractivePty({
+    executable: npmExecutable,
+    arguments: [
+      "exec",
+      "--yes",
+      "--offline",
+      "--package",
+      archive,
+      "--",
+      "side-glance",
+      "init",
+      "--home",
+      existingDurableHome,
+    ],
+    cwd: temporary,
+    environment: {
+      ...npmEnvironment,
+      NO_COLOR: undefined,
+      SIDE_GLANCE_ACCESSIBLE: undefined,
+      SIDE_GLANCE_NOTIFICATION_BACKEND: "none",
+      TERM: "xterm-256color",
+      PATH: [
+        path.dirname(executable),
+        providerBin,
+        path.dirname(process.execPath),
+        "/usr/bin",
+        "/bin",
+      ].join(path.delimiter),
+    },
+    interactions: [
+      { prompt: "How would you like to continue?", answer: "\r" },
+      { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
+    ],
+  });
+  assert.match(existingDurable.output, /Side Glance is ready/u);
+  assert.doesNotMatch(existingDurable.output, /Durable bootstrap complete/u);
+  assert.match(
+    await readFile(
+      path.join(existingDurableHome, ".claude", "settings.json"),
+      "utf8",
+    ),
+    new RegExp(escapeRegularExpression(executable), "u"),
+  );
   const npxInteractiveHome = path.join(temporary, "npx-interactive-home");
   await mkdir(npxInteractiveHome, { recursive: true });
   const npxInteractive = await runInteractivePty({

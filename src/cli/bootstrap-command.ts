@@ -292,6 +292,7 @@ async function executeAndRender(
     else if (result.kind === "bootstrap-plan") {
       options.writeStdout("Bootstrap preview complete. No package or provider configuration was changed.\n");
     } else if (result.kind === "bootstrap-result" && !request.dryRun) {
+      if (options.interactive && result.installMethod === "existing") return 0;
       if (result.setupApplied === "unknown") {
         options.writeStdout(
           `Durable bootstrap complete. Package installed: ${result.packageInstalled ? "yes" : "no"}; the setup outcome is reported by the durable command above.\n`,
@@ -514,12 +515,60 @@ function renderBootstrapError(
   if (error instanceof BootstrapError) {
     if (json) options.writeStdout(`${JSON.stringify(error.projection)}\n`);
     else {
-      options.writeStderr(`side-glance: ${error.message}\n`);
+      const delegatedFailure = isDelegatedSetupFailure(error);
+      options.writeStderr(
+        `side-glance: ${delegatedFailure ? delegatedFailureMessage(error.projection.child) : error.message}\n`,
+      );
       renderHumanCleanup(error, options);
+      if (delegatedFailure) renderDelegatedRecovery(options);
     }
     return error.code === "interrupted" ? 130 : 1;
   }
   return writeBootstrapFailure(options, json, "bootstrap-failed");
+}
+
+function isDelegatedSetupFailure(error: BootstrapError): boolean {
+  return (
+    error.code === "delegated-setup-failed" ||
+    (error.code === "interrupted" &&
+      (error.projection.installMethod === "existing" ||
+        error.projection.packageInstalled))
+  );
+}
+
+function delegatedFailureMessage(
+  child: BootstrapError["projection"]["child"],
+): string {
+  if (
+    child?.aborted ||
+    child?.exitCode === 130 ||
+    child?.signal === "SIGINT"
+  ) {
+    return "Side Glance setup was interrupted.";
+  }
+  if (child?.timedOut) return "Side Glance setup timed out.";
+  if (child?.outputExceeded) {
+    return "Side Glance setup produced more output than could be handled safely.";
+  }
+  if (child?.signal) {
+    const signal = /^[A-Z0-9]+$/u.test(child.signal)
+      ? ` ${child.signal}`
+      : "";
+    return `Side Glance setup stopped after signal${signal}.`;
+  }
+  if (
+    typeof child?.exitCode === "number" &&
+    Number.isSafeInteger(child.exitCode)
+  ) {
+    return `Side Glance setup exited with code ${child.exitCode}.`;
+  }
+  return "Side Glance setup did not finish.";
+}
+
+function renderDelegatedRecovery(options: BootstrapInitOptions): void {
+  options.writeStderr(
+    "Try again:\n  side-glance init\nFor details:\n  side-glance doctor --json\n",
+  );
 }
 
 function renderHumanCleanup(

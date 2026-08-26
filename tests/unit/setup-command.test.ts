@@ -136,6 +136,11 @@ test("interactive init offers recommended settings first and applies planner def
             id,
             configPath: `${homeDirectory}/.${id}/settings.json`,
             changed: true,
+            ...(id === "claude"
+              ? {
+                  backupPath: `${homeDirectory}/.claude/settings.json.side-glance-backup-1`,
+                }
+              : {}),
           })),
         };
       });
@@ -159,22 +164,87 @@ test("interactive init offers recommended settings first and applies planner def
   const firstDecision = prompter.calls[0];
   assert.equal(firstDecision?.kind, "select");
   assert.equal(firstDecision?.choices?.[0]?.id, "recommended");
+  assert.equal(
+    firstDecision?.choices?.[0]?.label,
+    "Recommended — Claude, Codex, and Gemini · notifications for Claude",
+  );
   const beforeFirstDecision = prompter.rendered.slice(0, 5).join("\n");
   assert.doesNotMatch(beforeFirstDecision, /contract-audited|integration unknown/u);
-  assert.doesNotMatch(
-    prompter.rendered.join("\n"),
-    /contract-audited|pre-final-silent/u,
-  );
-  assert.match(prompter.rendered.join("\n"), /Claude.*create.*settings\.json/u);
-  assert.match(prompter.rendered.join("\n"), /Claude.*attention.*failure/u);
+  const rendered = prompter.rendered.join("\n");
+  assert.match(rendered, /Claude CLI found/u);
+  assert.match(rendered, /Codex CLI found/u);
+  assert.match(rendered, /Gemini CLI found/u);
+  assert.match(rendered, /OpenCode skipped[\s\S]*Terminal's PATH/u);
+  assert.doesNotMatch(rendered, /providers? (?:is|are) unavailable/u);
+  assert.doesNotMatch(rendered, /contract-audited|pre-final-silent/u);
+  assert.match(rendered, /Review/u);
+  assert.match(rendered, /Providers: Claude, Codex, and Gemini/u);
+  assert.match(rendered, /Computer notifications: Claude · Glass/u);
   assert.match(
-    prompter.rendered.join("\n"),
-    /launch.*side-glance run --label "Claude" -- claude/u,
+    rendered,
+    /Colors: Status.*Working cyan.*Ready green.*Waiting amber.*Failed red/u,
   );
-  assert.match(prompter.rendered.join("\n"), /warning.*duplicate alerts/u);
+  assert.match(rendered, /Configuration:/u);
+  assert.match(rendered, /Claude: ~\/\.claude\/settings\.json/u);
+  assert.doesNotMatch(rendered, /attention.*failure|launch:/u);
+  assert.doesNotMatch(rendered, /write this configuration|roll back/iu);
+  assert.match(prompter.rendered.join("\n"), /warning.*duplicate alerts/iu);
+  assert.equal(
+    rendered
+      .split("\n")
+      .filter((line) => line.includes("Warning:"))
+      .every((line) => [...line].length <= 80),
+    true,
+  );
   assert.equal(prompter.calls.at(-1)?.success, true);
-  assert.match(stdout, /delivery and sound were not live-tested/iu);
-  assert.match(stdout, /Claude.*attention.*failure/u);
+  assert.equal(prompter.calls.at(-1)?.message, "Configuration saved.");
+  assert.match(stdout, /Side Glance is ready/u);
+  assert.match(stdout, /Claude configured/u);
+  assert.match(stdout, /Computer notifications enabled · Glass/u);
+  assert.match(stdout, /delivery not tested/iu);
+  assert.match(stdout, /Change anytime: side-glance theme/u);
+  assert.match(stdout, /Next\s+side-glance run --label "Claude" -- claude/u);
+  assert.match(
+    stdout,
+    /Backup saved to:\s+~\/\.claude\/settings\.json\.side-glance-backup-1/u,
+  );
+  assert.doesNotMatch(stdout, new RegExp(homeDirectory, "u"));
+  assert.equal(stdout.match(/Side Glance is ready/gu)?.length, 1);
+  assert.doesNotMatch(stdout, /Setup complete|Durable executable/u);
+  assert.doesNotMatch(stdout, /attention.*failure|Manual and wrapper guidance/iu);
+});
+
+test("interactive setup reports an existing Heat theme as unchanged", async () => {
+  let stdout = "";
+  const prompter = scriptedPrompter([
+    { status: "value", value: "recommended" },
+    { status: "value", value: true },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    appearance: {
+      configPath: "/Users/example/.config/side-glance/config.json",
+      exists: true,
+      valid: true,
+      config: {
+        schemaVersion: 1,
+        appearance: { preset: "heat", ceiling: { mode: "adaptive" } },
+      },
+    },
+    discover: async () => discovery(),
+    prompter,
+    writeStdout: (value) => {
+      stdout += value;
+    },
+    writeStderr: () => assert.fail("setup must not fail"),
+  });
+
+  assert.equal(code, 0);
+  assert.match(prompter.rendered.join("\n"), /Colors: Heat \(unchanged\)/u);
+  assert.match(stdout, /Colors: Heat \(unchanged\)/u);
+  assert.doesNotMatch(stdout, /Colors: Status/u);
 });
 
 test("interactive progress starts after approval and never reports success on failure", async () => {
@@ -341,8 +411,12 @@ test("interactive setup previews the final choices and applies only after confir
   assert.equal(requests[1]?.notificationSound, "Ping");
   assert.equal(applied.length, 1);
   assert.deepEqual(applied[0]?.selectedProviders, ["claude", "codex"]);
-  assert.match(prompter.rendered.join("\n"), /Claude.*create/u);
-  assert.match(stdout, /Setup complete/u);
+  assert.match(prompter.rendered.join("\n"), /Providers: Claude and Codex/u);
+  assert.match(
+    prompter.rendered.join("\n"),
+    /Claude: ~\/\.claude\/settings\.json/u,
+  );
+  assert.match(stdout, /Side Glance is ready/u);
   assert.equal(prompter.closed, true);
 });
 
@@ -510,8 +584,15 @@ test("no eligible providers exits read-only with usable guidance", async () => {
   });
 
   assert.equal(code, 0);
-  assert.match(prompter.rendered.join("\n"), /Claude: unavailable/u);
-  assert.match(prompter.rendered.join("\n"), /provider command was not found/u);
+  assert.match(
+    prompter.rendered.join("\n"),
+    /Claude, Codex, Gemini, and OpenCode skipped[\s\S]*Terminal's PATH/u,
+  );
+  assert.match(
+    prompter.rendered.join("\n"),
+    /No provider CLI commands were found/u,
+  );
+  assert.doesNotMatch(prompter.rendered.join("\n"), /unavailable/u);
   assert.match(
     prompter.rendered.join("\n"),
     /AIDER_NOTIFICATIONS_COMMAND=.*side-glance run --label "Aider" -- aider/u,
@@ -520,6 +601,48 @@ test("no eligible providers exits read-only with usable guidance", async () => {
     prompter.rendered.join("\n"),
     /side-glance run --notify-on-exit -- <command>/u,
   );
+  assert.equal(prompter.calls.length, 0);
+});
+
+test("a blocked provider is not described as a missing CLI command", async () => {
+  const dependencies = setupDependencies();
+  const prompter = scriptedPrompter([]);
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () => ({
+      ...discovery(),
+      dependencies: {
+        ...dependencies,
+        providers: dependencies.providers.map((provider) =>
+          provider.provider === "claude"
+            ? {
+                provider: provider.provider,
+                state: "blocked" as const,
+                integrationStatus: provider.integrationStatus,
+                reason: "unsafe-config-target" as const,
+                nativeNotifications: provider.nativeNotifications,
+              }
+            : {
+                provider: provider.provider,
+                state: "unavailable" as const,
+                integrationStatus: provider.integrationStatus,
+                reason: "binary-not-found" as const,
+                nativeNotifications: provider.nativeNotifications,
+              },
+        ),
+      },
+    }),
+    prompter,
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  });
+
+  const rendered = prompter.rendered.join("\n");
+  assert.equal(code, 0);
+  assert.match(rendered, /Claude skipped.*safety checks/iu);
+  assert.match(rendered, /No provider integrations can be configured safely/iu);
+  assert.doesNotMatch(rendered, /No provider CLI commands were found/u);
   assert.equal(prompter.calls.length, 0);
 });
 

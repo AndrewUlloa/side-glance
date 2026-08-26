@@ -1,10 +1,13 @@
 import {
+  SIDE_GLANCE_ACTIVE_WORK_LIMIT,
   SIDE_GLANCE_PROTOCOL_VERSION,
   type SideGlanceConfidence,
   type SideGlanceEvent,
   type SideGlanceEventKind,
   type SideGlanceSource,
   type SideGlanceTarget,
+  type SideGlanceWorkKind,
+  type SideGlanceWorkRef,
 } from "./protocol.ts";
 
 const SOURCES = new Set<SideGlanceSource>([
@@ -23,7 +26,14 @@ const EVENT_KINDS = new Set<SideGlanceEventKind>([
   "turn.completed",
   "turn.failed",
   "turn.cancelled",
+  "work.started",
+  "work.finished",
   "session.ended",
+]);
+const WORK_KINDS = new Set<SideGlanceWorkKind>([
+  "subagent",
+  "background-task",
+  "session-cron",
 ]);
 const CONFIDENCES = new Set<SideGlanceConfidence>([
   "native",
@@ -44,8 +54,11 @@ const EVENT_FIELDS = new Set([
   "reason",
   "confidence",
   "target",
+  "work",
+  "activeWork",
 ]);
 const TARGET_FIELDS = new Set(["surfaceId", "tty", "tmuxPane"]);
+const WORK_FIELDS = new Set(["id", "kind"]);
 
 export function parseSideGlanceEvent(value: unknown): SideGlanceEvent {
   const event = requireRecord(value, "Side Glance event");
@@ -94,6 +107,25 @@ export function parseSideGlanceEvent(value: unknown): SideGlanceEvent {
   if (event.target !== undefined) {
     parsed.target = parseTarget(event.target);
   }
+  if (event.work !== undefined) {
+    parsed.work = parseWork(event.work, "work");
+  }
+  if (event.activeWork !== undefined) {
+    if (!Array.isArray(event.activeWork)) {
+      throw new Error("Side Glance event activeWork must be an array.");
+    }
+    if (event.activeWork.length > SIDE_GLANCE_ACTIVE_WORK_LIMIT) {
+      throw new Error(
+        `Side Glance event activeWork exceeds ${SIDE_GLANCE_ACTIVE_WORK_LIMIT} items.`,
+      );
+    }
+    parsed.activeWork = event.activeWork.map((work, index) =>
+      parseWork(work, `activeWork[${index}]`),
+    );
+  }
+  if (["work.started", "work.finished"].includes(kind) && !parsed.work) {
+    throw new Error(`Side Glance event ${kind} requires work.`);
+  }
 
   return parsed;
 }
@@ -105,14 +137,28 @@ export function parseSideGlanceSource(value: string): SideGlanceSource {
 function parseTarget(value: unknown): SideGlanceTarget {
   const target = requireRecord(value, "Side Glance target");
   rejectUnknownFields(target, TARGET_FIELDS, "Side Glance target");
+  const tmuxPane =
+    target.tmuxPane === undefined
+      ? undefined
+      : requireText(target.tmuxPane, "target.tmuxPane", 64);
+  if (tmuxPane !== undefined && !/^%\d+$/u.test(tmuxPane)) {
+    throw new Error("target.tmuxPane must use the canonical %number form.");
+  }
   return {
     surfaceId: requireText(target.surfaceId, "target.surfaceId", 512),
     ...(target.tty !== undefined
       ? { tty: requireText(target.tty, "target.tty", 1_024) }
       : {}),
-    ...(target.tmuxPane !== undefined
-      ? { tmuxPane: requireText(target.tmuxPane, "target.tmuxPane", 64) }
-      : {}),
+    ...(tmuxPane !== undefined ? { tmuxPane } : {}),
+  };
+}
+
+function parseWork(value: unknown, label: string): SideGlanceWorkRef {
+  const work = requireRecord(value, `Side Glance event ${label}`);
+  rejectUnknownFields(work, WORK_FIELDS, `Side Glance event ${label}`);
+  return {
+    id: requireText(work.id, `${label}.id`, 160),
+    kind: requireEnum(work.kind, WORK_KINDS, `${label}.kind`),
   };
 }
 

@@ -62,8 +62,9 @@ test(
 
     assert.equal(result.code, 0, result.output);
     assert.match(result.output, /How would you like to continue/u);
-    assert.match(result.output, /Review setup/u);
-    assert.match(result.output, /Setup complete/u);
+    assert.match(result.output, /Review/u);
+    assert.match(result.output, /Side Glance is ready/u);
+    assert.match(result.output, /Next[\s\S]*side-glance run --label "Claude" -- claude/u);
     assert.equal(result.output.includes(String.fromCodePoint(27)), false);
     const settings = JSON.parse(
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
@@ -131,13 +132,312 @@ exit $status
     assert.equal(result.code, 0, result.output);
     assert.match(result.output, /↑\/↓ move/u);
     assert.match(result.output, /Space toggle/u);
-    assert.match(result.output, /Computer notifications: off/u);
-    assert.match(result.output, /Setup complete/u);
+    assert.match(result.output, /Computer notifications: Off/u);
+    assert.match(result.output, /Side Glance is ready/u);
     assert.equal(result.output.includes(String.fromCodePoint(27)), true);
     const settings = JSON.parse(
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
     );
     assert.ok(JSON.stringify(settings).includes(executable));
+  },
+);
+
+test(
+  "theme setup supports arrow-key Heat selection through a real PTY",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-theme-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const stateDirectory = path.join(home, "state");
+    const configDirectory = path.join(home, "config");
+
+    const result = await runInteractivePty({
+      executable: process.execPath,
+      arguments: [cliPath, "theme"],
+      cwd: home,
+      environment: {
+        HOME: home,
+        NO_COLOR: undefined,
+        SIDE_GLANCE_ACCESSIBLE: undefined,
+        SIDE_GLANCE_STATE_DIR: stateDirectory,
+        SIDE_GLANCE_CONFIG_DIR: configDirectory,
+        TERM: "xterm-256color",
+      },
+      interactions: [
+        {
+          prompt: "What should colors communicate?",
+          answer: "\u001b[B\r",
+        },
+        {
+          prompt: "How should Heat set its ceiling?",
+          answer: "\r",
+        },
+        { prompt: "Apply these colors? [Y/n] ", answer: "y\n" },
+      ],
+    });
+
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /↑\/↓ move/u);
+    assert.match(result.output, /under 10s.*visually quiet/iu);
+    assert.match(result.output, /Colors updated/u);
+    const config = JSON.parse(
+      await readFile(path.join(configDirectory, "config.json"), "utf8"),
+    );
+    assert.deepEqual(config.appearance, {
+      preset: "heat",
+      ceiling: { mode: "adaptive" },
+    });
+  },
+);
+
+test(
+  "theme setup reviews every semantic Status color through a real PTY",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-theme-status-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const configDirectory = path.join(home, "config");
+
+    const result = await runInteractivePty({
+      executable: process.execPath,
+      arguments: [cliPath, "theme"],
+      cwd: home,
+      environment: {
+        HOME: home,
+        NO_COLOR: undefined,
+        SIDE_GLANCE_ACCESSIBLE: undefined,
+        SIDE_GLANCE_STATE_DIR: path.join(home, "state"),
+        SIDE_GLANCE_CONFIG_DIR: configDirectory,
+        TERM: "xterm-256color",
+      },
+      interactions: [
+        { prompt: "What should colors communicate?", answer: "\r" },
+        { prompt: "Apply these colors? [Y/n] ", answer: "y\n" },
+      ],
+    });
+
+    assert.equal(result.code, 0, result.output);
+    assert.match(
+      result.output,
+      /Colors: Status[\s\S]*Working cyan · Waiting amber · Ready green · Failed red · Inactive neutral/u,
+    );
+  },
+);
+
+test(
+  "theme setup explains and retries an invalid fixed Heat ceiling",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-theme-retry-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const configDirectory = path.join(home, "config");
+
+    const result = await runInteractivePty({
+      executable: process.execPath,
+      arguments: [cliPath, "theme"],
+      cwd: home,
+      environment: {
+        HOME: home,
+        NO_COLOR: undefined,
+        SIDE_GLANCE_STATE_DIR: path.join(home, "state"),
+        SIDE_GLANCE_CONFIG_DIR: configDirectory,
+        TERM: "xterm-256color",
+      },
+      interactions: [
+        {
+          prompt: "What should colors communicate?",
+          answer: "\u001b[B\r",
+        },
+        {
+          prompt: "How should Heat set its ceiling?",
+          answer: "\u001b[B\r",
+        },
+        { prompt: "Fixed ceiling in seconds [300] ", answer: "nope\n" },
+        { prompt: "Fixed ceiling in seconds [300] ", answer: "120\n" },
+        { prompt: "Apply these colors? [Y/n] ", answer: "y\n" },
+      ],
+    });
+
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /integer from 60 to 7200 seconds/u);
+    const config = JSON.parse(
+      await readFile(path.join(configDirectory, "config.json"), "utf8"),
+    );
+    assert.deepEqual(config.appearance, {
+      preset: "heat",
+      ceiling: { mode: "fixed", seconds: 120 },
+    });
+  },
+);
+
+test(
+  "theme setup preserves the current Heat choice by default",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-theme-current-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const configDirectory = path.join(home, "config");
+    await mkdir(configDirectory, { recursive: true });
+    await writeFile(
+      path.join(configDirectory, "config.json"),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        appearance: { preset: "heat", ceiling: { mode: "adaptive" } },
+      })}\n`,
+    );
+
+    const result = await runInteractivePty({
+      executable: process.execPath,
+      arguments: [cliPath, "theme"],
+      cwd: home,
+      environment: {
+        HOME: home,
+        NO_COLOR: undefined,
+        SIDE_GLANCE_STATE_DIR: path.join(home, "state"),
+        SIDE_GLANCE_CONFIG_DIR: configDirectory,
+        TERM: "xterm-256color",
+      },
+      interactions: [
+        { prompt: "What should colors communicate?", answer: "\r" },
+        { prompt: "How should Heat set its ceiling?", answer: "\r" },
+        { prompt: "Apply these colors? [Y/n] ", answer: "y\n" },
+      ],
+    });
+
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /Heat.*current/u);
+    const config = JSON.parse(
+      await readFile(path.join(configDirectory, "config.json"), "utf8"),
+    );
+    assert.deepEqual(config.appearance, {
+      preset: "heat",
+      ceiling: { mode: "adaptive" },
+    });
+  },
+);
+
+test(
+  "theme setup saves and reviews exact Custom pairs through a real PTY",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-theme-custom-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const configDirectory = path.join(home, "config");
+    const result = await runInteractivePty({
+      executable: process.execPath,
+      arguments: [cliPath, "theme"],
+      cwd: home,
+      environment: {
+        HOME: home,
+        NO_COLOR: undefined,
+        SIDE_GLANCE_ACCESSIBLE: undefined,
+        SIDE_GLANCE_STATE_DIR: path.join(home, "state"),
+        SIDE_GLANCE_CONFIG_DIR: configDirectory,
+        TERM: "xterm-256color",
+      },
+      interactions: [
+        {
+          prompt: "What should colors communicate?",
+          answer: "\u001b[B\u001b[B\r",
+        },
+        { prompt: "Inactive wash:accent [101313:71807d] ", answer: "\n" },
+        { prompt: "Working wash:accent [16352f:009d89] ", answer: "\n" },
+        { prompt: "Waiting wash:accent [4d3510:f0a726] ", answer: "\n" },
+        { prompt: "Ready wash:accent [173326:3fa84e] ", answer: "\n" },
+        { prompt: "Failed wash:accent [732018:f33533] ", answer: "\n" },
+        { prompt: "Apply these colors? [Y/n] ", answer: "y\n" },
+      ],
+    });
+
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /Colors: Custom[\s\S]*Ready: 173326:3fa84e/u);
+    assert.match(result.output, /next lifecycle event/u);
+    const config = JSON.parse(
+      await readFile(path.join(configDirectory, "config.json"), "utf8"),
+    );
+    assert.equal(config.appearance.preset, "custom");
+    assert.deepEqual(config.appearance.colors.ready, {
+      wash: "173326",
+      accent: "3fa84e",
+    });
+  },
+);
+
+test(
+  "theme setup exits without writing and keeps the current configuration",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-theme-exit-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const configDirectory = path.join(home, "config");
+    await mkdir(configDirectory, { recursive: true });
+    const configPath = path.join(configDirectory, "config.json");
+    const original = `${JSON.stringify({
+      schemaVersion: 1,
+      appearance: { preset: "heat", ceiling: { mode: "fixed", seconds: 600 } },
+    })}\n`;
+    await writeFile(configPath, original);
+
+    const result = await runInteractivePty({
+      executable: process.execPath,
+      arguments: [cliPath, "theme"],
+      cwd: home,
+      environment: {
+        HOME: home,
+        NO_COLOR: undefined,
+        SIDE_GLANCE_ACCESSIBLE: undefined,
+        SIDE_GLANCE_STATE_DIR: path.join(home, "state"),
+        SIDE_GLANCE_CONFIG_DIR: configDirectory,
+        TERM: "xterm-256color",
+      },
+      interactions: [
+        {
+          prompt: "What should colors communicate?",
+          answer: "\u001b[B\u001b[B\r",
+        },
+      ],
+    });
+
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /No color changes were made/u);
+    assert.equal(await readFile(configPath, "utf8"), original);
+  },
+);
+
+test(
+  "theme setup keeps accessible terminals static and ANSI-free",
+  { skip: process.platform === "win32" },
+  async (context) => {
+    const home = await mkdtemp(path.join(tmpdir(), "side-glance-theme-accessible-pty-"));
+    context.after(() => rm(home, { recursive: true, force: true }));
+    const configDirectory = path.join(home, "config");
+    const result = await runInteractivePty({
+      executable: process.execPath,
+      arguments: [cliPath, "theme"],
+      cwd: home,
+      environment: {
+        HOME: home,
+        SIDE_GLANCE_ACCESSIBLE: "1",
+        SIDE_GLANCE_STATE_DIR: path.join(home, "state"),
+        SIDE_GLANCE_CONFIG_DIR: configDirectory,
+        TERM: "xterm-256color",
+      },
+      interactions: [
+        {
+          prompt: "Choose comma-separated numbers or names [default]: ",
+          answer: "4\n",
+        },
+      ],
+    });
+
+    assert.equal(result.code, 0, result.output);
+    assert.equal(result.output.includes(String.fromCodePoint(27)), false);
+    assert.match(result.output, /4\. \[ \] Exit without changing colors/u);
+    assert.match(result.output, /No color changes were made/u);
+    await assert.rejects(
+      () => readFile(path.join(configDirectory, "config.json"), "utf8"),
+      /ENOENT/u,
+    );
   },
 );
 

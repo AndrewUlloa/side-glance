@@ -581,19 +581,23 @@ these requirements.
 - Completed heat represents the duration of the completed turn, not the time that the
   terminal has been sitting ready. The controller converts epoch-millisecond timestamp
   differences to seconds exactly once.
-- Turns below 10 seconds remain visually suppressed, 60 seconds maps to urgency 500,
-  and the default maximum maps to 300 seconds.
-- A per-session reply-latency EWMA with alpha `0.4` is retained in typed JSON. Reply
-  latency is measured from completion to the next accepted acknowledgement or turn
-  start. The adaptive factor moves maximum-red duration from 300 seconds for an EWMA of
-  60 seconds or more to 450 seconds for an EWMA of 15 seconds or less.
-- Missing history safely uses the conservative 120-second default. Optional EWMA fields
-  remain compatible with schema version 1 and corrupted/non-finite values are rejected
-  or normalized at the persistence boundary.
+- In optional Heat, turns below 10 seconds remain visually suppressed, 60 seconds maps
+  to urgency 500, and the default maximum maps to 300 seconds. Status and Custom show
+  quick Ready immediately because their colors communicate lifecycle state, not heat.
+- The default Status theme gives lifecycle hues stable meaning: Working is cyan,
+  Waiting is amber, Ready is green, Failed is red, and Inactive is neutral. Ready
+  never becomes failure-red because a successful turn ran longer.
+- Optional Heat preserves the completion ramp and learns separately by provider
+  from the newest 12 eligible completed-turn durations. It stays at a 300-second
+  cold ceiling through seven samples, then moves a bounded, rate-limited p80 with
+  headroom between 60 and 7,200 seconds. The completed turn renders against the
+  ceiling learned before its duration trains the profile.
+- Legacy reply-latency EWMA remains readable during schema-1 to schema-2 migration
+  but no longer changes completion heat. Corrupted or non-finite history is
+  rejected at the persistence boundary.
 - `preview`, the controller, tmux, terminal output, website models, and documentation use
-  one phase-to-visual mapping. Working is teal, waiting is amber, completed uses the
-  adaptive thermal ramp, failed is maximum red, and inactive restores Side Glance-owned
-  state.
+  one phase-to-visual mapping. Status is the default; Heat and bounded Custom
+  semantic pairs are explicit user choices through `side-glance theme`.
 - Completed and failed are distinguishable without color. tmux uses different bounded
   markers, and any opt-in terminal-title fallback includes a sanitized phase marker.
 - User-facing elapsed copy says `Turn ran` or `Turn duration`; it never implies a
@@ -663,10 +667,13 @@ these requirements.
 
 ### Required proofs
 
-- Epoch-millisecond turns at 5, 60, and 300 seconds produce suppressed, urgency 500, and
-  urgency 1000 results; repeated response samples update the EWMA toward the 300–450
-  second adaptive maximum.
-- Every preview phase exactly matches controller and site visuals.
+- In Heat, epoch-millisecond turns at 5, 60, and 300 seconds produce suppressed,
+  urgency 500, and urgency 1000 cold-start results. Eight 400-second completed
+  turns move the next provider-local ceiling from 300 to 360 seconds, while one
+  high outlier cannot raise a mostly-short profile.
+- Every preview phase exactly matches controller and site visuals. Adaptive Heat
+  preview with `--source` reads that provider's persisted ceiling; without a source,
+  JSON labels the 300-second ceiling as a cold-start hypothetical.
 - Two panes in one tmux window share one lease boundary; releasing either cannot clear or
   resurrect the other. A session migration resets the old surface.
 - A blocked/retried completion does not notify Ready early; an eight-second Claude

@@ -32,11 +32,19 @@ Use `npx side-glance@latest init` only after the stable package owns npm's
 `latest` tag. The beta npx flow performs discovery and can ask to bootstrap an
 exact-version durable install. Side Glance deliberately refuses permanent provider installation from `npx` because npm's ephemeral cache is not a durable lifecycle-hook location.
 
-`side-glance init` shows a read-only preview of detected providers, owned target
-paths, create/update/unchanged actions, notification choices, warnings, and launch
-commands before it asks for one confirmation. `side-glance setup` is its exact alias
-and is safe to re-run. On an interactive terminal, **Use recommended settings** is
-focused first; choose **Customize** for provider and notification controls.
+`side-glance init` shows a concise read-only review of the selected providers,
+notification choices, warnings, and owned configuration paths before it asks for
+one confirmation, then finishes with the launch command to run next.
+`side-glance setup` is its exact alias and is safe to re-run. On an interactive
+terminal, **Recommended** is focused first; choose **Customize** for provider and
+notification controls.
+
+Side Glance considers a provider available only when its CLI command (`claude`,
+`codex`, `gemini`, or `opencode`) is executable on the `PATH` of the shell running
+setup. “Not found” refers only to that CLI command; the provider account or desktop
+app may still be usable. A desktop app does not count unless it exposes its CLI to
+that shell. Install or expose the command, then rerun `side-glance init`.
+
 Use Up/Down to move, Space to toggle multiple choices, and Enter to continue. Set
 `SIDE_GLANCE_ACCESSIBLE=1` for static numbered prompts; `NO_COLOR`, `TERM=dumb`,
 select that same no-ANSI fallback automatically. Non-TTY input stays
@@ -71,6 +79,49 @@ side-glance run -- your-coding-cli
 side-glance reset --all --json
 ```
 
+## Lifecycle colors
+
+**Status** is the default: Working is cyan, Waiting is amber, Ready is green,
+Failed is red, and Inactive is neutral. Short and long successful turns therefore
+share the same Ready green; red has one semantic meaning. tmux also renders
+distinct `●`, `!`, `✓`, and `×` markers.
+
+Use `side-glance theme` for an Up/Down and Enter selector. Optional **Heat** keeps
+the earlier green-to-amber-to-red successful-completion ramp, while **Custom**
+accepts one validated wash/accent pair per state.
+
+```bash
+side-glance theme show --json
+side-glance theme set status --yes --json
+side-glance theme set heat --ceiling adaptive --yes --json
+side-glance theme set heat --ceiling 300 --yes --json
+side-glance theme reset --yes --json
+```
+
+Existing terminals apply a saved theme on their next lifecycle event.
+
+Adaptive Heat learns separately per provider from the newest 12 eligible
+completed turns from one second to eight hours. It uses a five-minute cold start
+through seven samples, then recalculates the nearest-rank p80 × 1.5 after every
+eligible turn within a one-minute to two-hour ceiling. Each update can rise by at
+most the larger of 20% or 30 seconds, or fall by at most the larger of 10% or 15
+seconds. Heat keeps Ready turns under 10 seconds visually quiet. The current turn
+uses the prior ceiling, and one semantic turn trains at most once. The adaptive
+profile stores only duration metadata, not provider content. `side-glance theme
+show --json` reports the current sample count and learned ceiling for each
+provider. Invalid color configuration falls back to Status and is reported by
+`doctor --json`. `side-glance preview --phase completed --elapsed 300 --source
+claude --json` previews against Claude's learned ceiling and reports its basis;
+omitting `--source` makes adaptive Heat an explicit 300-second cold-start
+hypothetical.
+
+Claude's managed integration also observes bounded subagent identities and
+background-work snapshots. Known subagent work delays Ready, a child stop cannot
+create Ready by itself, and missing registries are never treated as an empty
+aggregate. Resume and compact starts preserve known work. Claude still has no
+post-aggregate hook proving every parallel Stop
+decision committed, so the result remains best-known.
+
 ## Computer notifications and sound
 
 Setup treats provider-native notifications separately from Side Glance alerts.
@@ -104,11 +155,11 @@ side-glance install opencode --notifications --json # stable OpenCode v1 only
 side-glance run --label "API worker" -- claude
 ```
 
-Claude/Codex `Stop` and Gemini `AfterAgent` are pre-final provider hooks. They can
-paint Ready, but Side Glance does not ring a final Ready notification because a
-different hook may still block or retry. Provider-native completion alerts may be
-kept enabled; `run --notify-on-exit` is available when process exit is the desired
-completion boundary.
+Claude/Codex `Stop` and Gemini `AfterAgent` are pre-final provider hooks. Known
+Claude subagent/background work prevents Ready, but Side Glance still does not
+ring a final Ready notification because a different parallel hook may block or
+retry. Provider-native completion alerts may be kept enabled; `run
+--notify-on-exit` is available when process exit is the desired boundary.
 
 OpenCode v1 can install colors without Side Glance alerts. Its piped plugin process
 needs the wrapper's stable surface identity:
