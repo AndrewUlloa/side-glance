@@ -150,7 +150,7 @@ and follow the protected feature/release/promotion/tag sequence.
 
 ### Phase 5: Protected publication
 
-- [ ] **Task 12: Merge feature PR through protected staging**
+- [x] **Task 12: Merge feature PR through protected staging**
   - **Acceptance:** Required CI and Vercel are green for the exact staged SHA;
     all review threads resolved.
   - **Depends on:** Task 11
