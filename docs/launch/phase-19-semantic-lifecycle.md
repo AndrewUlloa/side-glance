@@ -24,7 +24,9 @@ Both changes preserve compatible state and unrelated provider configuration.
    release-only branch from current `staging`: package version, lockfile,
    changelog section/link, launch record, and current-version fixtures.
 3. Release preparation PR #65 merged to protected `staging`; rerun every gate
-   and merge literal `staging` → `main` promotion PR #66.
+   from release-preparation SHA
+   `ffee005ea4986c20c8ce7a0a86a7e9845c6db13e`, then merge literal `staging` →
+   `main` promotion PR #66.
 4. Merge-commit the exact green staging head to protected `main`; verify main CI
    and Vercel production at `https://side-glance.vercel.app` for that SHA.
 5. Create and push one protected annotated version tag at the verified main SHA.
@@ -49,7 +51,7 @@ Both changes preserve compatible state and unrelated provider configuration.
 ## Public verification checklist
 
 - [x] Protected feature PR #64 merged to `staging` with exact-SHA checks green.
-- [ ] Next unused beta preparation merged to `staging` with full gates green.
+- [x] Next unused beta preparation merged to `staging` with full gates green.
 - [ ] Literal `staging` promoted to `main`; production Vercel SHA verified.
 - [ ] Protected annotated tag workflow green.
 - [ ] npm `beta`, integrity, and provenance match the release manifest.
