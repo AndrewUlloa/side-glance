@@ -15,14 +15,28 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { randomUUID } from "node:crypto";
 
+import {
+  captureConfigTarget,
+  captureConfigTargetParents,
+  ConfigTargetConflictError,
+  ensureConfigTargetParentDirectories,
+  revalidateConfigTargetSnapshot,
+  sensitiveConfigTargetSnapshotBytes,
+} from "../adapters/config-target.ts";
+
 import { createSideGlanceState } from "./reducer.ts";
-import type {
-  SideGlanceConfidence,
-  SideGlancePhase,
-  SideGlanceSessionState,
-  SideGlanceSource,
-  SideGlanceState,
-  SideGlanceSurfaceState,
+import {
+  SIDE_GLANCE_ACTIVE_WORK_LIMIT,
+  sessionKey,
+  type SideGlanceConfidence,
+  type SideGlanceDurationProfile,
+  type SideGlancePhase,
+  type SideGlanceSessionState,
+  type SideGlanceSource,
+  type SideGlanceState,
+  type SideGlanceSurfaceState,
+  type SideGlanceTarget,
+  type SideGlanceWorkKind,
 } from "./protocol.ts";
 
 const execFileAsync = promisify(execFile);
@@ -56,6 +70,60 @@ const CONFIDENCES = new Set<SideGlanceConfidence>([
   "wrapper",
   "heuristic",
 ]);
+const WORK_KINDS = new Set<SideGlanceWorkKind>([
+  "subagent",
+  "background-task",
+  "session-cron",
+]);
+const STATE_V1_FIELDS = new Set([
+  "schemaVersion",
+  "sessions",
+  "surfaces",
+  "seenEventIds",
+]);
+const STATE_V2_FIELDS = new Set([...STATE_V1_FIELDS, "durationProfiles"]);
+const DURATION_PROFILE_FIELDS = new Set([
+  "algorithmVersion",
+  "samplesSeconds",
+  "ceilingSeconds",
+]);
+const SESSION_FIELDS = new Set([
+  "source",
+  "sessionId",
+  "phase",
+  "generation",
+  "turnId",
+  "wrapperSessionId",
+  "reason",
+  "confidence",
+  "target",
+  "startedAt",
+  "completedAt",
+  "responseEwmaSeconds",
+  "completionCeilingSeconds",
+  "completionSnapshotKey",
+  "activeWork",
+  "activeWorkUpdatedAt",
+  "durationSampleKey",
+  "endedAt",
+  "leaseExpiresAt",
+  "updatedAt",
+]);
+const WORK_FIELDS = new Set(["id", "kind"]);
+const TARGET_FIELDS = new Set(["surfaceId", "tty", "tmuxPane"]);
+const SURFACE_FIELDS = new Set([
+  "surfaceId",
+  "target",
+  "phase",
+  "generation",
+  "updatedAt",
+  "terminalPainted",
+  "terminalTitlePainted",
+  "ownerKey",
+  "tmuxSnapshot",
+]);
+const TMUX_SNAPSHOT_FIELDS = new Set(["windowId", "options"]);
+const TMUX_OPTION_FIELDS = new Set(["name", "local", "value"]);
 
 interface LockOwner {
   pid: number;
@@ -66,7 +134,9 @@ interface LockOwner {
 
 export interface FileSideGlanceStoreOptions {
   directory: string;
+  rootDirectory: string;
   legacyDirectory?: string;
+  legacyRootDirectory?: string;
   staleLockMs?: number;
   lockTimeoutMs?: number;
   retryDelayMs?: number;
@@ -78,25 +148,37 @@ export type SideGlanceStateUpdate = (
 
 export class FileSideGlanceStore {
   private readonly directory: string;
+  private readonly rootDirectory: string;
   private readonly statePath: string;
   private readonly legacyStatePath?: string;
+  private readonly legacyRootDirectory?: string;
   private readonly lockPath: string;
   private readonly staleLockMs: number;
   private readonly lockTimeoutMs: number;
   private readonly retryDelayMs: number;
 
   constructor(options: FileSideGlanceStoreOptions) {
-    if (!path.isAbsolute(options.directory)) {
-      throw new Error("Side Glance state directory must be an absolute path.");
+    if (!path.isAbsolute(options.directory) || !path.isAbsolute(options.rootDirectory)) {
+      throw new Error("Side Glance state directory and trust root must be absolute paths.");
     }
     if (options.legacyDirectory && !path.isAbsolute(options.legacyDirectory)) {
       throw new Error("Legacy state directory must be an absolute path.");
     }
+    if (
+      options.legacyDirectory &&
+      (!options.legacyRootDirectory || !path.isAbsolute(options.legacyRootDirectory))
+    ) {
+      throw new Error("Legacy state trust root must be an absolute path.");
+    }
 
     this.directory = path.resolve(options.directory);
+    this.rootDirectory = path.resolve(options.rootDirectory);
     this.statePath = path.join(this.directory, STATE_FILENAME);
     this.legacyStatePath = options.legacyDirectory
       ? path.join(path.resolve(options.legacyDirectory), LEGACY_STATE_FILENAME)
+      : undefined;
+    this.legacyRootDirectory = options.legacyRootDirectory
+      ? path.resolve(options.legacyRootDirectory)
       : undefined;
     this.lockPath = path.join(this.directory, LOCK_DIRECTORY);
     this.staleLockMs = positiveOption(
@@ -143,12 +225,24 @@ export class FileSideGlanceStore {
   }
 
   private async ensurePrivateDirectory(): Promise<void> {
-    await mkdir(this.directory, { recursive: true, mode: 0o700 });
-    const metadata = await lstat(this.directory);
-    if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
-      throw new Error("Side Glance state path must be a real directory.");
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const snapshot = await captureConfigTargetParents({
+          rootDirectory: this.rootDirectory,
+          targetPath: path.join(this.directory, ".side-glance-parent-guard"),
+          label: "Side Glance state",
+          maxBytes: 1,
+          defaultMode: 0o600,
+        });
+        await ensureConfigTargetParentDirectories(snapshot, 0o700);
+        return;
+      } catch (error) {
+        if (!(error instanceof ConfigTargetConflictError) || attempt === 2) {
+          throw error;
+        }
+      }
     }
-    await chmod(this.directory, 0o700);
+    throw new Error("Side Glance state directory could not be captured safely.");
   }
 
   private async acquireLock(): Promise<LockOwner> {
@@ -277,9 +371,10 @@ export class FileSideGlanceStore {
 
     try {
       const value: unknown = JSON.parse(raw);
-      if (!isSideGlanceState(value)) return this.quarantineAndReset();
+      const normalized = normalizeSideGlanceState(value);
+      if (!normalized) return this.quarantineAndReset();
       await chmod(this.statePath, 0o600);
-      return value;
+      return normalized;
     } catch (error) {
       if (!(error instanceof SyntaxError)) throw error;
       return this.quarantineAndReset();
@@ -287,31 +382,23 @@ export class FileSideGlanceStore {
   }
 
   private async readLegacyState(): Promise<SideGlanceState | undefined> {
-    if (!this.legacyStatePath) return undefined;
-    let metadata;
+    if (!this.legacyStatePath || !this.legacyRootDirectory) return undefined;
+    const snapshot = await captureConfigTarget({
+      rootDirectory: this.legacyRootDirectory,
+      targetPath: this.legacyStatePath,
+      label: "Legacy Side Glance state",
+      maxBytes: MAX_STATE_BYTES,
+      defaultMode: 0o600,
+    });
+    await revalidateConfigTargetSnapshot(snapshot);
+    const bytes = sensitiveConfigTargetSnapshotBytes(snapshot);
+    if (!bytes) return undefined;
     try {
-      metadata = await lstat(this.legacyStatePath);
-    } catch (error) {
-      if (hasCode(error, "ENOENT")) return undefined;
-      throw error;
-    }
-    if (!metadata.isFile() || metadata.isSymbolicLink()) {
-      throw new Error("Legacy state must be a regular file, not a link.");
-    }
-    if (metadata.size > MAX_STATE_BYTES) return undefined;
-
-    const handle = await open(
-      this.legacyStatePath,
-      constants.O_RDONLY | constants.O_NOFOLLOW,
-    );
-    try {
-      const value: unknown = JSON.parse(await handle.readFile("utf8"));
-      return isSideGlanceState(value) ? value : undefined;
+      const value: unknown = JSON.parse(bytes.toString("utf8"));
+      return normalizeSideGlanceState(value);
     } catch (error) {
       if (error instanceof SyntaxError) return undefined;
       throw error;
-    } finally {
-      await handle.close();
     }
   }
 
@@ -411,28 +498,81 @@ async function processIdentity(pid: number): Promise<string | undefined> {
 
 function isSideGlanceState(value: unknown): value is SideGlanceState {
   if (!isRecord(value)) return false;
-  if (value.schemaVersion !== 1) return false;
+  if (value.schemaVersion !== 2) return false;
+  if (!hasExactFields(value, STATE_V2_FIELDS)) return false;
+  if (!isCommonSideGlanceState(value)) return false;
+  if (!isRecord(value.durationProfiles)) return false;
+  return Object.entries(value.durationProfiles).every(
+    ([source, profile]) =>
+      SOURCES.has(source as SideGlanceSource) && isDurationProfile(profile),
+  );
+}
+
+function normalizeSideGlanceState(value: unknown): SideGlanceState | undefined {
+  if (!isRecord(value) || !isCommonSideGlanceState(value)) return undefined;
+  if (value.schemaVersion === 2 && isSideGlanceState(value)) return value;
+  if (value.schemaVersion !== 1 || !hasExactFields(value, STATE_V1_FIELDS)) {
+    return undefined;
+  }
+
+  return {
+    schemaVersion: 2,
+    sessions: value.sessions as SideGlanceState["sessions"],
+    surfaces: value.surfaces as SideGlanceState["surfaces"],
+    seenEventIds: value.seenEventIds as string[],
+    durationProfiles: {},
+  };
+}
+
+function isCommonSideGlanceState(value: Record<string, unknown>): boolean {
   if (!isRecord(value.sessions)) return false;
   if (!isRecord(value.surfaces)) return false;
   if (
     !Array.isArray(value.seenEventIds) ||
-    value.seenEventIds.some((eventId) => typeof eventId !== "string")
+    value.seenEventIds.length > 4_096 ||
+    value.seenEventIds.some((eventId) => !isBoundedText(eventId, 160))
   ) {
     return false;
   }
 
   return (
-    Object.values(value.sessions).every(isSideGlanceSessionState) &&
-    Object.values(value.surfaces).every(isSideGlanceSurfaceState)
+    Object.entries(value.sessions).every(
+      ([key, session]) =>
+        isSideGlanceSessionState(session) &&
+        key === sessionKey(session.source, session.sessionId),
+    ) &&
+    Object.entries(value.surfaces).every(
+      ([key, surface]) =>
+        isSideGlanceSurfaceState(surface) && key === surface.surfaceId,
+    )
+  );
+}
+
+function isDurationProfile(value: unknown): value is SideGlanceDurationProfile {
+  return (
+    isRecord(value) &&
+    hasExactFields(value, DURATION_PROFILE_FIELDS) &&
+    value.algorithmVersion === 1 &&
+    Array.isArray(value.samplesSeconds) &&
+    value.samplesSeconds.length <= 12 &&
+    value.samplesSeconds.every(
+      (sample) =>
+        Number.isSafeInteger(sample) && Number(sample) >= 1 && Number(sample) <= 28_800,
+    ) &&
+    Number.isSafeInteger(value.ceilingSeconds) &&
+    Number(value.ceilingSeconds) >= 60 &&
+    Number(value.ceilingSeconds) <= 7_200 &&
+    (value.samplesSeconds.length >= 8 || value.ceilingSeconds === 300)
   );
 }
 
 function isSideGlanceSessionState(value: unknown): value is SideGlanceSessionState {
   if (!isRecord(value)) return false;
+  if (!hasExactFields(value, SESSION_FIELDS)) return false;
   if (typeof value.source !== "string" || !SOURCES.has(value.source as SideGlanceSource)) {
     return false;
   }
-  if (typeof value.sessionId !== "string" || value.sessionId.length === 0) {
+  if (!isBoundedText(value.sessionId, 256)) {
     return false;
   }
   if (typeof value.phase !== "string" || !PHASES.has(value.phase as SideGlancePhase)) {
@@ -459,14 +599,63 @@ function isSideGlanceSessionState(value: unknown): value is SideGlanceSessionSta
   ) {
     return false;
   }
-  if (value.turnId !== undefined && typeof value.turnId !== "string") return false;
   if (
-    value.wrapperSessionId !== undefined &&
-    typeof value.wrapperSessionId !== "string"
+    value.completionCeilingSeconds !== undefined &&
+    (!Number.isFinite(value.completionCeilingSeconds) ||
+      Number(value.completionCeilingSeconds) < 60 ||
+      Number(value.completionCeilingSeconds) > 7_200)
   ) {
     return false;
   }
-  if (value.reason !== undefined && typeof value.reason !== "string") return false;
+  if (
+    value.activeWork !== undefined &&
+    (!Array.isArray(value.activeWork) ||
+      value.activeWork.length > SIDE_GLANCE_ACTIVE_WORK_LIMIT ||
+      value.activeWork.some(
+        (work) =>
+          !isRecord(work) ||
+          !hasExactFields(work, WORK_FIELDS) ||
+          !isBoundedText(work.id, 160) ||
+          typeof work.kind !== "string" ||
+          !WORK_KINDS.has(work.kind as SideGlanceWorkKind),
+      ) ||
+      new Set(
+        value.activeWork.flatMap((work) =>
+          isRecord(work) && typeof work.id === "string" ? [work.id] : [],
+        ),
+      ).size !== value.activeWork.length)
+  ) {
+    return false;
+  }
+  if (
+    value.activeWorkUpdatedAt !== undefined &&
+    !Number.isFinite(value.activeWorkUpdatedAt)
+  ) {
+    return false;
+  }
+  if (value.turnId !== undefined && !isBoundedText(value.turnId, 256)) return false;
+  if (
+    value.wrapperSessionId !== undefined &&
+    !isBoundedText(value.wrapperSessionId, 256)
+  ) {
+    return false;
+  }
+  if (value.reason !== undefined && !isBoundedText(value.reason, 256)) return false;
+  if (
+    value.durationSampleKey !== undefined &&
+    !isBoundedText(value.durationSampleKey, 272)
+  ) {
+    return false;
+  }
+  if (
+    value.completionSnapshotKey !== undefined &&
+    !isBoundedText(value.completionSnapshotKey, 272)
+  ) {
+    return false;
+  }
+  if (value.endedAt !== undefined && !Number.isFinite(value.endedAt)) {
+    return false;
+  }
   if (
     value.leaseExpiresAt !== undefined &&
     !Number.isFinite(value.leaseExpiresAt)
@@ -477,16 +666,32 @@ function isSideGlanceSessionState(value: unknown): value is SideGlanceSessionSta
   return true;
 }
 
-function isSideGlanceTarget(value: unknown): boolean {
-  if (!isRecord(value) || typeof value.surfaceId !== "string") return false;
-  if (value.tty !== undefined && typeof value.tty !== "string") return false;
-  if (value.tmuxPane !== undefined && typeof value.tmuxPane !== "string") return false;
+function isSideGlanceTarget(value: unknown): value is SideGlanceTarget {
+  if (
+    !isRecord(value) ||
+    !hasExactFields(value, TARGET_FIELDS) ||
+    !isBoundedText(value.surfaceId, 512)
+  ) {
+    return false;
+  }
+  if (value.tty !== undefined && !isBoundedText(value.tty, 1_024)) return false;
+  if (
+    value.tmuxPane !== undefined &&
+    (!isBoundedText(value.tmuxPane, 64) || !/^%\d+$/u.test(value.tmuxPane))
+  ) {
+    return false;
+  }
   return true;
 }
 
 function isSideGlanceSurfaceState(value: unknown): value is SideGlanceSurfaceState {
   if (!isRecord(value)) return false;
-  if (typeof value.surfaceId !== "string" || !isSideGlanceTarget(value.target)) {
+  if (!hasExactFields(value, SURFACE_FIELDS)) return false;
+  if (
+    !isBoundedText(value.surfaceId, 512) ||
+    !isSideGlanceTarget(value.target) ||
+    value.target.surfaceId !== value.surfaceId
+  ) {
     return false;
   }
   if (typeof value.phase !== "string" || !PHASES.has(value.phase as SideGlancePhase)) {
@@ -504,7 +709,7 @@ function isSideGlanceSurfaceState(value: unknown): value is SideGlanceSurfaceSta
   ) {
     return false;
   }
-  if (value.ownerKey !== undefined && typeof value.ownerKey !== "string") {
+  if (value.ownerKey !== undefined && !isBoundedText(value.ownerKey, 768)) {
     return false;
   }
   if (value.tmuxSnapshot !== undefined && !isTmuxSnapshot(value.tmuxSnapshot)) {
@@ -514,7 +719,13 @@ function isSideGlanceSurfaceState(value: unknown): value is SideGlanceSurfaceSta
 }
 
 function isTmuxSnapshot(value: unknown): boolean {
-  if (!isRecord(value) || !/^@\d+$/u.test(String(value.windowId))) return false;
+  if (
+    !isRecord(value) ||
+    !hasExactFields(value, TMUX_SNAPSHOT_FIELDS) ||
+    !/^@\d+$/u.test(String(value.windowId))
+  ) {
+    return false;
+  }
   if (!Array.isArray(value.options) || value.options.length !== 4) return false;
   const names = new Set([
     "window-status-style",
@@ -522,14 +733,26 @@ function isTmuxSnapshot(value: unknown): boolean {
     "window-status-format",
     "window-status-current-format",
   ]);
-  return value.options.every(
+  const valid = value.options.every(
     (option) =>
       isRecord(option) &&
+      hasExactFields(option, TMUX_OPTION_FIELDS) &&
       typeof option.name === "string" &&
       names.has(option.name) &&
       typeof option.local === "boolean" &&
-      (option.value === undefined || typeof option.value === "string") &&
+      (option.value === undefined ||
+        (typeof option.value === "string" &&
+          option.value.length <= 16_384 &&
+          !option.value.includes("\u0000"))) &&
       option.local === (option.value !== undefined),
+  );
+  return (
+    valid &&
+    new Set(
+      value.options.flatMap((option) =>
+        isRecord(option) && typeof option.name === "string" ? [option.name] : [],
+      ),
+    ).size === value.options.length
   );
 }
 
@@ -547,6 +770,25 @@ function isLockOwner(value: unknown): value is LockOwner {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasExactFields(
+  value: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+): boolean {
+  return Object.keys(value).every((field) => allowed.has(field));
+}
+
+function isBoundedText(value: unknown, maximumCodePoints: number): value is string {
+  if (typeof value !== "string" || value.length === 0) return false;
+  const characters = [...value];
+  return (
+    characters.length <= maximumCodePoints &&
+    characters.every((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint > 0x1f && !(codePoint >= 0x7f && codePoint <= 0x9f);
+    })
+  );
 }
 
 function positiveOption(

@@ -33,7 +33,7 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(showcase, /const phase = activeState\.phase/u);
   assert.match(showcase, /terminalId:\s*"tmux_01"/u);
   assert.match(showcase, /terminalId:\s*"tmux_04"/u);
-  assert.doesNotMatch(showcase, /terminalId:\s*"tmux_05"/u);
+  assert.match(showcase, /terminalId:\s*"tmux_05"/u);
   assert.match(
     showcase,
     /<InteractiveClaudeTerminal\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/u
@@ -42,12 +42,29 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(showcase, /className="minimal-lifecycle gap-lifecycle-gap"/u);
   assert.match(showcase, /aria-pressed=\{activeState\.id === state\.id\}/u);
   assert.match(showcase, /onClick=\{\(\) => selectState\(index\)\}/u);
+  assert.match(
+    showcase,
+    /const \[isPlaybackPaused, setPlaybackPaused\]\s*=\s*useState\(false\)/u
+  );
+  assert.match(showcase, /setPlaybackPaused\(true\)/u);
+  assert.match(
+    showcase,
+    /stage === STORYBOARD_STAGE\.waiting \|\|[\s\S]*isPlaybackPaused \|\|[\s\S]*shouldReduceMotion/u
+  );
   assert.match(showcase, /type="button"/u);
   assert.match(
     showcase,
     /visualForPhase\(state\.phase, state\.elapsedSeconds\)/u
   );
   assert.doesNotMatch(showcase, /install-icon\.svg|from "next\/image"/u);
+  assert.match(
+    showcase,
+    /Status keeps Ready green and failures red[\s\S]*Optional Heat adapts to[\s\S]*recent local turn durations/u
+  );
+  assert.match(
+    showcase,
+    /aria-live=\{isPlaybackRunning \? "off" : "polite"\}/u
+  );
 
   assert.match(terminal, /phase\?: PlaygroundPhase/u);
   assert.match(terminal, /terminalId\?: string/u);
@@ -58,6 +75,7 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
 
   assert.match(playground, />Turn ran</u);
   assert.doesNotMatch(playground, />Ready for</u);
+  assert.doesNotMatch(playground, /% heat/u);
 
   assert.match(
     css,
@@ -68,5 +86,6 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(css, /\.minimal-lifecycle-button\[aria-pressed="true"\]/u);
   assert.match(css, /\.minimal-lifecycle-progress\s*\{/u);
   assert.match(css, /\.minimal-lifecycle-progress-value\s*\{/u);
+  assert.match(css, /\.minimal-lifecycle-explanation\s*\{/u);
   assert.match(css, /--spacing-lifecycle-gap:\s*4rem/u);
 });

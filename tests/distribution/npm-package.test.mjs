@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -73,11 +80,12 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   });
   const report = JSON.parse(doctor.stdout);
   assert.equal(report.node.supported, true);
-  assert.equal(report.stateDirectory, stateDirectory);
+  assert.equal(report.stateDirectory, path.join(await realpath(temporary), "state"));
   const installedHome = path.join(temporary, "installed-home");
   await mkdir(installedHome, { recursive: true });
   const runtimeEnvironment = {
     SIDE_GLANCE_STATE_DIR: stateDirectory,
+    SIDE_GLANCE_CONFIG_DIR: path.join(temporary, "theme-config"),
     SIDE_GLANCE_NOTIFICATION_BACKEND: "none",
     PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
   };
@@ -166,6 +174,37 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   );
   assert.match(help.stdout, /side-glance init/u);
   assert.match(help.stdout, /side-glance setup/u);
+  assert.match(help.stdout, /side-glance theme/u);
+  const themeSet = await command(
+    executable,
+    ["theme", "set", "heat", "--ceiling", "adaptive", "--yes", "--json"],
+    { cwd: temporary, env: runtimeEnvironment },
+  );
+  assert.deepEqual(JSON.parse(themeSet.stdout).config.appearance, {
+    preset: "heat",
+    ceiling: { mode: "adaptive" },
+  });
+  const themeShow = await command(executable, ["theme", "show", "--json"], {
+    cwd: temporary,
+    env: runtimeEnvironment,
+  });
+  assert.equal(JSON.parse(themeShow.stdout).config.appearance.preset, "heat");
+  const themePreview = await command(
+    executable,
+    [
+      "theme",
+      "preview",
+      "--preset",
+      "heat",
+      "--elapsed",
+      "360",
+      "--ceiling",
+      "360",
+      "--json",
+    ],
+    { cwd: temporary, env: runtimeEnvironment },
+  );
+  assert.equal(JSON.parse(themePreview.stdout).visual.accent, "f33533");
 
   const setupHome = path.join(temporary, "guided-setup-home");
   await mkdir(setupHome, { recursive: true });

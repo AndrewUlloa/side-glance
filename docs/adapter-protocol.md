@@ -31,15 +31,26 @@ Adapters submit one JSON object on stdin to `side-glance event --json`, or trans
 | `turn.completed` | completed | Ready state; short completions may suppress the visual |
 | `turn.failed` | failed | Provider-reported failure |
 | `turn.cancelled` | failed | Cancellation remains attention-worthy |
+| `work.started` | working | Adds one bounded child/background identity to the parent aggregate |
+| `work.finished` | working | Removes one identity but never synthesizes Ready |
 | `session.ended` | inactive | Releases only this session's lease |
 
-`confidence` is `native`, `notification`, `wrapper`, or `heuristic`. It describes event fidelity and does not change ordering safety. Claude `Stop`, Codex `Stop`, and Gemini `AfterAgent` are marked `heuristic`: each provider can still allow a separate hook to block or retry after Side Glance runs, and none exposes a post-aggregate acceptance event. Those events can paint the best-known Ready state, but they do not issue a final Ready desktop notification. Use `side-glance run --notify-on-exit -- <provider>` when process exit is the completion boundary you want to hear.
+`work.started` and `work.finished` require a bounded `{id, kind}` reference. A
+provider may also send an optional `activeWork` snapshot. Missing means unknown
+and preserves known work; an explicit empty array means the provider reported no
+registry work. Nonempty known work prevents `turn.completed` from reducing to
+Ready. A work-finish event removes its matching child and also reconciles a
+valid registry snapshot on that event. Resume/compact session starts preserve
+known work. Child completion alone never creates Ready, and completion must be
+strictly later than the most recent work evidence.
+
+`confidence` is `native`, `notification`, `wrapper`, or `heuristic`. It describes event fidelity and does not change ordering safety. Claude `Stop`/`SubagentStop`, Codex `Stop`, and Gemini `AfterAgent` are marked `heuristic`: each provider can still allow a separate hook to block or retry after Side Glance runs, and none exposes a post-aggregate acceptance event. Known Claude subagent/background work delays Ready, but the eventual best-known event still does not issue a final Ready desktop notification. Use `side-glance run --notify-on-exit -- <provider>` when process exit is the completion boundary you want to hear.
 
 ## Provider coverage
 
 | Provider | Integration | Fidelity |
 |---|---|---|
-| Claude Code | JSON hooks | Session, prompt, permission/idle notification, stop/failure, end |
+| Claude Code | JSON hooks | Session, prompt, permission/idle notification, subagent start/stop, bounded background snapshots, stop/failure, end |
 | Codex | JSON hooks | Session, prompt, permission, stop, synchronous end; existing legacy notify preserved |
 | Gemini CLI | JSON hooks | Session, before/after agent, permission notification, end |
 | OpenCode v1 | managed stable plugin events (experimental) | Top-level session status/idle/error/delete and permission events; child sessions are filtered. OpenCode 2's incompatible beta plugin API is rejected. |

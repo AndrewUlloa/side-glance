@@ -23,16 +23,16 @@ test("uses the shared core theme for working and waiting states", () => {
   });
 });
 
-test("uses the real thermal policy for completed turn duration", () => {
+test("uses semantic Ready while retaining bounded duration metadata", () => {
   assert.deepEqual(visualForPhase("completed", 60), {
     phase: "completed",
     label: "Ready",
     message: "The turn finished. Side Glance is holding your place.",
-    wash: "3a2f16",
-    accent: "e0a726",
+    wash: "173326",
+    accent: "3fa84e",
     urgency: 500,
   });
-  assert.equal(visualForPhase("completed", 300).accent, "f33533");
+  assert.equal(visualForPhase("completed", 300).accent, "3fa84e");
 });
 
 test("keeps failure urgent and inactive truly neutral", () => {

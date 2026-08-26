@@ -1,14 +1,14 @@
 # Launch: Arrow-key guided setup
 
-> Status: feature approved; protected release in progress
+> Status: shipped in 0.1.0-beta.6
 > Date: 2026-08-25
 
 ## Candidate behavior
 
-The next Side Glance beta makes the durable `side-glance init` and staged
-`npx side-glance@beta init` choices navigable with Up/Down, Space, and Enter. It
-adds recommended/customize/exit progressive disclosure, truthful post-approval
-progress, an exact concise review, and a numbered accessibility fallback.
+Beta.6 made the durable `side-glance init` and staged `npx side-glance@beta init`
+choices navigable with Up/Down, Space, and Enter. It added
+recommended/customize/exit progressive disclosure, truthful post-approval progress,
+an exact concise review, and a numbered accessibility fallback.
 
 The candidate does not change provider detection, provider hooks, notification
 coverage, lifecycle colors, configuration targets, JSON schemas, supported
@@ -39,11 +39,11 @@ platforms, or npm's `latest` tag.
 
 ## Public verification checklist
 
-- [ ] Protected feature PR merged to `staging`.
-- [ ] Next beta release preparation merged to `staging`.
-- [ ] `staging` promoted to `main`; required checks green.
-- [ ] Protected annotated tag workflow green.
-- [ ] npm `beta`, integrity, and provenance match the release manifest.
-- [ ] GitHub prerelease, native archives, `SHA256SUMS`, and attestations match.
-- [ ] Fresh public npx enhanced and `NO_COLOR` smokes pass.
-- [ ] Homebrew tap PR checks and post-merge smoke pass.
+- [x] Protected feature PR merged to `staging`.
+- [x] Beta.6 release preparation merged to `staging`.
+- [x] `staging` promoted to `main`; required checks green.
+- [x] Protected annotated tag workflow green.
+- [x] npm `beta`, integrity, and provenance match the release manifest.
+- [x] GitHub prerelease, native archives, `SHA256SUMS`, and attestations match.
+- [x] Fresh public npx enhanced and `NO_COLOR` smokes pass.
+- [x] Homebrew tap PR checks and post-merge smoke pass.

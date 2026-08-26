@@ -20,6 +20,11 @@ import {
 } from "../core/target.ts";
 import { parseSideGlanceEvent, parseSideGlanceSource } from "../core/validation.ts";
 import { createNativeNotifier } from "../notifications/native.ts";
+import {
+  FileSideGlanceConfig,
+  resolveAppearance,
+  type SideGlanceAppearance,
+} from "../core/appearance.ts";
 import { inspectNotificationReadiness } from "../notifications/inspection.ts";
 import type {
   EventNotifier,
@@ -51,28 +56,47 @@ import { runInstallCommand } from "./install.ts";
 import { runSupervised } from "./run.ts";
 import { runSetupCommand } from "./setup-command.ts";
 import { createDurableSetupDiscovery } from "./setup-discovery.ts";
+import { runThemeCommand, themeHelpText } from "./theme-command.ts";
 
 const MAX_STDIN_BYTES = 1_048_576;
 
 export async function main(args = process.argv.slice(2)): Promise<number> {
   const command = args[0];
+  if (command === "--version" || command === "-v") {
+    process.stdout.write(`${SIDE_GLANCE_VERSION}\n`);
+    return 0;
+  }
+  if (command === "--help" || command === "-h") {
+    process.stdout.write(helpText());
+    return 0;
+  }
+  if (
+    command === "theme" &&
+    args.length === 2 &&
+    (args[1] === "--help" || args[1] === "-h")
+  ) {
+    process.stdout.write(themeHelpText());
+    return 0;
+  }
   if (command === "init" || command === "setup") {
     return runGuidedSetupCommand(command, args.slice(1));
   }
-  const { stateDirectory, legacyStateDirectory } = resolveStateDirectories();
+  const {
+    stateDirectory,
+    stateRootDirectory,
+    legacyStateDirectory,
+    legacyRootDirectory,
+  } = resolveStateDirectories();
   const store = new FileSideGlanceStore({
     directory: stateDirectory,
+    rootDirectory: stateRootDirectory,
     ...(legacyStateDirectory ? { legacyDirectory: legacyStateDirectory } : {}),
+    ...(legacyRootDirectory ? { legacyRootDirectory } : {}),
   });
+  const configStore = new FileSideGlanceConfig(resolveConfigLocation());
+  const configInspection = await configStore.inspect();
+  const appearance = configInspection.config.appearance;
   switch (command) {
-    case "--version":
-    case "-v":
-      process.stdout.write(`${SIDE_GLANCE_VERSION}\n`);
-      return 0;
-    case "--help":
-    case "-h":
-      process.stdout.write(helpText());
-      return 0;
     case "event": {
       requireOnlyOptions(
         args.slice(1),
@@ -87,7 +111,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         ["--notifications", "--terminal-title", "--json"],
       );
       const event = parseSideGlanceEvent(JSON.parse(await readBoundedStdin()));
-      await controllerWithNotifications(store, args).submit(event);
+      await controllerWithNotifications(store, args, appearance).submit(event);
       writeJson({});
       return 0;
     }
@@ -138,7 +162,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         writeHookAcknowledgement(provider);
         return 0;
       }
-      await controllerWithNotifications(store, args).submit(event);
+      await controllerWithNotifications(store, args, appearance).submit(event);
       writeHookAcknowledgement(provider);
       return 0;
     }
@@ -183,7 +207,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         confidence: "notification",
         ...(target ? { target } : {}),
       });
-      await controllerWithNotifications(store, args, true).submit(event);
+      await controllerWithNotifications(store, args, appearance, true).submit(event);
       writeJson({});
       return 0;
     }
@@ -195,6 +219,14 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       writeJson(await store.read());
       return 0;
     }
+    case "theme":
+      return runThemeCommand(args.slice(1), {
+        configStore,
+        state: await store.read(),
+        interactive: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+        input: process.stdin,
+        output: process.stdout,
+      });
     case "doctor": {
       const homeDirectory = optionalOption(args, "--home") ?? homedir();
       requireOnlyOptions(args.slice(1), ["--home", "--json"], "doctor");
@@ -235,6 +267,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         },
         providers: providerInspections,
         notifications: notificationReadiness,
+        appearance: configInspection,
         capabilities,
       });
       return 0;
@@ -245,20 +278,59 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         throw new Error("preview phase must be working, waiting, completed, or failed.");
       }
       const elapsed = parseNonNegativeNumber(parseOption(args, "--elapsed"), "elapsed");
-      requireOnlyOptions(args.slice(1), ["--phase", "--elapsed", "--json"], "preview");
-      const visual = visualForPhase(phase, elapsed, 120);
+      const sourceOption = optionalOption(args, "--source");
+      const source = sourceOption
+        ? parseSideGlanceSource(sourceOption)
+        : undefined;
+      requireOnlyOptions(
+        args.slice(1),
+        ["--phase", "--elapsed", "--source", "--json"],
+        "preview",
+      );
+      const state = source ? await store.read() : undefined;
+      const providerProfile = source ? state?.durationProfiles[source] : undefined;
+      const resolvedAppearance = resolveAppearance(
+        appearance,
+        providerProfile?.ceilingSeconds ?? 300,
+      );
+      const completionCeilingBasis =
+        appearance.preset === "heat" && appearance.ceiling.mode === "fixed"
+          ? "fixed"
+          : appearance.preset === "heat" && source && providerProfile
+            ? "provider-profile"
+            : appearance.preset === "heat" && source
+              ? "provider-cold-start"
+              : appearance.preset === "heat"
+                ? "cold-start-hypothetical"
+                : "semantic-default";
+      const visual = visualForPhase(
+        phase,
+        elapsed,
+        resolvedAppearance.completionCeilingSeconds,
+        resolvedAppearance.theme,
+        resolvedAppearance.suppressQuickCompletions,
+      );
       writeJson({
         phase,
         urgency: visual.urgency,
         wash: visual.wash,
         accent: visual.accent,
+        suppressed: visual.suppressed,
+        completionCeilingSeconds: resolvedAppearance.completionCeilingSeconds,
+        completionCeilingBasis,
+        ...(source ? { source } : {}),
       });
       return 0;
     }
     case "reset": {
       if (args.includes("--all")) {
         requireExactArgs(args.slice(1), ["--all", "--json"], "reset");
-        const controller = new SideGlanceController(store);
+        const controller = new SideGlanceController(
+          store,
+          createDefaultSurfaceRenderer(),
+          undefined,
+          appearance,
+        );
         let current = await store.read();
         for (const session of Object.values(current.sessions)) {
           if (session.phase === "inactive") continue;
@@ -284,7 +356,12 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       const current = await store.read();
       const session = current.sessions[sessionKey(source, sessionId)];
       if (!session) throw new Error("reset session was not found.");
-      await new SideGlanceController(store).submit({
+      await new SideGlanceController(
+        store,
+        createDefaultSurfaceRenderer(),
+        undefined,
+        appearance,
+      ).submit({
         v: 1,
         eventId: randomUUID(),
         source,
@@ -304,6 +381,9 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         args.slice(1),
         stateDirectory,
         legacyStateDirectory,
+        appearance,
+        stateRootDirectory,
+        legacyRootDirectory,
       );
       if (result.signal) {
         process.kill(process.pid, result.signal);
@@ -312,7 +392,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
     default:
       throw new Error(
-        "usage: side-glance <init|setup|event|hook|notify|status|doctor|preview|reset|run|install|uninstall> [options]",
+        "usage: side-glance <init|setup|event|hook|notify|status|doctor|theme|preview|reset|run|install|uninstall> [options]",
       );
   }
 }
@@ -328,7 +408,8 @@ Usage:
   side-glance init [--dry-run | --yes --providers <list> --notifications <list|none>]
   side-glance setup [--dry-run | --yes --providers <list> --notifications <list|none>]
   side-glance doctor --json
-  side-glance preview --phase <phase> --elapsed <seconds> --json
+  side-glance theme [show|set|preview|reset]
+  side-glance preview --phase <phase> --elapsed <seconds> [--source <provider>] --json
   side-glance run [--surface <id>] [--notify-on-exit] -- <command> [args...]
   side-glance install <claude|codex|gemini|opencode> [--notifications] --json
   side-glance uninstall <claude|codex|gemini|opencode> --json
@@ -347,6 +428,24 @@ Options:
   -h, --help                    Show this help
   -v, --version                 Show the installed version
 `;
+}
+
+function resolveConfigLocation(): { directory: string; rootDirectory: string } {
+  const configured = process.env.SIDE_GLANCE_CONFIG_DIR;
+  if (configured) {
+    if (!path.isAbsolute(configured)) {
+      throw new Error("SIDE_GLANCE_CONFIG_DIR must be an absolute path.");
+    }
+    const directory = normalizeTrustedAbsolutePath(configured);
+    return { directory, rootDirectory: path.parse(directory).root };
+  }
+  const base = normalizeTrustedAbsolutePath(
+    process.env.XDG_CONFIG_HOME ?? path.join(homedir(), ".config"),
+  );
+  return {
+    directory: path.join(base, "side-glance"),
+    rootDirectory: path.parse(base).root,
+  };
 }
 
 async function runGuidedSetupCommand(
@@ -422,6 +521,9 @@ async function runGuidedSetupCommand(
   const interrupt = () => controller.abort();
   process.once("SIGINT", interrupt);
   try {
+    const appearance = await new FileSideGlanceConfig(
+      resolveConfigLocation(),
+    ).inspect();
     return await runSetupCommand(command, args, {
       execution,
       interactive,
@@ -436,6 +538,7 @@ async function runGuidedSetupCommand(
       writeStdout: (value) => process.stdout.write(value),
       writeStderr: (value) => process.stderr.write(value),
       signal: controller.signal,
+      appearance,
     });
   } finally {
     process.removeListener("SIGINT", interrupt);
@@ -444,30 +547,55 @@ async function runGuidedSetupCommand(
 
 function resolveStateDirectories(): {
   stateDirectory: string;
+  stateRootDirectory: string;
   legacyStateDirectory?: string;
+  legacyRootDirectory?: string;
 } {
   const configured = process.env.SIDE_GLANCE_STATE_DIR;
   if (configured) {
     if (!path.isAbsolute(configured)) {
       throw new Error("SIDE_GLANCE_STATE_DIR must be an absolute path.");
     }
-    return { stateDirectory: path.resolve(configured) };
+    const stateDirectory = normalizeTrustedAbsolutePath(configured);
+    return {
+      stateDirectory,
+      stateRootDirectory: path.parse(stateDirectory).root,
+    };
   }
   const legacyConfigured = process.env.SIGNAL_STATE_DIR;
   if (legacyConfigured) {
     if (!path.isAbsolute(legacyConfigured)) {
       throw new Error("Legacy state directory must be an absolute path.");
     }
-    const directory = path.resolve(legacyConfigured);
-    return { stateDirectory: directory, legacyStateDirectory: directory };
+    const directory = normalizeTrustedAbsolutePath(legacyConfigured);
+    return {
+      stateDirectory: directory,
+      stateRootDirectory: path.parse(directory).root,
+      legacyStateDirectory: directory,
+      legacyRootDirectory: path.parse(directory).root,
+    };
   }
-  const base = process.env.XDG_STATE_HOME
-    ? path.resolve(process.env.XDG_STATE_HOME)
-    : path.join(homedir(), ".local", "state");
+  const base = normalizeTrustedAbsolutePath(
+    process.env.XDG_STATE_HOME ?? path.join(homedir(), ".local", "state"),
+  );
   return {
     stateDirectory: path.join(base, "side-glance"),
+    stateRootDirectory: path.parse(base).root,
     legacyStateDirectory: path.join(base, "signal"),
+    legacyRootDirectory: path.parse(base).root,
   };
+}
+
+function normalizeTrustedAbsolutePath(value: string): string {
+  const resolved = path.resolve(value);
+  if (process.platform !== "darwin") return resolved;
+  if (resolved === "/var" || resolved.startsWith("/var/")) {
+    return `/private${resolved}`;
+  }
+  if (resolved === "/tmp" || resolved.startsWith("/tmp/")) {
+    return `/private${resolved}`;
+  }
+  return resolved;
 }
 
 async function readBoundedStdin(): Promise<string> {
@@ -577,6 +705,7 @@ function parseNotificationKind(value: string):
 function controllerWithNotifications(
   store: FileSideGlanceStore,
   args: readonly string[],
+  appearance: SideGlanceAppearance,
   enabled = args.includes("--notifications"),
 ): SideGlanceController {
   return new SideGlanceController(
@@ -587,6 +716,7 @@ function controllerWithNotifications(
         process.env.SIDE_GLANCE_TERMINAL_TITLE === "1",
     }),
     configuredNotifier(args, enabled),
+    appearance,
   );
 }
 

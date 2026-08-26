@@ -9,6 +9,7 @@ import {
   type SurfaceRenderer,
   type SurfaceRenderResult,
 } from "../../src/core/controller.ts";
+import type { SideGlanceAppearance } from "../../src/core/appearance.ts";
 import type {
   SideGlanceEvent,
   SideGlanceSessionState,
@@ -23,6 +24,7 @@ interface PaintRecord {
   wash: string;
   accent: string;
   urgency: number;
+  suppressed: boolean;
 }
 
 class RecordingRenderer implements SurfaceRenderer {
@@ -32,7 +34,7 @@ class RecordingRenderer implements SurfaceRenderer {
   async paint(
     target: SideGlanceTarget,
     session: SideGlanceSessionState,
-    visual: { wash: string; accent: string; urgency: number },
+    visual: { wash: string; accent: string; urgency: number; suppressed: boolean },
   ): Promise<SurfaceRenderResult> {
     this.paints.push({ target, session, ...visual });
     return {
@@ -67,15 +69,20 @@ class RecordingNotifier implements EventNotifier {
 async function controllerFixture(
   context: test.TestContext,
   notifier?: EventNotifier,
+  appearance: SideGlanceAppearance = { preset: "status" },
 ) {
   const directory = await mkdtemp(path.join(tmpdir(), "side-glance-controller-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const renderer = new RecordingRenderer();
-  const store = new FileSideGlanceStore({ directory });
+  const store = new FileSideGlanceStore({
+    directory,
+    rootDirectory: path.dirname(directory),
+  });
   const controller = new SideGlanceController(
     store,
     renderer,
     notifier,
+    appearance,
   );
   return { controller, renderer, store };
 }
@@ -105,7 +112,7 @@ function event(
   };
 }
 
-test("renders lifecycle states and derives completion heat from turn runtime", async (context) => {
+test("renders semantic lifecycle states and keeps Ready distinct from failure", async (context) => {
   const { controller, renderer } = await controllerFixture(context);
   const turnStartedAt = 1_786_536_000_000;
 
@@ -138,13 +145,92 @@ test("renders lifecycle states and derives completion heat from turn runtime", a
     [
       { phase: "working", wash: "16352f", accent: "009d89", urgency: 0 },
       { phase: "waiting", wash: "4d3510", accent: "f0a726", urgency: 0 },
-      { phase: "completed", wash: "3a2f16", accent: "e0a726", urgency: 500 },
+      { phase: "completed", wash: "173326", accent: "3fa84e", urgency: 500 },
     ],
   );
   assert.equal(
     state.surfaces["tty:/dev/ttys001"]?.tmuxSnapshot?.windowId,
     "@7",
   );
+});
+
+test("paints Heat completion with the prior learned ceiling, then slides", async (context) => {
+  const { controller, renderer } = await controllerFixture(
+    context,
+    undefined,
+    { preset: "heat", ceiling: { mode: "adaptive" } },
+  );
+
+  for (let turn = 0; turn < 9; turn += 1) {
+    const startedAt = turn * 1_000_000 + 1_000;
+    await controller.submit(
+      event("claude", "heat-learning", `heat-start-${turn}`, "turn.started", startedAt, {
+        generation: turn + 1,
+        turnId: `heat-turn-${turn}`,
+      }),
+    );
+    await controller.submit(
+      event(
+        "claude",
+        "heat-learning",
+        `heat-done-${turn}`,
+        "turn.completed",
+        startedAt + 240_000,
+        { generation: turn + 1, turnId: `heat-turn-${turn}` },
+      ),
+    );
+    if (turn === 7) {
+      await controller.submit(
+        event(
+          "claude",
+          "heat-learning",
+          "heat-done-7-duplicate",
+          "turn.completed",
+          startedAt + 240_000,
+          { generation: 8, turnId: "heat-turn-7" },
+        ),
+      );
+    }
+  }
+
+  const completions = renderer.paints.filter(
+    ({ session }) => session.phase === "completed",
+  );
+  assert.equal(completions[7]?.session.completionCeilingSeconds, 300);
+  assert.equal(completions[8]?.session.completionCeilingSeconds, 300);
+  assert.equal(completions[9]?.session.completionCeilingSeconds, 360);
+  assert.equal(completions[8]?.urgency, completions[7]?.urgency);
+  assert.ok(
+    (completions[8]?.urgency ?? 0) > (completions[9]?.urgency ?? 0),
+    "the ninth completion must cool after the learned ceiling slides upward",
+  );
+});
+
+test("suppresses quick Ready only when Heat is selected", async (context) => {
+  const custom: SideGlanceAppearance = {
+    preset: "custom",
+    colors: {
+      inactive: { wash: "111111", accent: "aaaaaa" },
+      working: { wash: "122222", accent: "00aaaa" },
+      waiting: { wash: "332200", accent: "ffaa00" },
+      ready: { wash: "113311", accent: "44cc44" },
+      failed: { wash: "331111", accent: "ff4444" },
+    },
+  };
+  for (const [label, appearance, suppressed] of [
+    ["status", { preset: "status" }, false],
+    ["custom", custom, false],
+    ["heat", { preset: "heat", ceiling: { mode: "adaptive" } }, true],
+  ] as const) {
+    const fixture = await controllerFixture(context, undefined, appearance);
+    await fixture.controller.submit(
+      event("claude", label, `${label}-start`, "turn.started", 1_000),
+    );
+    await fixture.controller.submit(
+      event("claude", label, `${label}-done`, "turn.completed", 6_000),
+    );
+    assert.equal(fixture.renderer.paints.at(-1)?.suppressed, suppressed, label);
+  }
 });
 
 test("never renders a stale event and recomputes shared ownership before reset", async (context) => {
@@ -198,6 +284,114 @@ test("never renders a stale event and recomputes shared ownership before reset",
   );
   assert.equal(renderer.resets.length, 1);
   assert.equal(final.surfaces["tty:/dev/ttys001"]?.phase, "inactive");
+});
+
+test("a rejected stale start cannot expire or repaint unrelated sessions", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  const targetA = { surfaceId: "logical:stale-a" };
+  const targetB = { surfaceId: "logical:stale-b" };
+  await controller.submit(
+    event("claude", "stale-a", "stale-a-start", "turn.started", 1_000, {
+      generation: 5,
+      turnId: "turn-5",
+      target: targetA,
+    }),
+  );
+  await controller.submit(
+    event("codex", "stale-b", "stale-b-start", "turn.started", 2_000, {
+      generation: 1,
+      turnId: "turn-1",
+      target: targetB,
+    }),
+  );
+  const paintCount = renderer.paints.length;
+  const resetCount = renderer.resets.length;
+
+  const state = await controller.submit(
+    event(
+      "claude",
+      "stale-a",
+      "stale-a-old-start",
+      "turn.started",
+      2_000_000,
+      { generation: 4, turnId: "turn-4", target: targetA },
+    ),
+  );
+
+  assert.equal(state.sessions["codex:stale-b"]?.phase, "working");
+  assert.equal(renderer.paints.length, paintCount);
+  assert.equal(renderer.resets.length, resetCount);
+});
+
+test("session end prevents delayed child events from repainting", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  await controller.submit(
+    event("claude", "ended", "ended-start", "turn.started", 1_000, {
+      generation: 1,
+      turnId: "ended-turn",
+    }),
+  );
+  await controller.submit(
+    event("claude", "ended", "ended-child", "work.started", 2_000, {
+      generation: 1,
+      turnId: "ended-turn",
+      work: { id: "subagent:ended", kind: "subagent" },
+    }),
+  );
+  const ended = await controller.submit(
+    event("claude", "ended", "ended-session", "session.ended", 3_000),
+  );
+  const paintCount = renderer.paints.length;
+  const resetCount = renderer.resets.length;
+
+  const afterLateChild = await controller.submit(
+    event("claude", "ended", "ended-child-late", "work.finished", 4_000, {
+      generation: 1,
+      turnId: "ended-turn",
+      work: { id: "subagent:ended", kind: "subagent" },
+    }),
+  );
+
+  assert.deepEqual(afterLateChild, ended);
+  assert.equal(afterLateChild.sessions["claude:ended"]?.phase, "inactive");
+  assert.equal(renderer.paints.length, paintCount);
+  assert.equal(renderer.resets.length, resetCount);
+});
+
+test("manual reset cannot be undone by a delayed child event", async (context) => {
+  const { controller, renderer } = await controllerFixture(context);
+  await controller.submit(
+    event("claude", "manual", "manual-start", "turn.started", 1_000, {
+      generation: 1,
+      turnId: "manual-turn",
+    }),
+  );
+  await controller.submit(
+    event("claude", "manual", "manual-child", "work.started", 2_000, {
+      generation: 1,
+      turnId: "manual-turn",
+      work: { id: "subagent:manual", kind: "subagent" },
+    }),
+  );
+  const reset = await controller.submit(
+    event("claude", "manual", "manual-reset", "session.ended", 3_000, {
+      reason: "manual-reset",
+    }),
+  );
+  const paintCount = renderer.paints.length;
+  const resetCount = renderer.resets.length;
+
+  const afterLateChild = await controller.submit(
+    event("claude", "manual", "manual-late", "work.finished", 4_000, {
+      generation: 1,
+      turnId: "manual-turn",
+      work: { id: "subagent:manual", kind: "subagent" },
+    }),
+  );
+
+  assert.deepEqual(afterLateChild, reset);
+  assert.equal(renderer.paints.length, paintCount);
+  assert.equal(renderer.resets.length, resetCount);
 });
 
 test("releases the previous surface before painting a migrated session", async (context) => {
@@ -288,6 +482,19 @@ test("reconciles an expired attention owner before selecting a new session", asy
   assert.equal(state.sessions["claude:orphan"]?.reason, "reconciled-stale");
   assert.equal(state.surfaces[target.surfaceId]?.ownerKey, "codex:replacement");
   assert.equal(renderer.paints.at(-1)?.session.sessionId, "replacement");
+
+  const reactivated = await controller.submit(
+    event(
+      "claude",
+      "orphan",
+      "orphan-new-turn",
+      "turn.started",
+      1_000 + leaseTtlMs + 2,
+      { generation: 2, target },
+    ),
+  );
+  assert.equal(reactivated.sessions["claude:orphan"]?.phase, "working");
+  assert.equal(reactivated.surfaces[target.surfaceId]?.ownerKey, "claude:orphan");
 });
 
 test("bounds inactive surface history after repeated terminal churn", async (context) => {
@@ -426,6 +633,77 @@ test("does not notify Ready from pre-final provider completion hooks", async (co
   assert.equal(state.sessions["claude:retrying"].phase, "completed");
   assert.equal(state.sessions["claude:retrying"].confidence, "heuristic");
   assert.deepEqual(notifier.events, []);
+});
+
+test("does not notify Ready when completion inherits heuristic confidence", async (context) => {
+  const notifier = new RecordingNotifier();
+  const { controller } = await controllerFixture(context, notifier);
+
+  await controller.submit(
+    event("claude", "inherited-heuristic", "inherited-start", "turn.started", 1_000, {
+      confidence: "heuristic",
+    }),
+  );
+  const completion = event(
+    "claude",
+    "inherited-heuristic",
+    "inherited-done",
+    "turn.completed",
+    2_000,
+    { confidence: undefined },
+  );
+  const state = await controller.submit(completion);
+
+  assert.equal(state.sessions["claude:inherited-heuristic"]?.confidence, "heuristic");
+  assert.deepEqual(notifier.events, []);
+});
+
+test("does not paint or notify Ready while aggregate work remains", async (context) => {
+  const notifier = new RecordingNotifier();
+  const { controller, renderer } = await controllerFixture(context, notifier);
+
+  await controller.submit(
+    event("claude", "aggregate", "start", "turn.started", 1_000),
+  );
+  await controller.submit(
+    event("claude", "aggregate", "child", "work.started", 2_000, {
+      work: { id: "subagent:a", kind: "subagent" },
+    }),
+  );
+  const provisional = event(
+    "claude",
+    "aggregate",
+    "parent-stop-busy",
+    "turn.completed",
+    3_000,
+    {
+      activeWork: [{ id: "subagent:a", kind: "subagent" }],
+      confidence: "native",
+    },
+  );
+  const busy = await controller.submit(provisional);
+
+  assert.equal(busy.sessions["claude:aggregate"]?.phase, "working");
+  assert.equal(renderer.paints.at(-1)?.session.phase, "working");
+  assert.deepEqual(notifier.events, []);
+
+  await controller.submit(
+    event("claude", "aggregate", "child-finished", "work.finished", 4_000, {
+      work: { id: "subagent:a", kind: "subagent" },
+    }),
+  );
+  const complete = event(
+    "claude",
+    "aggregate",
+    "parent-stop-empty",
+    "turn.completed",
+    5_000,
+    { activeWork: [], confidence: "native" },
+  );
+  const ready = await controller.submit(complete);
+
+  assert.equal(ready.sessions["claude:aggregate"]?.phase, "completed");
+  assert.deepEqual(notifier.events, [complete]);
 });
 
 test("does not notify for duplicates, stale events, starts, acknowledgements, or teardown", async (context) => {
