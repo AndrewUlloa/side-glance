@@ -80,8 +80,8 @@ test("keeps guided setup, notification coverage, and recovery guidance aligned",
   }
 
   for (const guide of [readme, packageReadme]) {
-    assert.match(guide, /`side-glance setup`[^\n]*exact alias/u);
-    assert.match(guide, /read-only preview/u);
+    assert.match(guide, /`side-glance setup`[\s\S]{0,120}exact alias/u);
+    assert.match(guide, /read-only (?:review|preview)/u);
     assert.match(guide, /Up\/Down[^\n]*Space[^\n]*Enter/u);
     assert.match(guide, /SIDE_GLANCE_ACCESSIBLE=1/u);
     assert.match(guide, /Claude[^\n]*attention[^\n]*failure/u);

@@ -59,11 +59,19 @@ the matching release, provenance, and `SHA256SUMS` before using one manually.
 ## Guided setup
 
 `side-glance init` detects supported providers without executing them and presents
-a read-only preview of the executable, target paths, create/update/unchanged
-actions, notification choices, warnings, and launch commands. It writes nothing
-until the whole plan is confirmed. `side-glance setup` is its exact alias; both are
-safe to re-run. On an interactive terminal, **Use recommended settings** is focused
-first; choose **Customize** to reveal provider and computer-notification choices.
+a concise read-only review of the selected providers, notification choices,
+warnings, and owned configuration paths. It writes nothing until the whole plan is
+confirmed, then finishes with the launch command to run next. `side-glance setup`
+is its exact alias; both are safe to re-run. On an interactive terminal,
+**Recommended** is focused first; choose **Customize** to reveal provider and
+computer-notification choices.
+
+Side Glance considers a provider available only when its CLI command (`claude`,
+`codex`, `gemini`, or `opencode`) is executable on the `PATH` of the shell running
+setup. “Not found” refers only to that CLI command; the provider account or desktop
+app may still be usable. A desktop app does not count unless it exposes its CLI to
+that shell. Install or expose the command, then rerun `side-glance init`.
+
 Use Up/Down to move, Space to toggle multiple choices, and Enter to continue.
 Set `SIDE_GLANCE_ACCESSIBLE=1` for the static numbered prompt; `NO_COLOR`,
 and `TERM=dumb` use that same no-ANSI fallback automatically. Non-TTY input stays

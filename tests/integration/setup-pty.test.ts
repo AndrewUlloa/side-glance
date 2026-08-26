@@ -62,8 +62,9 @@ test(
 
     assert.equal(result.code, 0, result.output);
     assert.match(result.output, /How would you like to continue/u);
-    assert.match(result.output, /Review setup/u);
-    assert.match(result.output, /Setup complete/u);
+    assert.match(result.output, /Review/u);
+    assert.match(result.output, /Side Glance is ready/u);
+    assert.match(result.output, /Next[\s\S]*side-glance run --label "Claude" -- claude/u);
     assert.equal(result.output.includes(String.fromCodePoint(27)), false);
     const settings = JSON.parse(
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
@@ -131,8 +132,8 @@ exit $status
     assert.equal(result.code, 0, result.output);
     assert.match(result.output, /↑\/↓ move/u);
     assert.match(result.output, /Space toggle/u);
-    assert.match(result.output, /Computer notifications: off/u);
-    assert.match(result.output, /Setup complete/u);
+    assert.match(result.output, /Computer notifications: Off/u);
+    assert.match(result.output, /Side Glance is ready/u);
     assert.equal(result.output.includes(String.fromCodePoint(27)), true);
     const settings = JSON.parse(
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
