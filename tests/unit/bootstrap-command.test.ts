@@ -12,7 +12,7 @@ import type {
 import type { ExecutableIdentityToken } from "../../src/cli/executable.ts";
 import type { PromptOutcome, SetupPrompter } from "../../src/cli/prompts.ts";
 
-const exactVersion = "0.1.0-beta.11";
+const exactVersion = "0.1.0-beta.12";
 const invocationPath = "/Users/example/.npm/_npx/cache/side-glance";
 
 test("bootstrap child escalates after a bounded grace period when SIGTERM is ignored", async () => {
