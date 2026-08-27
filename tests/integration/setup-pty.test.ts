@@ -42,7 +42,7 @@ test(
     const environment = {
       HOME: home,
       PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
-      SHELL: "/bin/zsh",
+      SHELL: process.platform === "darwin" ? "/bin/zsh" : "/bin/sh",
       NO_COLOR: "1",
       TERM: "xterm-256color",
     };
@@ -71,10 +71,12 @@ test(
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
     );
     assert.ok(JSON.stringify(settings).includes(executable));
-    assert.match(
-      await readFile(path.join(home, ".zshrc"), "utf8"),
-      /Side Glance fresh terminal tabs/u,
-    );
+    if (process.platform === "darwin") {
+      assert.match(
+        await readFile(path.join(home, ".zshrc"), "utf8"),
+        /Side Glance fresh terminal tabs/u,
+      );
+    }
   },
 );
 
@@ -113,7 +115,7 @@ exit $status
       NO_COLOR: undefined,
       SIDE_GLANCE_ACCESSIBLE: undefined,
       SIDE_GLANCE_CONFIG_DIR: path.join(home, ".config", "side-glance"),
-      SHELL: "/bin/zsh",
+      SHELL: process.platform === "darwin" ? "/bin/zsh" : "/bin/sh",
       TERM: "xterm-256color",
     };
     const interactions = [
@@ -129,10 +131,14 @@ exit $status
         prompt: "Select Side Glance computer notifications",
         answer: " \r",
       },
-      {
-        prompt: "How should new terminal tabs start?",
-        answer: "\r",
-      },
+      ...(process.platform === "darwin"
+        ? [
+            {
+              prompt: "How should new terminal tabs start?",
+              answer: "\r",
+            },
+          ]
+        : []),
       {
         prompt: "What should colors communicate?",
         answer: "\u001b[B\r",
