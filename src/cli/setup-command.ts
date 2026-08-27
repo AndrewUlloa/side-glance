@@ -96,6 +96,7 @@ Options:
   --providers <list>           Claude, Codex, Gemini, and/or OpenCode
   --notifications <list|none>  Side Glance computer-notification channels
   --notification-sound <name>  Installed sound name (default: Glass)
+  --migrate-legacy-stoplight   Replace exact legacy Claude Stoplight hooks
   --dry-run                    Inspect the exact redacted plan without writing
   --yes                        Apply a fully specified non-interactive plan
   --json                       Emit exactly one versioned JSON result
@@ -106,6 +107,11 @@ Options:
 Interactive:
   Recommended keeps setup concise and preserves existing colors.
   Customize includes providers, notifications, and Status, Heat, or Custom colors.
+
+After setup:
+  Use claude, codex, or experimental gemini normally. Package upgrades alone do
+  not rewrite hooks, so rerun side-glance init once after upgrading.
+  side-glance run remains the fallback when safe terminal discovery is unavailable.
 
 Safety:
   A caught apply or verification failure rolls back completed writes when safe.
@@ -122,6 +128,13 @@ async function runAutomatedSetup(
   if (request.dryRun) {
     writeSetupPlan(planned.plan, request.json, options);
     return 0;
+  }
+  if (hasUnresolvedLegacyStoplight(planned.plan)) {
+    return writeSetupFailure(
+      options,
+      request.json,
+      "legacy-stoplight-conflict",
+    );
   }
   return await applyPlan(planned.discovery, planned.plan, request.json, options);
 }
@@ -192,7 +205,7 @@ async function runInteractiveSetup(
         selectedMode.value === "recommended" ? "recommended" : "customize";
     }
 
-    const selectedProviderValues = initialRequest.providers
+    let selectedProviderValues = initialRequest.providers
       ? [...initialRequest.providers]
       : setupMode === "recommended"
         ? [...preliminary.plan.selectedProviders]
@@ -210,7 +223,51 @@ async function runInteractiveSetup(
     }
     if (options.signal?.aborted) return interruptedSetup(options, false);
 
-    const selectedNotificationValues = initialRequest.notificationsSpecified
+    let migrateLegacyStoplight = false;
+    const legacyClaude = preliminary.plan.providers.find(
+      ({ provider }) => provider === "claude",
+    );
+    if (
+      selectedProviderValues.includes("claude") &&
+      (legacyClaude?.legacyStoplightHooks ?? 0) > 0
+    ) {
+      prompter.note(
+        "Claude has legacy Stoplight colors. Two color hooks can compete, so only one can stay active.",
+      );
+      const legacyDecision = await prompter.select(
+        "Claude already has legacy Stoplight colors. What should Side Glance do?",
+        [
+          {
+            id: "replace",
+            label: "Replace legacy Stoplight colors (recommended)",
+            selected: true,
+          },
+          {
+            id: "skip",
+            label: "Keep legacy Stoplight and skip Claude",
+          },
+        ],
+      );
+      if (legacyDecision.status === "cancelled") {
+        return cancellationCode(legacyDecision);
+      }
+      if (legacyDecision.value === "replace") {
+        migrateLegacyStoplight = true;
+      } else {
+        selectedProviderValues = selectedProviderValues.filter(
+          (provider) => provider !== "claude",
+        );
+        prompter.note("Keeping legacy Stoplight; Claude will be skipped.");
+        if (selectedProviderValues.length === 0) {
+          prompter.note("No other providers selected. Nothing was changed.");
+          renderGuidance(preliminary.plan, prompter);
+          return 0;
+        }
+      }
+    }
+    if (options.signal?.aborted) return interruptedSetup(options, false);
+
+    const selectedNotificationValuesRaw = initialRequest.notificationsSpecified
       ? [...(initialRequest.notifications ?? [])]
       : setupMode === "recommended"
         ? [...preliminary.plan.selectedNotifications]
@@ -220,9 +277,13 @@ async function runInteractiveSetup(
           prompter,
           options,
         );
-    if (!Array.isArray(selectedNotificationValues)) {
-      return selectedNotificationValues;
+    if (!Array.isArray(selectedNotificationValuesRaw)) {
+      return selectedNotificationValuesRaw;
     }
+    const selectedProviderSet = new Set(selectedProviderValues);
+    const selectedNotificationValues = selectedNotificationValuesRaw.filter(
+      (provider) => selectedProviderSet.has(provider),
+    );
     if (initialRequest.notificationsSpecified) {
       prompter.note(
         `Notification selection fixed by --notifications: ${selectedNotificationValues.length > 0 ? selectedNotificationValues.join(", ") : "none"}`,
@@ -292,6 +353,7 @@ async function runInteractiveSetup(
       providers: canonicalPromptProviders(selectedProviderValues),
       notifications: canonicalPromptProviders(selectedNotificationValues),
       notificationsSpecified: true,
+      migrateLegacyStoplight,
       ...(notificationSound === undefined ? {} : { notificationSound }),
     };
     const finalPlan = await discoverPlan(request, options);
@@ -484,6 +546,10 @@ export function projectSetupPlan(plan: SetupPlan) {
                 code,
                 message,
               })),
+              legacyStoplight: {
+                detectedHookCount: provider.legacyStoplightHooks,
+                migrated: provider.migrateLegacyStoplight,
+              },
               ...(provider.launchCommand
                 ? { launchCommand: provider.launchCommand }
                 : {}),
@@ -529,6 +595,22 @@ function renderPlanNotes(
       prompter,
       `    ${providerLabel(provider.provider)}: ${displayHomeRelativePath(provider.target.path, plan.homeDirectory)}${provider.maturity === "experimental" ? " (experimental)" : ""}`,
     );
+    if (provider.migrateLegacyStoplight) {
+      writePromptDetail(
+        prompter,
+        `      Replace ${provider.legacyStoplightHooks} legacy Stoplight hooks`,
+      );
+    }
+  }
+  if (plan.providers.some(({ migrateLegacyStoplight }) => migrateLegacyStoplight)) {
+    writePromptDetail(
+      prompter,
+      "  Warning: Legacy Stoplight colors, terminal titles, and its long-turn bell",
+    );
+    writePromptDetail(
+      prompter,
+      "  will be disabled. Side Glance terminal titles are off by default.",
+    );
   }
   for (const provider of plan.providers) {
     if (!provider.selected) continue;
@@ -560,6 +642,19 @@ function humanSetupPlan(plan: SetupPlan, dryRun = true): string[] {
     lines.push(
       `  ${providerLabel(provider.provider)}: ${provider.state}; ${selected}; ${provider.maturity}; current integration ${provider.integrationStatus}${reason}`,
     );
+    if (provider.migrateLegacyStoplight) {
+      lines.push(
+        `    legacy Stoplight: replace ${provider.legacyStoplightHooks} exact managed hooks; unrelated hooks preserved`,
+      );
+    } else if (
+      provider.provider === "claude" &&
+      provider.selected &&
+      provider.legacyStoplightHooks > 0
+    ) {
+      lines.push(
+        "    legacy Stoplight: conflict active; apply requires --migrate-legacy-stoplight or skipping Claude",
+      );
+    }
   }
   lines.push("Approved provider changes:");
   for (const provider of plan.providers) {
@@ -580,7 +675,7 @@ function humanSetupPlan(plan: SetupPlan, dryRun = true): string[] {
     lines.push(`Notification sound: ${plan.notificationSound}`);
   }
   lines.push(
-    "Installed hooks provide lifecycle semantics; side-glance run provides the stable terminal surface identity used for reliable colors.",
+    "Managed hooks use safe terminal discovery for supported local launches; side-glance run remains the fallback when discovery is unavailable.",
     "A caught apply or verification failure rolls back completed provider writes when they still match this setup.",
     "Power loss or SIGKILL between provider writes can leave partial setup; the next side-glance init or side-glance doctor reports it for repair.",
   );
@@ -613,6 +708,10 @@ function projectSetupResult(
                 coverage: provider.notifications.coverage,
               },
               warnings: provider.warnings,
+              legacyStoplight: {
+                detectedHookCount: provider.legacyStoplightHooks,
+                migrated: provider.migrateLegacyStoplight,
+              },
               ...(provider.launchCommand
                 ? { launchCommand: provider.launchCommand }
                 : {}),
@@ -649,6 +748,9 @@ function humanSetupResult(
       lines.push(`  warning: ${warning.message}`);
     }
     if (provider.launchCommand) lines.push(`  launch: ${provider.launchCommand}`);
+    if (provider.legacyStoplight?.migrated) {
+      lines.push("  Legacy Stoplight disabled; unrelated Claude hooks preserved");
+    }
   }
   if (projected.notificationSound) {
     lines.push(`Notification sound: ${projected.notificationSound}`);
@@ -657,7 +759,7 @@ function humanSetupResult(
     );
   }
   lines.push(
-    "Hooks provide lifecycle events; use the launch commands above to provide a stable terminal surface identity for reliable colors.",
+    "Hooks provide lifecycle events and safe terminal discovery for supported local launches; side-glance run remains the fallback when discovery is unavailable.",
   );
   appendGuidanceLines(lines, plan);
   return lines;
@@ -673,9 +775,15 @@ function humanInteractiveSetupResult(
   const projected = projectSetupResult(plan, result);
   const lines = ["✓ Side Glance is ready", ""];
   for (const provider of projected.providers) {
+    const plannedProvider = plan.providers.find(
+      ({ provider: id }) => id === provider.id,
+    );
     lines.push(
       `  ${providerLabel(provider.id as SetupProvider)} ${provider.changed ? "configured" : "already configured"}`,
     );
+    if (plannedProvider?.migrateLegacyStoplight) {
+      lines.push("    Legacy Stoplight disabled · unrelated Claude hooks kept");
+    }
   }
   lines.push(
     plan.selectedNotifications.length > 0
@@ -716,6 +824,16 @@ function humanInteractiveSetupResult(
     }
   }
   return lines.map(sanitizePromptDetail);
+}
+
+function hasUnresolvedLegacyStoplight(plan: SetupPlan): boolean {
+  return plan.providers.some(
+    (provider) =>
+      provider.provider === "claude" &&
+      provider.selected &&
+      provider.legacyStoplightHooks > 0 &&
+      !provider.migrateLegacyStoplight,
+  );
 }
 
 function setupSelectedColorSummary(appearance: SideGlanceAppearance): string {
@@ -1068,6 +1186,8 @@ function writeSetupFailure(
         ? "Setup options are incomplete or invalid. Use --dry-run, or use --yes with both --providers and --notifications."
         : code === "interrupted"
           ? "Setup was interrupted. No unconfirmed provider changes were written; caught in-progress changes were rolled back when safe."
+        : code === "legacy-stoplight-conflict"
+          ? "Claude's legacy Stoplight colors are still active. Re-run with --migrate-legacy-stoplight, or omit Claude from --providers."
         : code === "planning-failed"
           ? "Setup could not create a safe provider plan. Run side-glance doctor --json for redacted diagnostics."
           : "Setup could not apply the approved plan; completed provider writes were rolled back when safe.";

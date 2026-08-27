@@ -13,6 +13,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import {
+  inspectProviderHooks,
+  installProviderHooks,
+} from "../../src/adapters/installers.ts";
 import { createDurableSetupDiscovery } from "../../src/cli/setup-discovery.ts";
 import { createSetupPlan, type SetupRequest } from "../../src/cli/setup.ts";
 import { SetupTransactionError } from "../../src/cli/setup-transaction.ts";
@@ -85,6 +89,8 @@ test("applies multiple exact plans under one transaction and re-runs idempotentl
   );
   assert.ok(JSON.stringify(claude).includes(fixture.executable));
   assert.ok(JSON.stringify(codex).includes(fixture.executable));
+  assert.match(JSON.stringify(claude), /--discover-terminal/u);
+  assert.match(JSON.stringify(codex), /--discover-terminal/u);
 
   const second = await createDurableSetupDiscovery(request, options);
   const secondPlan = createSetupPlan(request, second.dependencies);
@@ -97,6 +103,130 @@ test("applies multiple exact plans under one transaction and re-runs idempotentl
   const reapplied = await second.apply(secondPlan);
   assert.equal(reapplied.providers.every(({ changed }) => !changed), true);
   assert.equal(reapplied.providers.every(({ backupPath }) => !backupPath), true);
+});
+
+test("rerunning setup upgrades otherwise-installed hooks for plain provider commands", async (context) => {
+  const fixture = await setupFixture(context);
+  await installProviderHooks({
+    provider: "codex",
+    homeDirectory: fixture.home,
+    executablePath: fixture.executable,
+  });
+  const before = await inspectProviderHooks({
+    provider: "codex",
+    homeDirectory: fixture.home,
+  });
+  assert.equal(before.integrationStatus, "installed");
+  assert.ok(before.managedHooks.every(({ directSurfaceConfigured }) => !directSurfaceConfigured));
+
+  const request = setupRequest(["codex"], []);
+  const discovery = await createDurableSetupDiscovery(request, {
+    defaultHomeDirectory: fixture.home,
+    defaultExecutablePath: fixture.executable,
+    expectedVersion: version,
+    environment: { PATH: fixture.bin },
+    platform: "darwin",
+    pathProbe: async (candidate) => candidate === "codex",
+    probeVersion: async () => ({ exitCode: 0, stdout: `${version}\n` }),
+  });
+  const plan = createSetupPlan(request, discovery.dependencies);
+  assert.equal(
+    plan.providers.find(({ provider }) => provider === "codex")?.target?.action,
+    "update",
+  );
+  await discovery.apply(plan);
+
+  const after = await inspectProviderHooks({
+    provider: "codex",
+    homeDirectory: fixture.home,
+  });
+  assert.ok(after.managedHooks.every(({ directSurfaceConfigured }) => directSurfaceConfigured));
+});
+
+test("guided discovery cannot apply two Claude painters and explicitly migrates exact legacy Stoplight hooks", async (context) => {
+  const fixture = await setupFixture(context);
+  const claudeDirectory = path.join(fixture.home, ".claude");
+  const claudePath = path.join(claudeDirectory, "settings.json");
+  await mkdir(claudeDirectory, { recursive: true });
+  const original = `${JSON.stringify({
+    hooks: {
+      Stop: [
+        {
+          hooks: [
+            {
+              type: "command",
+              command: "bash $HOME/.claude/hooks/stoplight.sh done",
+            },
+            { type: "command", command: "/usr/bin/unrelated-hook" },
+          ],
+        },
+      ],
+    },
+  }, null, 2)}\n`;
+  await writeFile(claudePath, original, { mode: 0o600 });
+  const options = {
+    defaultHomeDirectory: fixture.home,
+    defaultExecutablePath: fixture.executable,
+    expectedVersion: version,
+    environment: { PATH: fixture.bin },
+    platform: "darwin" as const,
+    pathProbe: async (candidate: string) =>
+      candidate === "claude" || candidate === "codex",
+    probeVersion: async () => ({ exitCode: 0, stdout: `${version}\n` }),
+  };
+
+  const unresolvedRequest = setupRequest(["claude"], []);
+  const unresolved = await createDurableSetupDiscovery(unresolvedRequest, options);
+  const unresolvedPlan = createSetupPlan(
+    unresolvedRequest,
+    unresolved.dependencies,
+  );
+  assert.equal(unresolvedPlan.providers[0]?.legacyStoplightHooks, 1);
+  assert.equal(unresolvedPlan.providers[0]?.migrateLegacyStoplight, false);
+  await assert.rejects(
+    () => unresolved.apply(unresolvedPlan),
+    (error: unknown) => {
+      assert.ok(error instanceof SetupTransactionError);
+      assert.equal(error.code, "plan-changed");
+      return true;
+    },
+  );
+  assert.equal(await readFile(claudePath, "utf8"), original);
+
+  const skipRequest = setupRequest(["codex"], []);
+  const skippedClaude = await createDurableSetupDiscovery(skipRequest, options);
+  const skipPlan = createSetupPlan(skipRequest, skippedClaude.dependencies);
+  await skippedClaude.apply(skipPlan);
+  assert.equal(await readFile(claudePath, "utf8"), original);
+  assert.match(
+    await readFile(path.join(fixture.home, ".codex", "hooks.json"), "utf8"),
+    /--discover-terminal/u,
+  );
+
+  const migrationRequest = {
+    ...setupRequest(["claude", "codex"], []),
+    migrateLegacyStoplight: true,
+  };
+  const migration = await createDurableSetupDiscovery(migrationRequest, options);
+  const migrationPlan = createSetupPlan(
+    migrationRequest,
+    migration.dependencies,
+  );
+  assert.equal(migrationPlan.providers[0]?.migrateLegacyStoplight, true);
+  const result = await migration.apply(migrationPlan);
+  assert.deepEqual(
+    result.providers.map(({ id }) => id),
+    ["claude", "codex"],
+  );
+  assert.ok(result.providers[0]?.backupPath);
+  const installed = await readFile(claudePath, "utf8");
+  assert.doesNotMatch(installed, /\.claude\/hooks\/stoplight\.sh/u);
+  assert.match(installed, /\/usr\/bin\/unrelated-hook/u);
+  assert.match(installed, /--discover-terminal/u);
+  assert.match(
+    await readFile(path.join(fixture.home, ".codex", "hooks.json"), "utf8"),
+    /--discover-terminal/u,
+  );
 });
 
 test("revalidates the durable executable immediately before any provider write", async (context) => {

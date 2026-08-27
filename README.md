@@ -52,6 +52,11 @@ side-glance init
 side-glance --version
 ```
 
+Package upgrades do not rewrite provider hooks. Existing users should rerun
+`side-glance init` once after upgrading so normal provider commands receive the
+latest safe integration; `side-glance doctor --json` reports `rerun-init` when an
+otherwise-installed hook still needs that refresh.
+
 The Homebrew formula installs the corresponding standalone archive from the
 immutable GitHub release. Direct archive downloads remain available there; verify
 the matching release, provenance, and `SHA256SUMS` before using one manually.
@@ -61,7 +66,7 @@ the matching release, provenance, and `SHA256SUMS` before using one manually.
 `side-glance init` detects supported providers without executing them and presents
 a concise read-only review of the selected providers, notification choices,
 warnings, and owned configuration paths. It writes nothing until the whole plan is
-confirmed, then finishes with the launch command to run next. `side-glance setup`
+confirmed, then tells you what to run next. `side-glance setup`
 is its exact alias; both are safe to re-run. On an interactive terminal,
 **Recommended** is focused first. For a new configuration, **Recommended** uses
 Status without an additional theme question; rerunning setup preserves an existing
@@ -88,20 +93,26 @@ side-glance setup --dry-run
 side-glance setup --providers claude,codex --notifications none --yes --json
 ```
 
-Provider hooks supply lifecycle events, but they do not identify which Terminal.app,
-iTerm, Ghostty, or tmux surface should change color. Launch each interactive session
-through the wrapper to supply that stable surface identity:
+After setup, just run `claude`, `codex`, or the experimental `gemini` integration
+as usual and start prompting:
 
 ```bash
-side-glance run --label "Claude" -- claude
-side-glance run --label "Codex" -- codex
+claude
+codex
+gemini
 ```
 
-Running `claude` or `codex` directly still works, but provider hook subprocesses
-do not consistently inherit a controlling terminal. When no safe surface can be
-identified, an installed Side Glance hook acknowledges the lifecycle event
-without painting a terminal instead of failing inside the provider UI. Use the
-wrapper when you want reliable per-terminal colors.
+For supported local CLI launches, Side Glance can recover the originating terminal
+from tmux identity or bounded process ancestry, then paint only after the canonical
+path passes its owned character TTY checks. Direct discovery is supported, not
+guaranteed. Desktop and detached sessions have no trustworthy local terminal and
+remain targetless; hooks still acknowledge lifecycle events without painting the
+wrong window. Use `side-glance run` as the explicit fallback when discovery is not
+available, or when you want a private label or process-exit notification:
+
+```bash
+side-glance run --label "Codex" -- codex
+```
 
 Advanced commands remain available for one-provider changes and diagnosis:
 
@@ -174,7 +185,9 @@ node packages/cli/dist/side-glance.mjs run -- claude
 
 For a durable installation from a checkout, use `npm install --global ./packages/cli` after building. Provider hooks must never point at `npx` or an npm cache path.
 
-The wrapper automatically discovers the controlling TTY and passes a stable surface identity to native hooks. Explicit targets remain available for automation:
+The wrapper fallback discovers the controlling TTY before starting the provider and
+passes that stable identity to native hooks. Explicit targets remain available for
+automation:
 
 ```bash
 side-glance run --surface test:demo -- your-command
@@ -190,7 +203,14 @@ side-glance install gemini --json # experimental
 side-glance uninstall claude --json
 ```
 
-Do not install over the existing `stoplight.sh` setup until you have reviewed `side-glance doctor --json` and chosen a migration window.
+If recognized legacy `stoplight.sh` color hooks are active, guided init offers to
+replace them or keep them and skip Claude. The replacement is explicit, creates a
+backup, and preserves unrelated Claude hooks. For an automated one-provider
+migration, review `side-glance doctor --json`, then run:
+
+```bash
+side-glance install claude --migrate-legacy-stoplight --json
+```
 
 ## Desktop notifications and sound
 
@@ -233,9 +253,10 @@ side-glance install opencode --json
 side-glance run -- opencode
 ```
 
-For several sessions in macOS Terminal, iTerm, Ghostty, or another terminal, wrap
-each with a private label. The label appears in the notification body; without one,
-Side Glance uses a distinct, privacy-safe session digest:
+For several sessions in macOS Terminal, iTerm, Ghostty, or another terminal, plain
+provider commands remain the primary path. Use the wrapper only when you want a
+private label. The label appears in the notification body; without one, Side Glance
+uses a distinct, privacy-safe session digest:
 
 ```bash
 side-glance run --label "API worker" -- claude
@@ -273,7 +294,7 @@ session, inspect, then remove only the Side Glance-owned entry:
 ```bash
 side-glance setup --providers claude --notifications none --dry-run
 side-glance setup --providers claude --notifications none --yes
-side-glance run --label "Side Glance smoke" -- claude
+claude
 side-glance doctor --json
 side-glance uninstall claude --json
 side-glance reset --all --json

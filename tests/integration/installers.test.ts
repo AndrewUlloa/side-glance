@@ -162,6 +162,28 @@ test("installs optional notification flags into every managed hook", async (cont
   );
 });
 
+test("does not confuse notification text with the direct discovery option", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  await installProviderHooks({
+    provider: "codex",
+    homeDirectory: home,
+    executablePath,
+    notifications: true,
+    notificationSound: "Glass --discover-terminal",
+  });
+
+  const inspection = await inspectProviderHooks({
+    provider: "codex",
+    homeDirectory: home,
+  });
+  assert.ok(
+    inspection.managedHooks.every(
+      ({ directSurfaceConfigured }) => !directSurfaceConfigured,
+    ),
+  );
+});
+
 test("reports partial integration when duplicate hooks hide missing events", async (context) => {
   const home = await fixtureHome(context);
   const targetPath = configPath(home, "claude");
@@ -730,4 +752,100 @@ test("replaces and uninstalls pre-rename managed hooks", async (context) => {
   const uninstalled = await readFile(targetPath, "utf8");
   assert.doesNotMatch(uninstalled, /(?:SIGNAL|SIDE_GLANCE)_MANAGED_HOOK=1/u);
   assert.match(uninstalled, /\/usr\/bin\/user-hook/u);
+});
+
+test("requires explicit legacy Stoplight migration before enabling direct terminal discovery", async (context) => {
+  const home = await fixtureHome(context);
+  const executablePath = await executableFixture(home);
+  const targetPath = configPath(home, "claude");
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  const original = `${JSON.stringify({
+      hooks: {
+        SessionStart: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: "bash $HOME/.claude/hooks/stoplight.sh session",
+              },
+            ],
+          },
+        ],
+        UserPromptSubmit: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: "bash $HOME/.claude/hooks/stoplight.sh start",
+              },
+            ],
+          },
+        ],
+        Stop: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: "bash $HOME/.claude/hooks/stoplight.sh done",
+              },
+              { type: "command", command: "/usr/bin/unrelated-hook" },
+            ],
+          },
+        ],
+        Notification: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: "bash $HOME/.claude/hooks/stoplight.sh wait",
+              },
+              {
+                type: "command",
+                command: "bash $HOME/.claude/hooks/stoplight.sh idle",
+              },
+              {
+                type: "command",
+                command: "/usr/bin/custom --note stoplight.sh",
+              },
+            ],
+          },
+        ],
+      },
+    }, null, 2)}\n`;
+  await writeFile(targetPath, original, { mode: 0o600 });
+
+  const before = await inspectProviderHooks({ provider: "claude", homeDirectory: home });
+  assert.equal(before.legacyStoplightHooks, 5);
+  assert.equal(before.managedHooks.length, 0);
+
+  await assert.rejects(
+    () =>
+      planProviderHookInstall({
+        provider: "claude",
+        homeDirectory: home,
+        executablePath,
+        directSurface: true,
+      }),
+    /legacy Stoplight.*migration/iu,
+  );
+  assert.equal(await readFile(targetPath, "utf8"), original);
+
+  const migrated = await installProviderHooks({
+    provider: "claude",
+    homeDirectory: home,
+    executablePath,
+    directSurface: true,
+    migrateLegacyStoplight: true,
+  });
+  assert.equal(migrated.changed, true);
+  assert.ok(migrated.backupPath);
+  const installed = await readFile(targetPath, "utf8");
+  assert.doesNotMatch(installed, /\.claude\/hooks\/stoplight\.sh/u);
+  assert.match(installed, /\/usr\/bin\/unrelated-hook/u);
+  assert.match(installed, /\/usr\/bin\/custom --note stoplight\.sh/u);
+
+  const after = await inspectProviderHooks({ provider: "claude", homeDirectory: home });
+  assert.equal(after.legacyStoplightHooks, 0);
+  assert.ok(after.managedHooks.length > 0);
+  assert.ok(after.managedHooks.every((hook) => hook.directSurfaceConfigured));
 });

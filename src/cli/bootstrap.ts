@@ -1039,6 +1039,7 @@ function projectDelegatedPlanProvider(value: unknown): Readonly<Record<string, u
     "target",
     "notifications",
     "warnings",
+    "legacyStoplight",
     "launchCommand",
   ]);
   return {
@@ -1062,6 +1063,7 @@ function projectDelegatedPlanProvider(value: unknown): Readonly<Record<string, u
     target: projectDelegatedTarget(provider.target),
     notifications: projectDelegatedNotifications(provider.notifications, true),
     warnings: projectArray(provider.warnings, 16, projectDelegatedWarning),
+    legacyStoplight: projectDelegatedLegacyStoplight(provider.legacyStoplight),
     ...optionalSafeStringField(provider, "launchCommand", 4_096),
   };
 }
@@ -1080,6 +1082,7 @@ function projectDelegatedResultProvider(
     "maturity",
     "notifications",
     "warnings",
+    "legacyStoplight",
     "launchCommand",
   ]);
   if (typeof provider.changed !== "boolean") {
@@ -1107,7 +1110,34 @@ function projectDelegatedResultProvider(
     ...(provider.warnings === undefined
       ? {}
       : { warnings: projectArray(provider.warnings, 16, projectDelegatedWarning) }),
+    ...(provider.legacyStoplight === undefined
+      ? {}
+      : {
+          legacyStoplight: projectDelegatedLegacyStoplight(
+            provider.legacyStoplight,
+          ),
+        }),
     ...optionalSafeStringField(provider, "launchCommand", 4_096),
+  };
+}
+
+function projectDelegatedLegacyStoplight(
+  value: unknown,
+): Readonly<Record<string, unknown>> {
+  const legacy = requiredRecord(value);
+  assertAllowedKeys(legacy, ["detectedHookCount", "migrated"]);
+  if (
+    typeof legacy.detectedHookCount !== "number" ||
+    !Number.isSafeInteger(legacy.detectedHookCount) ||
+    legacy.detectedHookCount < 0 ||
+    legacy.detectedHookCount > 64 ||
+    typeof legacy.migrated !== "boolean"
+  ) {
+    throw new Error("Delegated legacy Stoplight metadata is invalid.");
+  }
+  return {
+    detectedHookCount: legacy.detectedHookCount,
+    migrated: legacy.migrated,
   };
 }
 

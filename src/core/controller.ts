@@ -16,7 +16,10 @@ import {
   resolveAppearance,
   type SideGlanceAppearance,
 } from "./appearance.ts";
-import { createDefaultSurfaceRenderer } from "../renderers/surface.ts";
+import {
+  createDefaultSurfaceRenderer,
+  isGoneSurfaceError,
+} from "../renderers/surface.ts";
 import {
   shouldNotifyForEvent,
   type EventNotifier,
@@ -40,22 +43,30 @@ export interface SurfaceRenderer {
   reset(target: SideGlanceTarget, previous: SideGlanceSurfaceState): Promise<void>;
 }
 
+export interface SideGlanceControllerOptions {
+  failOpenUnavailableSurface?: boolean;
+}
+
 export class SideGlanceController {
   private readonly store: FileSideGlanceStore;
   private readonly renderer: SurfaceRenderer;
   private readonly notifier?: EventNotifier;
   private readonly appearance: SideGlanceAppearance;
+  private readonly failOpenUnavailableSurface: boolean;
 
   constructor(
     store: FileSideGlanceStore,
     renderer: SurfaceRenderer = createDefaultSurfaceRenderer(),
     notifier?: EventNotifier,
     appearance: SideGlanceAppearance = { preset: "status" },
+    options: SideGlanceControllerOptions = {},
   ) {
     this.store = store;
     this.renderer = renderer;
     this.notifier = notifier;
     this.appearance = appearance;
+    this.failOpenUnavailableSurface =
+      options.failOpenUnavailableSurface === true;
   }
 
   async submit(event: SideGlanceEvent): Promise<SideGlanceState> {
@@ -140,12 +151,20 @@ export class SideGlanceController {
     if (!target) {
       throw new Error("Resolved surface owner does not have a render target.");
     }
-    const rendered = await this.renderer.paint(
-      target,
-      resolution.session,
-      visualForSession(resolution.session, this.appearance),
-      previous,
-    );
+    let rendered: SurfaceRenderResult;
+    try {
+      rendered = await this.renderer.paint(
+        target,
+        resolution.session,
+        visualForSession(resolution.session, this.appearance),
+        previous,
+      );
+    } catch (error) {
+      if (!this.failOpenUnavailableSurface || !isGoneSurfaceError(error)) {
+        throw error;
+      }
+      return detachUnavailableSurface(state, event, surfaceId, previous);
+    }
     return {
       ...state,
       surfaces: {
@@ -166,6 +185,41 @@ export class SideGlanceController {
       },
     };
   }
+}
+
+function detachUnavailableSurface(
+  state: SideGlanceState,
+  event: SideGlanceEvent,
+  surfaceId: string,
+  previous: SideGlanceSurfaceState | undefined,
+): SideGlanceState {
+  const sessions = Object.fromEntries(
+    Object.entries(state.sessions).map(([key, session]) => {
+      if (session.target?.surfaceId !== surfaceId) return [key, session];
+      const detached = { ...session };
+      delete detached.target;
+      return [key, detached];
+    }),
+  );
+  if (!previous) return { ...state, sessions };
+  const inactive = { ...previous };
+  delete inactive.ownerKey;
+  delete inactive.tmuxSnapshot;
+  return {
+    ...state,
+    sessions,
+    surfaces: {
+      ...state.surfaces,
+      [surfaceId]: {
+        ...inactive,
+        phase: "inactive",
+        generation: Math.max(previous.generation, event.generation ?? 0),
+        updatedAt: event.occurredAt,
+        terminalPainted: false,
+        terminalTitlePainted: false,
+      },
+    },
+  };
 }
 
 function isSemanticNotificationDuplicate(

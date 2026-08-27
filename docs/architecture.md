@@ -44,6 +44,16 @@ Every active session is a candidate lease for its `surfaceId`. Priority is `fail
 - Side Glance does not apply a whole-client OSC background while in tmux because separate panes cannot safely own different client-wide backgrounds.
 - Logical surfaces remain useful for tests and integrations but perform no terminal write.
 
+Target resolution prefers explicit wrapper identity, then inherited tmux identity,
+the current standard-input TTY, and finally a bounded process-ancestry lookup.
+An ancestry result requires stable current-user process records and a canonical
+TTY token. Before painting, the renderer separately requires a current-user-owned
+character device and rechecks its identity when opened. Local Claude, Codex, and
+experimental Gemini hooks can therefore paint after a plain provider launch, but
+this discovery is not guaranteed.
+Desktop applications, detached processes, and remote app servers remain targetless
+when no verified local terminal exists; the supervised wrapper is the fallback.
+
 ## Persistence and recovery
 
 State lives in a mode-0700 directory and a mode-0600 JSON file. Writers serialize through a lock directory containing the owner PID, nonce, creation time, and process-start identity. Stale locks are reclaimed only after age and owner-death checks. Writes use a private temporary file, `fsync`, and atomic rename. Valid schema-1 state migrates in memory to schema 2; malformed, oversized, or unknown-schema state is quarantined rather than evaluated.

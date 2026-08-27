@@ -125,6 +125,60 @@ test("keeps guided setup, notification coverage, and recovery guidance aligned",
   );
 });
 
+test("documents direct provider launch as the primary local CLI journey", async () => {
+  const [readme, packageReadme, protocol, storyboard, playground, terminal] =
+    await Promise.all([
+      readFile("README.md", "utf8"),
+      readFile("packages/cli/README.md", "utf8"),
+      readFile("docs/adapter-protocol.md", "utf8"),
+      readFile("app/components/TerminalStoryboard.tsx", "utf8"),
+      readFile("app/components/SideGlancePlayground.tsx", "utf8"),
+      readFile("app/components/InteractiveClaudeTerminal.tsx", "utf8"),
+    ]);
+
+  for (const guide of [readme, packageReadme]) {
+    assert.match(
+      guide,
+      /(?:just|normally) (?:run|type) `claude`, `codex`, or the experimental `gemini`/iu
+    );
+    assert.match(guide, /upgrades?[^.]*do not rewrite[^.]*hooks/iu);
+    assert.match(guide, /rerun[^.]*`side-glance init`/iu);
+    assert.match(
+      guide,
+      /process ancestry[\s\S]{0,180}owned character (?:device|TTY)/iu
+    );
+    assert.match(guide, /supported[\s\S]{0,120}not\s+guaranteed/iu);
+    assert.match(
+      guide,
+      /desktop[\s\S]{0,160}detached[\s\S]{0,160}targetless/iu
+    );
+    assert.match(guide, /`side-glance run`[\s\S]{0,160}fallback/iu);
+  }
+
+  assert.match(
+    protocol,
+    /process ancestry[\s\S]{0,100}canonical TTY candidate/iu
+  );
+  assert.match(protocol, /renderer[\s\S]{0,200}verified TTY/iu);
+  assert.match(
+    protocol,
+    /desktop[\s\S]{0,160}detached[\s\S]{0,160}targetless/iu
+  );
+  assert.match(storyboard, /command:\s*"claude"/u);
+  assert.match(storyboard, /command:\s*"codex"/u);
+  assert.match(storyboard, /command:\s*"gemini"/u);
+  assert.doesNotMatch(
+    storyboard,
+    /side-glance run -- (?:claude|codex|gemini)/u
+  );
+  assert.match(playground, /<span>~<\/span> claude/u);
+  assert.match(
+    terminal,
+    /<code>claude<\/code>[\s\S]{0,100}<code>codex<\/code>[\s\S]{0,100}<code>gemini<\/code>[\s\S]{0,100}normally/u
+  );
+  assert.match(terminal, /<code>side-glance init<\/code>/u);
+});
+
 test("keeps shipped beta.7 phase launch records closed after publication", async () => {
   const launchRecords = await Promise.all([
     readFile("docs/launch/phase-18-concise-init-output.md", "utf8"),

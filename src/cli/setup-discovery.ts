@@ -115,6 +115,7 @@ export async function createDurableSetupDiscovery(
     notifications,
     selectedNotifications: new Set(request.notifications ?? []),
     notificationSound: request.notificationSound,
+    migrateLegacyStoplight: request.migrateLegacyStoplight === true,
     beforeProviderApply: options.beforeProviderApply,
   });
   const preliminaryDependencies = dependenciesFor(
@@ -134,6 +135,7 @@ export async function createDurableSetupDiscovery(
     notifications,
     selectedNotifications,
     notificationSound: recommendedPlan.notificationSound ?? undefined,
+    migrateLegacyStoplight: request.migrateLegacyStoplight === true,
     beforeProviderApply: options.beforeProviderApply,
   });
   const dependencies = dependenciesFor(
@@ -182,6 +184,7 @@ async function planProviders(options: {
   notifications: NotificationReadinessInspection;
   selectedNotifications: ReadonlySet<SetupProvider>;
   notificationSound?: string;
+  migrateLegacyStoplight: boolean;
   beforeProviderApply?: (provider: SetupProvider) => void | Promise<void>;
 }): Promise<PlannedProvider[]> {
   const stableOpenCode = await safePathProbe(options.pathProbe, "opencode");
@@ -245,10 +248,18 @@ async function planJsonProvider(
     provider,
     homeDirectory: options.homeDirectory,
   });
+  const legacyStoplightConflict = inspection.legacyStoplightHooks > 0;
+  const migrateLegacyStoplight =
+    provider === "claude" && options.migrateLegacyStoplight;
   const providerPlan = await planProviderHookInstall({
     provider,
     homeDirectory: options.homeDirectory,
     executablePath: options.executablePath,
+    directSurface:
+      !legacyStoplightConflict || migrateLegacyStoplight,
+    ...(migrateLegacyStoplight
+      ? { migrateLegacyStoplight: true }
+      : {}),
     ...(options.selectedNotifications.has(provider)
       ? {
           notifications: true,
@@ -264,6 +275,7 @@ async function planJsonProvider(
       provider,
       state: "eligible",
       integrationStatus: inspection.integrationStatus,
+      legacyStoplightHooks: inspection.legacyStoplightHooks,
       target: {
         path: providerPlan.configPath,
         action: providerPlan.action,
@@ -274,10 +286,14 @@ async function planJsonProvider(
         options.notifications,
       ),
     },
-    participant: providerParticipant(
-      providerPlan,
-      options.beforeProviderApply,
-    ),
+    ...(!legacyStoplightConflict || migrateLegacyStoplight
+      ? {
+          participant: providerParticipant(
+            providerPlan,
+            options.beforeProviderApply,
+          ),
+        }
+      : {}),
   };
 }
 
