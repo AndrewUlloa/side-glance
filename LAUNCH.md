@@ -2,7 +2,9 @@
 
 Side Glance is a beta. Version `0.1.0-beta.7` is public on npm, GitHub Releases,
 and the Homebrew tap. It ships semantic lifecycle colors, aggregate Claude
-readiness, truly adaptive Heat, and guarded user theme control.
+readiness, truly adaptive Heat, and guarded user theme control. Guided init theme
+selection is merged to protected `staging` and prepared as the still-unpublished
+`0.1.0-beta.8` release candidate.
 
 ## Production deployment status
 
@@ -35,10 +37,10 @@ historical deployment identifiers are not rewritten during a product rename.
 ## npm beta status and next candidate
 
 - Current public release: `side-glance@0.1.0-beta.7`
+- Prepared candidate: `side-glance@0.1.0-beta.8` (unused; not published)
 - Channel: `beta`
-- Status: protected promotion PR #66, annotated tag `v0.1.0-beta.7`, and release
-  workflow run 33023621621 are complete; `beta` points to beta.7 while `latest`
-  deliberately remains beta.1
+- Status: beta.8 is prepared for protected review; until its tag workflow
+  succeeds, `beta` points to beta.7 while `latest` deliberately remains beta.1
 - Previously published: `side-glance@0.1.0-beta.6`, `side-glance@0.1.0-beta.5`,
   `side-glance@0.1.0-beta.4`, `side-glance@0.1.0-beta.3`, and
   `side-glance@0.1.0-beta.1`
@@ -147,8 +149,9 @@ beta.7 gates are complete:
 
 Phase 19 feature PR #64, release preparation PR #65, protected promotion PR #66,
 annotated beta.7 publication, and Homebrew tap PR #5 are complete. Future releases
-must repeat the same protected staging, main, tag, artifact, and tap sequence with
-the next unused version.
+must repeat the same protected staging, main, tag, artifact, and tap sequence.
+Guided init theme selection merged through feature PR #72; this release branch
+prepares beta.8 before a fresh literal `staging` → `main` promotion PR.
 
 ## Controlled migration from stoplight.sh
 
