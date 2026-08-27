@@ -241,7 +241,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   });
   assert.match(arrowSetup.output, /↑\/↓ move/u);
   assert.match(arrowSetup.output, /Side Glance is ready/u);
-  assert.match(arrowSetup.output, /Next[\s\S]*side-glance run --label "Claude" -- claude/u);
+  assert.match(arrowSetup.output, /Next[\s\S]*\r?\n[ ]{2}claude\r?\n/u);
   assert.match(
     await readFile(path.join(arrowHome, ".claude", "settings.json"), "utf8"),
     new RegExp(escapeRegularExpression(executable), "u"),

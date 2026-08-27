@@ -200,6 +200,53 @@ test("setup parser rejects invalid notification automation before planning", () 
   }
 });
 
+test("setup carries an explicit legacy Stoplight migration decision", () => {
+  const parsed = parseSetupArguments(
+    [
+      "--providers",
+      "claude,codex",
+      "--notifications",
+      "none",
+      "--migrate-legacy-stoplight",
+      "--yes",
+    ],
+    { command: "setup", execution: "durable", interactive: false },
+  );
+  assert.equal(parsed.migrateLegacyStoplight, true);
+
+  const claude = {
+    ...providerObservation("claude", "eligible", "not-configured", "update"),
+    legacyStoplightHooks: 5,
+  };
+  const plan = createSetupPlan(parsed, {
+    ...planDependencies(),
+    providers: [
+      claude,
+      providerObservation("codex", "eligible", "ready"),
+      providerObservation("gemini", "unavailable", "unknown"),
+      providerObservation("opencode", "unavailable", "unknown"),
+    ],
+  });
+  assert.equal(plan.providers[0]?.legacyStoplightHooks, 5);
+  assert.equal(plan.providers[0]?.migrateLegacyStoplight, true);
+
+  assert.throws(
+    () =>
+      parseSetupArguments(
+        [
+          "--providers",
+          "codex",
+          "--notifications",
+          "none",
+          "--migrate-legacy-stoplight",
+          "--yes",
+        ],
+        { command: "setup", execution: "durable", interactive: false },
+      ),
+    /requires Claude/u,
+  );
+});
+
 test("non-interactive setup requires a dry-run or a completely specified apply", () => {
   const context = {
     command: "setup" as const,

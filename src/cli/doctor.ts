@@ -63,8 +63,9 @@ export function inspectTerminalCapabilities(options: {
 interface HookInspectionLike {
   expectedEvents: number;
   sideGlanceHooks: number;
+  legacyStoplightHooks?: number;
   integrationStatus: "installed" | "partial" | "not-installed";
-  managedHooks: unknown[];
+  managedHooks: Array<{ directSurfaceConfigured?: boolean }>;
 }
 
 export async function inspectProviderCapabilities(options: {
@@ -97,14 +98,23 @@ export async function inspectProviderCapabilities(options: {
     options.environment,
     options.openAiderConfig ?? ((filePath, flags) => open(filePath, flags)),
   );
-  const surfaceStatus = options.environment.SIDE_GLANCE_SURFACE_ID
-    ? "wrapper-provided"
-    : "wrapper-required";
-
   const providers = Object.fromEntries(
     providerNames.map((provider) => {
       const contractAudited = provider === "claude" || provider === "codex";
       const hookInspection = hookInspectionLike(options.hooks[provider]);
+      const directSurfaceConfigured =
+        hookInspection?.integrationStatus === "installed" &&
+        hookInspection.managedHooks.length === hookInspection.expectedEvents &&
+        hookInspection.managedHooks.every(
+          ({ directSurfaceConfigured: configured }) => configured === true,
+        );
+      const setupRefreshRequired =
+        hookInspection?.integrationStatus === "installed" &&
+        hookInspection.managedHooks.length === hookInspection.expectedEvents &&
+        !directSurfaceConfigured;
+      const wrapperProvided = Boolean(
+        options.environment.SIDE_GLANCE_SURFACE_ID,
+      );
       const integration =
         provider === "opencode"
           ? openCode
@@ -143,10 +153,41 @@ export async function inspectProviderCapabilities(options: {
                   : "pre-final",
           },
           integration,
-          stableSurface: {
-            status: surfaceStatus,
-            supportedCommand: `side-glance run -- ${provider}`,
-          },
+          stableSurface: wrapperProvided
+            ? {
+                status: "wrapper-provided",
+                supportedCommand: `side-glance run -- ${provider}`,
+              }
+            : directSurfaceConfigured
+              ? {
+                  status: "direct-discovery-supported",
+                  strategy: "process-ancestry",
+                  primaryCommand: provider,
+                  fallbackCommand: `side-glance run -- ${provider}`,
+                }
+              : {
+                  status: "wrapper-required",
+                  supportedCommand: `side-glance run -- ${provider}`,
+                  ...(setupRefreshRequired
+                    ? {
+                        recommendedAction: "rerun-init",
+                        setupCommand: "side-glance init",
+                        fallbackCommand: `side-glance run -- ${provider}`,
+                      }
+                    : {}),
+                },
+          visualHookConflicts:
+            provider === "claude" &&
+            (hookInspection?.legacyStoplightHooks ?? 0) > 0
+              ? [
+                  {
+                    kind: "legacy-stoplight",
+                    status: "active",
+                    commandCount: hookInspection?.legacyStoplightHooks ?? 0,
+                    recommendedAction: "replace-via-init",
+                  },
+                ]
+              : [],
           overrides: overrideStatus(provider, options.environment),
           liveVerification: { status: "not-run" },
         },

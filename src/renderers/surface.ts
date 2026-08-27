@@ -144,7 +144,7 @@ async function resetSurface(
   }
 }
 
-function isGoneSurfaceError(error: unknown): boolean {
+export function isGoneSurfaceError(error: unknown): boolean {
   if (error instanceof TerminalGoneError) return true;
   if (typeof error !== "object" || error === null) return false;
   if (
@@ -156,7 +156,7 @@ function isGoneSurfaceError(error: unknown): boolean {
     return true;
   }
   const message = "message" in error ? String(error.message) : "";
-  return /can't find (?:pane|window|session)|no server running|failed to connect|error connecting/iu.test(
+  return /can't find (?:pane|window|session)|no server running|failed to connect|error connecting|terminal target (?:changed|is not|may not|must be)|direct terminal rendering is unsupported/iu.test(
     message,
   );
 }

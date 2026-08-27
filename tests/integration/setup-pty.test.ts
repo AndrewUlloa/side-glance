@@ -64,7 +64,7 @@ test(
     assert.match(result.output, /How would you like to continue/u);
     assert.match(result.output, /Review/u);
     assert.match(result.output, /Side Glance is ready/u);
-    assert.match(result.output, /Next[\s\S]*side-glance run --label "Claude" -- claude/u);
+    assert.match(result.output, /Next[\s\S]*\r?\n[ ]{2}claude\r?\n/u);
     assert.equal(result.output.includes(String.fromCodePoint(27)), false);
     const settings = JSON.parse(
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),

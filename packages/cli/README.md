@@ -22,6 +22,10 @@ npm install --global side-glance@beta
 side-glance init
 ```
 
+Package upgrades alone do not rewrite existing provider hooks. Rerun
+`side-glance init` once after upgrading; `side-glance doctor --json` reports
+`rerun-init` when an installed integration needs that refresh.
+
 For public discovery or a guided trial, use:
 
 ```bash
@@ -34,7 +38,7 @@ exact-version durable install. Side Glance deliberately refuses permanent provid
 
 `side-glance init` shows a concise read-only review of the selected providers,
 notification choices, warnings, and owned configuration paths before it asks for
-one confirmation, then finishes with the launch command to run next.
+one confirmation, then tells you what to run next.
 `side-glance setup` is its exact alias and is safe to re-run. On an interactive
 terminal, **Recommended** is focused first. For a new configuration,
 **Recommended** uses Status without an additional theme question; rerunning setup
@@ -54,12 +58,24 @@ select that same no-ANSI fallback automatically. Non-TTY input stays
 non-interactive and requires explicit automation flags. Setup does not edit shell
 profiles or start a daemon.
 
-Provider hooks supply lifecycle semantics, but they do not identify which
-Terminal.app, iTerm, Ghostty, or tmux surface should receive colors. Use the wrapper
-for that stable surface identity:
+After setup, just run `claude`, `codex`, or the experimental `gemini` integration
+as usual and start prompting:
 
 ```bash
-side-glance run --label "Claude" -- claude
+claude
+codex
+gemini
+```
+
+For supported local CLI launches, Side Glance can recover the originating terminal
+from tmux identity or bounded process ancestry, then paint only after the canonical
+path passes its owned character TTY checks. Direct discovery is supported, not
+guaranteed. Desktop and detached sessions have no trustworthy local terminal and
+remain targetless; hooks still acknowledge lifecycle events without painting the
+wrong window. Use `side-glance run` as the explicit fallback when discovery is not
+available, or when you want a private label or process-exit notification:
+
+```bash
 side-glance run --label "Codex" -- codex
 ```
 
@@ -158,6 +174,14 @@ side-glance install opencode --notifications --json # stable OpenCode v1 only
 side-glance run --label "API worker" -- claude
 ```
 
+Recognized legacy Claude `stoplight.sh` color hooks cannot run beside direct Side
+Glance colors. Guided init offers a replace-or-skip decision. Automation must opt
+in explicitly; replacement creates a backup and preserves unrelated hooks:
+
+```bash
+side-glance install claude --migrate-legacy-stoplight --json
+```
+
 Claude/Codex `Stop` and Gemini `AfterAgent` are pre-final provider hooks. Known
 Claude subagent/background work prevents Ready, but Side Glance still does not
 ring a final Ready notification because a different parallel hook may block or
@@ -209,7 +233,7 @@ owned entry:
 ```bash
 side-glance setup --providers claude --notifications none --dry-run
 side-glance setup --providers claude --notifications none --yes
-side-glance run --label "Side Glance smoke" -- claude
+claude
 side-glance doctor --json
 side-glance uninstall claude --json
 side-glance reset --all --json

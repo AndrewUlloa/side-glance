@@ -27,6 +27,7 @@ export interface SetupRequest {
   providers?: readonly SetupProvider[];
   notifications?: readonly SetupProvider[];
   notificationsSpecified: boolean;
+  migrateLegacyStoplight?: boolean;
   notificationSound?: string;
   dryRun: boolean;
   yes: boolean;
@@ -70,6 +71,7 @@ export interface SetupProviderObservation {
   state: SetupProviderState;
   integrationStatus: SetupIntegrationStatus;
   reason?: SetupProviderReason;
+  legacyStoplightHooks?: number;
   target?: {
     path: string;
     action: SetupTargetAction;
@@ -117,6 +119,8 @@ export interface SetupPlanProvider {
   maturity: "contract-audited" | "experimental";
   integrationStatus: SetupIntegrationStatus;
   reason?: { code: SetupProviderReason; message: string };
+  legacyStoplightHooks: number;
+  migrateLegacyStoplight: boolean;
   target?: {
     path: string;
     action: SetupTargetAction;
@@ -286,6 +290,12 @@ export function createSetupPlan(
           ? "contract-audited"
           : "experimental",
       integrationStatus: observation.integrationStatus,
+      legacyStoplightHooks: observation.legacyStoplightHooks ?? 0,
+      migrateLegacyStoplight:
+        observation.provider === "claude" &&
+        selectedProviders.has("claude") &&
+        (observation.legacyStoplightHooks ?? 0) > 0 &&
+        request.migrateLegacyStoplight === true,
       ...(observation.reason
         ? {
             reason: {
@@ -375,6 +385,15 @@ function canonicalObservations(
       !Object.hasOwn(REASON_MESSAGES, observation.reason)
     ) {
       throw new Error(`setup discovery returned an invalid ${observation.provider} reason.`);
+    }
+    if (
+      observation.legacyStoplightHooks !== undefined &&
+      (!Number.isSafeInteger(observation.legacyStoplightHooks) ||
+        observation.legacyStoplightHooks < 0)
+    ) {
+      throw new Error(
+        `setup discovery returned an invalid ${observation.provider} legacy Stoplight hook count.`,
+      );
     }
     byProvider.set(observation.provider, observation);
   }
@@ -485,6 +504,7 @@ function notificationCoverage(
 }
 
 function launchCommand(provider: SetupProvider): string {
+  if (provider !== "opencode") return provider;
   const labels: Readonly<Record<SetupProvider, string>> = {
     claude: "Claude",
     codex: "Codex",
@@ -533,7 +553,12 @@ const VALUE_OPTIONS = new Set([
   "--executable",
   "--install",
 ]);
-const BOOLEAN_OPTIONS = new Set(["--dry-run", "--yes", "--json"]);
+const BOOLEAN_OPTIONS = new Set([
+  "--dry-run",
+  "--yes",
+  "--json",
+  "--migrate-legacy-stoplight",
+]);
 
 export function parseSetupArguments(
   args: readonly string[],
@@ -577,6 +602,7 @@ export function parseSetupArguments(
   const dryRun = booleans.has("--dry-run");
   const yes = booleans.has("--yes");
   const json = booleans.has("--json");
+  const migrateLegacyStoplight = booleans.has("--migrate-legacy-stoplight");
   const homeDirectory = values.has("--home")
     ? validateAbsolutePath(values.get("--home") as string, "--home")
     : undefined;
@@ -619,6 +645,9 @@ export function parseSetupArguments(
       );
     }
   }
+  if (migrateLegacyStoplight && !providers?.includes("claude")) {
+    throw new Error("--migrate-legacy-stoplight requires Claude in --providers.");
+  }
   if (dryRun && yes) {
     throw new Error("--dry-run and --yes cannot be used together.");
   }
@@ -642,6 +671,7 @@ export function parseSetupArguments(
     ...(providers ? { providers } : {}),
     ...(notifications ? { notifications } : {}),
     notificationsSpecified,
+    ...(migrateLegacyStoplight ? { migrateLegacyStoplight: true } : {}),
     ...(notificationSound ? { notificationSound } : {}),
     dryRun,
     yes,

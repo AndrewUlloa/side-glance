@@ -38,6 +38,8 @@ export interface InstallerOptions {
   provider: InstallableProvider;
   homeDirectory: string;
   executablePath: string;
+  directSurface?: boolean;
+  migrateLegacyStoplight?: boolean;
   notifications?: boolean;
   notificationSound?: string;
 }
@@ -58,9 +60,11 @@ export interface ProviderInspection {
   expectedEvents: number;
   existingHookGroups: number;
   sideGlanceHooks: number;
+  legacyStoplightHooks: number;
   integrationStatus: "installed" | "partial" | "not-installed";
   managedHooks: Array<{
     event: string;
+    directSurfaceConfigured: boolean;
     notifications: boolean;
     soundConfigured: boolean;
     timeout: number | null;
@@ -137,6 +141,10 @@ export async function inspectProviderHooks(options: {
   const loaded = await readConfiguration(homeDirectory, configPath);
   const hooks = readHooks(loaded.value);
   const groups = Object.values(hooks).flat();
+  const legacyStoplightHooks =
+    options.provider === "claude"
+      ? countLegacyStoplightHooks(groups, homeDirectory)
+      : 0;
   const managedHooks = Object.entries(hooks).flatMap(([event, eventGroups]) =>
     eventGroups.flatMap((group) =>
       group.hooks.flatMap((hook) => {
@@ -144,6 +152,8 @@ export async function inspectProviderHooks(options: {
         return [
           {
             event,
+            directSurfaceConfigured:
+              hasDirectSurfaceOption(hook.command, options.provider),
             notifications: hook.command?.includes(" --notifications") ?? false,
             soundConfigured:
               hook.command?.includes(" --notification-sound ") ?? false,
@@ -173,6 +183,7 @@ export async function inspectProviderHooks(options: {
     expectedEvents,
     existingHookGroups: groups.length,
     sideGlanceHooks: managedHooks.length,
+    legacyStoplightHooks,
     integrationStatus:
       providerEvents.every((event) => managedEvents.has(event))
         ? "installed"
@@ -218,12 +229,42 @@ export async function planProviderHookInstall(
   options: InstallerOptions,
 ): Promise<ProviderHookMutationPlan> {
   const validated = await validateOptions(options, true);
+  const homeDirectory = path.resolve(options.homeDirectory);
   const loaded = await readConfiguration(
-    path.resolve(options.homeDirectory),
+    homeDirectory,
     validated.configPath,
   );
   const configuration = loaded.value;
   const hooks = readHooks(configuration);
+  const legacyStoplightHooks =
+    options.provider === "claude"
+      ? countLegacyStoplightHooks(Object.values(hooks).flat(), homeDirectory)
+      : 0;
+  if (options.migrateLegacyStoplight && options.provider !== "claude") {
+    throw new Error("Legacy Stoplight migration is supported only for Claude.");
+  }
+  if (options.migrateLegacyStoplight && !options.directSurface) {
+    throw new Error("Legacy Stoplight migration requires direct terminal discovery.");
+  }
+  if (
+    options.directSurface &&
+    legacyStoplightHooks > 0 &&
+    !options.migrateLegacyStoplight
+  ) {
+    throw new Error(
+      "A legacy Stoplight visual hook is active; explicit migration is required before direct terminal discovery can be enabled.",
+    );
+  }
+  if (options.migrateLegacyStoplight) {
+    for (const [eventName, groups] of Object.entries(hooks)) {
+      const retained = removeLegacyStoplightHandlers(
+        groups,
+        homeDirectory,
+      );
+      if (retained.length > 0) hooks[eventName] = retained;
+      else delete hooks[eventName];
+    }
+  }
   const command = managedCommand(
     options.provider,
     validated.executablePath,
@@ -575,6 +616,50 @@ function removeManagedHandlers(
   });
 }
 
+function countLegacyStoplightHooks(
+  groups: readonly HookGroup[],
+  homeDirectory: string,
+): number {
+  return groups.reduce(
+    (count, group) =>
+      count +
+      group.hooks.filter((hook) =>
+        isLegacyStoplightCommand(hook.command, homeDirectory),
+      ).length,
+    0,
+  );
+}
+
+function removeLegacyStoplightHandlers(
+  groups: readonly HookGroup[],
+  homeDirectory: string,
+): HookGroup[] {
+  return groups.flatMap((group) => {
+    const hooks = group.hooks.filter(
+      (hook) => !isLegacyStoplightCommand(hook.command, homeDirectory),
+    );
+    return hooks.length > 0 ? [{ ...group, hooks }] : [];
+  });
+}
+
+function isLegacyStoplightCommand(
+  command: string | undefined,
+  homeDirectory: string,
+): boolean {
+  if (typeof command !== "string") return false;
+  const script = path.join(homeDirectory, ".claude", "hooks", "stoplight.sh");
+  const invocations = [
+    "bash $HOME/.claude/hooks/stoplight.sh",
+    'bash "$HOME/.claude/hooks/stoplight.sh"',
+    `bash ${shellQuote(script)}`,
+    `/bin/bash ${shellQuote(script)}`,
+  ];
+  const actions = ["session", "start", "wait", "done", "idle"];
+  return invocations.some((invocation) =>
+    actions.some((action) => command === `${invocation} ${action}`),
+  );
+}
+
 function isManagedCommand(
   command: string | undefined,
   provider: InstallableProvider,
@@ -588,10 +673,25 @@ function isManagedCommand(
   );
 }
 
+function hasDirectSurfaceOption(
+  command: string | undefined,
+  provider: InstallableProvider,
+): boolean {
+  return (
+    typeof command === "string" &&
+    command.includes(
+      ` hook --provider ${provider} --json --discover-terminal`,
+    )
+  );
+}
+
 function managedCommand(
   provider: InstallableProvider,
   executablePath: string,
-  options: Pick<InstallerOptions, "notifications" | "notificationSound">,
+  options: Pick<
+    InstallerOptions,
+    "directSurface" | "notifications" | "notificationSound"
+  >,
 ): string {
   if (options.notificationSound !== undefined && !options.notifications) {
     throw new Error("--notification-sound requires --notifications.");
@@ -605,7 +705,10 @@ function managedCommand(
             )}`
       }`
     : "";
-  return `${MANAGED_MARKER} ${shellQuote(executablePath)} hook --provider ${provider} --json${notificationArguments}`;
+  const directSurfaceArgument = options.directSurface
+    ? " --discover-terminal"
+    : "";
+  return `${MANAGED_MARKER} ${shellQuote(executablePath)} hook --provider ${provider} --json${directSurfaceArgument}${notificationArguments}`;
 }
 
 function validateNotificationSound(value: string): string {

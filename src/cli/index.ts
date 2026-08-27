@@ -123,12 +123,16 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       const provider = parseOption(args, "--provider");
       const notifications = args.includes("--notifications");
       const managedHook = process.env.SIDE_GLANCE_MANAGED_HOOK === "1";
+      const discoverProcessAncestry =
+        managedHook && args.includes("--discover-terminal");
       const target = await (notifications || managedHook
         ? discoverOptionalTerminalTarget({
+            discoverProcessAncestry,
             environment: process.env,
             surfaceId: optionalOption(args, "--surface"),
           })
         : discoverTerminalTarget({
+            discoverProcessAncestry,
             environment: process.env,
             surfaceId: optionalOption(args, "--surface"),
           }));
@@ -142,10 +146,16 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
           "--notification-sound",
           "--label",
           "--terminal-title",
+          "--discover-terminal",
           "--json",
         ],
         "hook",
-        ["--notifications", "--terminal-title", "--json"],
+        [
+          "--notifications",
+          "--terminal-title",
+          "--discover-terminal",
+          "--json",
+        ],
       );
       const sessionIndex = args.indexOf("--session");
       const fallbackSessionId =
@@ -167,7 +177,13 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         writeHookAcknowledgement(provider);
         return 0;
       }
-      await controllerWithNotifications(store, args, appearance).submit(event);
+      await controllerWithNotifications(
+        store,
+        args,
+        appearance,
+        notifications,
+        { failOpenUnavailableSurface: managedHook },
+      ).submit(event);
       writeHookAcknowledgement(provider);
       return 0;
     }
@@ -416,7 +432,7 @@ Usage:
   side-glance theme [show|set|preview|reset]
   side-glance preview --phase <phase> --elapsed <seconds> [--source <provider>] --json
   side-glance run [--surface <id>] [--notify-on-exit] -- <command> [args...]
-  side-glance install <claude|codex|gemini|opencode> [--notifications] --json
+  side-glance install <claude|codex|gemini|opencode> [--notifications] [--migrate-legacy-stoplight] --json
   side-glance uninstall <claude|codex|gemini|opencode> --json
   side-glance status --json
   side-glance reset (--all | --source <source> --session <id>) --json
@@ -427,11 +443,16 @@ Usage:
 Options:
   --notifications              Enable Side Glance desktop notifications
   --notification-sound <name>  Use an installed sound name (default: Glass)
+  --migrate-legacy-stoplight   Replace exact legacy Claude Stoplight hooks
   --label <text>                Distinguish concurrent sessions privately
   --notify-on-exit              Notify when a supervised process exits
   --terminal-title              Opt into a sanitized lifecycle title fallback
   -h, --help                    Show this help
   -v, --version                 Show the installed version
+
+After install or upgrade:
+  Run side-glance init once, then use claude, codex, or experimental gemini normally.
+  side-glance run remains the fallback when safe terminal discovery is unavailable.
 `;
 }
 
@@ -713,6 +734,7 @@ function controllerWithNotifications(
   args: readonly string[],
   appearance: SideGlanceAppearance,
   enabled = args.includes("--notifications"),
+  options: { failOpenUnavailableSurface?: boolean } = {},
 ): SideGlanceController {
   return new SideGlanceController(
     store,
@@ -723,6 +745,7 @@ function controllerWithNotifications(
     }),
     configuredNotifier(args, enabled),
     appearance,
+    options,
   );
 }
 

@@ -1,11 +1,15 @@
 import { execFile, spawn } from "node:child_process";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import type { Readable, Stream } from "node:stream";
 import { promisify } from "node:util";
 
 import type { SideGlanceTarget } from "./protocol.ts";
 
 const execFileAsync = promisify(execFile);
+const PROCESS_ANCESTRY_MAX_DEPTH = 8;
+const PROCESS_ANCESTRY_TIMEOUT_MS = 500;
+const PROCESS_INSPECTION_MAX_BYTES = 4_096;
 
 interface TtyProcess {
   kill: (signal: NodeJS.Signals) => boolean;
@@ -24,8 +28,23 @@ type SpawnTtyProcess = (
   options: TtySpawnOptions,
 ) => TtyProcess;
 
+export interface TargetProcessRecord {
+  pid: number;
+  ppid: number;
+  uid: number;
+  tty: string;
+  startedAt: string;
+}
+
+type InspectProcesses = (
+  pids: readonly number[],
+  timeoutMs: number,
+) => Promise<readonly TargetProcessRecord[]>;
+
 export interface TargetDiscoveryOptions {
+  discoverProcessAncestry?: boolean;
   environment?: Readonly<Record<string, string | undefined>>;
+  inspectProcesses?: InspectProcesses;
   resolveTty?: () => Promise<string | undefined>;
   resolveTmuxWindow?: (paneId: string) => Promise<string | undefined>;
   spawnProcess?: SpawnTtyProcess;
@@ -74,12 +93,22 @@ async function discoverTarget(
     throw new Error("tmux pane identity must use the canonical %number form.");
   }
 
-  const tty =
+  let tty =
     explicitTty ??
     (explicitSurface || tmuxPane
       ? undefined
       : await (options.resolveTty ??
           (() => resolveControllingTty(options.spawnProcess)))());
+  if (
+    !tty &&
+    !explicitSurface &&
+    !tmuxPane &&
+    options.discoverProcessAncestry
+  ) {
+    tty = await resolveProcessAncestryTty(
+      options.inspectProcesses ?? inspectProcessesWithPs,
+    );
+  }
   if (tty) validateTtyPath(tty);
 
   let surfaceId = explicitSurface;
@@ -191,6 +220,206 @@ async function resolveControllingTty(
       const tty = output.trim();
       finish(code === 0 && tty.startsWith("/dev/") ? tty : undefined);
     });
+  });
+}
+
+async function resolveProcessAncestryTty(
+  inspectProcesses: InspectProcesses,
+): Promise<string | undefined> {
+  if (typeof process.getuid !== "function") return undefined;
+  const uid = process.getuid();
+  const deadline = performance.now() + PROCESS_ANCESTRY_TIMEOUT_MS;
+  const chain: TargetProcessRecord[] = [];
+  const seen = new Set<number>();
+  let pid = process.pid;
+  let candidate: string | undefined;
+
+  try {
+    for (let depth = 0; depth < PROCESS_ANCESTRY_MAX_DEPTH; depth += 1) {
+      if (seen.has(pid)) return undefined;
+      seen.add(pid);
+      const records = await inspectBeforeDeadline(inspectProcesses, [pid], deadline);
+      if (records.length !== 1) return undefined;
+      const record = validateProcessRecord(records[0], pid, uid);
+      chain.push(record);
+      candidate = ttyPathFromProcessToken(record.tty);
+      if (candidate) break;
+      if (record.ppid <= 1) return undefined;
+      pid = record.ppid;
+    }
+    if (!candidate) return undefined;
+
+    const confirmed = await inspectBeforeDeadline(
+      inspectProcesses,
+      chain.map(({ pid: chainPid }) => chainPid),
+      deadline,
+    );
+    if (confirmed.length !== chain.length) return undefined;
+    const confirmedByPid = new Map<number, TargetProcessRecord>();
+    for (const record of confirmed) {
+      if (confirmedByPid.has(record.pid)) return undefined;
+      confirmedByPid.set(record.pid, record);
+    }
+    for (const original of chain) {
+      const record = confirmedByPid.get(original.pid);
+      if (!record) return undefined;
+      const validated = validateProcessRecord(record, original.pid, uid);
+      if (!sameProcessRecord(original, validated)) return undefined;
+    }
+    const confirmedCandidate = firstTtyInChain(
+      chain.map(({ pid: chainPid }) => confirmedByPid.get(chainPid)!),
+    );
+    return confirmedCandidate === candidate ? candidate : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function inspectBeforeDeadline(
+  inspectProcesses: InspectProcesses,
+  pids: readonly number[],
+  deadline: number,
+): Promise<readonly TargetProcessRecord[]> {
+  const remaining = deadline - performance.now();
+  if (remaining <= 0) throw new Error("Process ancestry discovery timed out.");
+  const records = await inspectProcesses(pids, remaining);
+  if (performance.now() > deadline) {
+    throw new Error("Process ancestry discovery timed out.");
+  }
+  return records;
+}
+
+function validateProcessRecord(
+  record: TargetProcessRecord | undefined,
+  expectedPid: number,
+  expectedUid: number,
+): TargetProcessRecord {
+  if (
+    !record ||
+    !Number.isSafeInteger(record.pid) ||
+    record.pid !== expectedPid ||
+    !Number.isSafeInteger(record.ppid) ||
+    record.ppid < 0 ||
+    !Number.isSafeInteger(record.uid) ||
+    record.uid !== expectedUid
+  ) {
+    throw new Error("Process ancestry record did not match the requested process.");
+  }
+  validateText(record.startedAt, "process start identity", 160);
+  validateText(record.tty, "process TTY", 64);
+  ttyPathFromProcessToken(record.tty);
+  return record;
+}
+
+function firstTtyInChain(
+  records: readonly TargetProcessRecord[],
+): string | undefined {
+  for (const record of records) {
+    const tty = ttyPathFromProcessToken(record.tty);
+    if (tty) return tty;
+  }
+  return undefined;
+}
+
+function ttyPathFromProcessToken(token: string): string | undefined {
+  if (["?", "??", "-"].includes(token)) return undefined;
+  if (!/^(?:ttys?\d+|pts\/\d+)$/u.test(token)) {
+    throw new Error("Process TTY was not a canonical device token.");
+  }
+  return `/dev/${token}`;
+}
+
+function sameProcessRecord(
+  left: TargetProcessRecord,
+  right: TargetProcessRecord,
+): boolean {
+  return (
+    left.pid === right.pid &&
+    left.ppid === right.ppid &&
+    left.uid === right.uid &&
+    left.tty === right.tty &&
+    left.startedAt === right.startedAt
+  );
+}
+
+async function inspectProcessesWithPs(
+  pids: readonly number[],
+  timeoutMs: number,
+): Promise<readonly TargetProcessRecord[]> {
+  const executable =
+    process.platform === "darwin"
+      ? "/bin/ps"
+      : process.platform === "linux"
+        ? "/usr/bin/ps"
+        : undefined;
+  if (!executable || pids.length === 0) return [];
+  if (
+    pids.length > PROCESS_ANCESTRY_MAX_DEPTH ||
+    pids.some((pid) => !Number.isSafeInteger(pid) || pid <= 0)
+  ) {
+    throw new Error("Process inspection received an invalid PID set.");
+  }
+  const { stdout } = await execFileAsync(
+    executable,
+    [
+      "-ww",
+      "-o",
+      "pid=",
+      "-o",
+      "ppid=",
+      "-o",
+      "uid=",
+      "-o",
+      "tty=",
+      "-o",
+      "lstart=",
+      "-p",
+      pids.join(","),
+    ],
+    {
+      encoding: "utf8",
+      env: {
+        LANG: "C",
+        LC_ALL: "C",
+        NODE_ENV: process.env.NODE_ENV ?? "production",
+        PATH: "/usr/bin:/bin",
+      },
+      maxBuffer: PROCESS_INSPECTION_MAX_BYTES,
+      timeout: Math.max(
+        1,
+        Math.min(Math.floor(timeoutMs), PROCESS_ANCESTRY_TIMEOUT_MS),
+      ),
+    },
+  );
+  return parseProcessRecords(stdout);
+}
+
+function parseProcessRecords(stdout: string): TargetProcessRecord[] {
+  if (stdout.length > PROCESS_INSPECTION_MAX_BYTES) {
+    throw new Error("Process inspection output exceeded its limit.");
+  }
+  const trimmed = stdout.trim();
+  if (!trimmed) return [];
+  return trimmed.split("\n").map((line) => {
+    const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.+?)\s*$/u.exec(line);
+    if (!match) throw new Error("Process inspection returned malformed output.");
+    const pid = Number(match[1]);
+    const ppid = Number(match[2]);
+    const uid = Number(match[3]);
+    if (
+      !Number.isSafeInteger(pid) ||
+      !Number.isSafeInteger(ppid) ||
+      !Number.isSafeInteger(uid)
+    ) {
+      throw new Error("Process inspection returned an invalid numeric field.");
+    }
+    return {
+      pid,
+      ppid,
+      uid,
+      tty: match[4]!,
+      startedAt: match[5]!,
+    };
   });
 }
 

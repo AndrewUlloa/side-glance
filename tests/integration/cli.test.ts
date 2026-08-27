@@ -311,6 +311,85 @@ test("managed Codex hooks fail open when the hook subprocess has no terminal", a
   ];
   assert.equal(session.phase, "working");
   assert.equal(session.target, undefined);
+
+  const strict = await runCli(["hook", "--provider", "codex", "--json"], {
+    stateDirectory: directory,
+    env: { SIDE_GLANCE_TTY: "/dev/tty999999" },
+    input: JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      session_id: "codex-terminal-race-strict",
+    }),
+  });
+  assert.equal(strict.code, 1);
+  assert.match(strict.stderr, /Terminal target does not exist/u);
+});
+
+test("managed hooks fail open when a discovered terminal disappears before paint", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(
+    ["hook", "--provider", "codex", "--discover-terminal", "--json"],
+    {
+      stateDirectory: directory,
+      env: {
+        SIDE_GLANCE_MANAGED_HOOK: "1",
+        SIDE_GLANCE_TTY: "/dev/tty999999",
+      },
+      input: JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        session_id: "codex-terminal-race",
+      }),
+    },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout, "{}\n");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const session = JSON.parse(status.stdout).sessions[
+    "codex:codex-terminal-race"
+  ];
+  assert.equal(session.phase, "working");
+  assert.equal(session.target, undefined);
+});
+
+test("managed hooks accept explicit direct-terminal discovery opt-in", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(
+    ["hook", "--provider", "codex", "--discover-terminal", "--json"],
+    {
+      stateDirectory: directory,
+      env: { SIDE_GLANCE_MANAGED_HOOK: "1" },
+      input: JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        session_id: "codex-direct-discovery-opt-in",
+      }),
+    },
+  );
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout, "{}\n");
+
+  const unknown = await runCli(
+    [
+      "hook",
+      "--provider",
+      "codex",
+      "--discover-terminal",
+      "--unknown-after-discovery",
+      "--json",
+    ],
+    {
+      stateDirectory: directory,
+      env: { SIDE_GLANCE_MANAGED_HOOK: "1" },
+      input: JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        session_id: "codex-direct-discovery-invalid-option",
+      }),
+    },
+  );
+  assert.equal(unknown.code, 1);
+  assert.match(unknown.stderr, /unknown option/u);
 });
 
 test("uses the wrapper-provided surface for an installed hook command", async (context) => {
@@ -893,6 +972,119 @@ test("doctor separates provider capabilities without claiming live verification"
   }
 });
 
+test("doctor reports configured direct discovery and competing legacy painters", async (context) => {
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-direct-doctor-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const notifications = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: process.platform,
+    pathProbe: async () => false,
+    backendHints: { desktopSession: false },
+  });
+  const hooks = {
+    claude: {
+      expectedEvents: 1,
+      sideGlanceHooks: 1,
+      legacyStoplightHooks: 5,
+      integrationStatus: "installed",
+      managedHooks: [{ directSurfaceConfigured: true }],
+    },
+    codex: {
+      expectedEvents: 1,
+      sideGlanceHooks: 1,
+      legacyStoplightHooks: 0,
+      integrationStatus: "installed",
+      managedHooks: [{ directSurfaceConfigured: true }],
+    },
+    gemini: {
+      expectedEvents: 1,
+      sideGlanceHooks: 1,
+      legacyStoplightHooks: 0,
+      integrationStatus: "installed",
+      managedHooks: [{ directSurfaceConfigured: true }],
+    },
+  };
+
+  const report = await inspectProviderCapabilities({
+    homeDirectory: home,
+    environment: {},
+    pathProbe: async () => false,
+    hooks,
+    notifications,
+  });
+  const providers = report.providers as Record<
+    "claude" | "codex" | "gemini",
+    {
+      stableSurface: {
+        status: string;
+        strategy: string;
+        fallbackCommand: string;
+      };
+      visualHookConflicts: unknown[];
+    }
+  >;
+
+  for (const provider of ["claude", "codex", "gemini"] as const) {
+    assert.equal(
+      providers[provider].stableSurface.status,
+      "direct-discovery-supported",
+    );
+    assert.equal(
+      providers[provider].stableSurface.strategy,
+      "process-ancestry",
+    );
+    assert.match(
+      providers[provider].stableSurface.fallbackCommand,
+      new RegExp(`side-glance run -- ${provider}`, "u"),
+    );
+  }
+  assert.deepEqual(providers.claude.visualHookConflicts, [
+    {
+      kind: "legacy-stoplight",
+      status: "active",
+      commandCount: 5,
+      recommendedAction: "replace-via-init",
+    },
+  ]);
+  assert.deepEqual(providers.codex.visualHookConflicts, []);
+  assert.deepEqual(providers.gemini.visualHookConflicts, []);
+});
+
+test("doctor tells otherwise-installed legacy hooks to rerun setup for plain commands", async (context) => {
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-upgrade-doctor-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const notifications = await inspectNotificationReadiness({
+    homeDirectory: home,
+    platform: process.platform,
+    pathProbe: async () => false,
+    backendHints: { desktopSession: false },
+  });
+  const report = await inspectProviderCapabilities({
+    homeDirectory: home,
+    environment: {},
+    pathProbe: async () => false,
+    hooks: {
+      codex: {
+        expectedEvents: 1,
+        sideGlanceHooks: 1,
+        legacyStoplightHooks: 0,
+        integrationStatus: "installed",
+        managedHooks: [{ directSurfaceConfigured: false }],
+      },
+    },
+    notifications,
+  });
+  const stableSurface = (
+    report.providers.codex as {
+      stableSurface: Record<string, unknown>;
+    }
+  ).stableSurface;
+  assert.equal(stableSurface.status, "wrapper-required");
+  assert.equal(stableSurface.recommendedAction, "rerun-init");
+  assert.equal(stableSurface.setupCommand, "side-glance init");
+  assert.equal(stableSurface.fallbackCommand, "side-glance run -- codex");
+});
+
 test("doctor reads Aider config through one verified no-follow handle", async (context) => {
   const home = await mkdtemp(path.join(tmpdir(), "side-glance-aider-handle-"));
   context.after(() => rm(home, { recursive: true, force: true }));
@@ -1254,6 +1446,10 @@ test("exposes transactional provider install and uninstall commands", async (con
   );
   assert.equal(installed.code, 0, installed.stderr);
   assert.equal(JSON.parse(installed.stdout).changed, true);
+  assert.match(
+    await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
+    /--discover-terminal/u,
+  );
 
   const uninstalled = await runCli(
     [
@@ -1269,6 +1465,56 @@ test("exposes transactional provider install and uninstall commands", async (con
   );
   assert.equal(uninstalled.code, 0, uninstalled.stderr);
   assert.equal(JSON.parse(uninstalled.stdout).installedHooks, 0);
+});
+
+test("direct Claude install refuses legacy Stoplight until migration is explicit", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-cli-migration-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "side-glance-bin");
+  const settingsPath = path.join(home, ".claude", "settings.json");
+  await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await mkdir(path.dirname(settingsPath), { recursive: true });
+  const original = `${JSON.stringify({
+    hooks: {
+      Stop: [
+        {
+          hooks: [
+            {
+              type: "command",
+              command: "bash $HOME/.claude/hooks/stoplight.sh done",
+            },
+            { type: "command", command: "/usr/bin/unrelated-hook" },
+          ],
+        },
+      ],
+    },
+  }, null, 2)}\n`;
+  await writeFile(settingsPath, original, { mode: 0o600 });
+  const baseArguments = [
+    "install",
+    "claude",
+    "--home",
+    home,
+    "--executable",
+    executable,
+    "--json",
+  ];
+
+  const refused = await runCli(baseArguments, { stateDirectory: directory });
+  assert.notEqual(refused.code, 0);
+  assert.equal(await readFile(settingsPath, "utf8"), original);
+
+  const migrated = await runCli(
+    [...baseArguments, "--migrate-legacy-stoplight"],
+    { stateDirectory: directory },
+  );
+  assert.equal(migrated.code, 0, migrated.stderr);
+  assert.ok(JSON.parse(migrated.stdout).backupPath);
+  const installed = await readFile(settingsPath, "utf8");
+  assert.doesNotMatch(installed, /\.claude\/hooks\/stoplight\.sh/u);
+  assert.match(installed, /\/usr\/bin\/unrelated-hook/u);
+  assert.match(installed, /--discover-terminal/u);
 });
 
 test("installs notification-enabled provider hooks without changing unrelated settings", async (context) => {
@@ -1534,6 +1780,62 @@ test("refuses permanent provider activation from an ephemeral npm execution", as
     () => readFile(path.join(home, ".claude", "settings.json"), "utf8"),
     /ENOENT/u,
   );
+});
+
+test("direct install configures plain Claude launches and requires explicit legacy migration", async (context) => {
+  const directory = await stateDirectory(context);
+  const home = await mkdtemp(path.join(tmpdir(), "side-glance-direct-install-"));
+  context.after(() => rm(home, { recursive: true, force: true }));
+  const executable = path.join(home, "side-glance-bin");
+  await writeFile(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await chmod(executable, 0o700);
+  const settingsPath = path.join(home, ".claude", "settings.json");
+  await mkdir(path.dirname(settingsPath), { recursive: true });
+  await writeFile(
+    settingsPath,
+    `${JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: "bash $HOME/.claude/hooks/stoplight.sh done",
+              },
+              { type: "command", command: "/usr/bin/unrelated-hook" },
+            ],
+          },
+        ],
+      },
+    })}\n`,
+    { mode: 0o600 },
+  );
+
+  const refused = await runCli(
+    ["install", "claude", "--home", home, "--executable", executable, "--json"],
+    { stateDirectory: directory },
+  );
+  assert.equal(refused.code, 1);
+  assert.match(refused.stderr, /legacy Stoplight.*migration/iu);
+
+  const installed = await runCli(
+    [
+      "install",
+      "claude",
+      "--home",
+      home,
+      "--executable",
+      executable,
+      "--migrate-legacy-stoplight",
+      "--json",
+    ],
+    { stateDirectory: directory },
+  );
+  assert.equal(installed.code, 0, installed.stderr);
+  const settings = await readFile(settingsPath, "utf8");
+  assert.match(settings, /--discover-terminal/u);
+  assert.doesNotMatch(settings, /\.claude\/hooks\/stoplight\.sh/u);
+  assert.match(settings, /\/usr\/bin\/unrelated-hook/u);
 });
 
 test("refuses an explicit npx-cache executable from an otherwise durable install", async (context) => {

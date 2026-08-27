@@ -107,7 +107,7 @@ the exact durable alias for `init`.
 3. Choose one notification path per provider unless duplicate alerts are intentional. When provider-native notifications are ready, Side Glance defaults off; when the native notification state is unknown, Side Glance also defaults off. Disabled/not-configured native delivery defaults Side Glance on only when its backend is available.
 4. Confirm the promised coverage: Claude attention/failure with pre-final Ready silent; Codex and Gemini attention with pre-final Ready silent; experimental OpenCode v1 Ready/attention/failure; Aider only through an explicit conflict-aware static bridge; generic wrapper process exit only.
 5. For an advanced one-provider trial, use `side-glance install <provider> --notifications --notification-sound Glass --json`; never point hooks at `npx`.
-6. In Terminal.app, iTerm, Ghostty, or another terminal, launch each session through `side-glance run --label "<private label>" -- <provider>`; hooks provide lifecycle semantics, while the wrapper provides the stable surface identity used for colors.
+6. In Terminal.app, iTerm, Ghostty, or another terminal, normally run `claude`, `codex`, or experimental `gemini`; supported local hooks discover and verify their originating TTY. Direct discovery is not guaranteed, so use `side-glance run --label "<private label>" -- <provider>` as the fallback for detached or unusual launch paths, or when a private label is useful.
 7. Manually verify terminal channels plus OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
 
 ## Guided setup smoke and rollback
@@ -117,7 +117,7 @@ Use a deliberately chosen provider and keep the initial preview read-only:
 ```bash
 side-glance setup --providers claude --notifications none --dry-run
 side-glance setup --providers claude --notifications none --yes
-side-glance run --label "Side Glance smoke" -- claude
+claude
 side-glance doctor --json
 side-glance uninstall claude --json
 side-glance reset --all --json
@@ -158,13 +158,16 @@ promotion; only its exact green `main` merge commit may receive the
 
 ## Controlled migration from stoplight.sh
 
-1. Save the existing hook configuration and locate every reference to `stoplight.sh`.
-2. Install Side Glance durably for one provider in a chosen terminal session.
-3. Exercise working, waiting, completion, failure, normal exit, and `SIGINT` paths.
-4. Confirm unrelated hooks and Codex notification behavior still run.
-5. Remove old hook entries only after the Side Glance trial passes.
+1. Run `side-glance doctor --json` and review every recognized legacy Stoplight hook.
+2. Run guided init and choose Replace, or use
+   `side-glance install claude --migrate-legacy-stoplight --json` for automation.
+3. Confirm the timestamped backup exists and unrelated Claude hooks remain.
+4. Exercise working, waiting, completion, failure, normal exit, and `SIGINT` paths.
+5. Restore the backup if the controlled migration does not pass.
 
-Side Glance's installer creates a timestamped backup before changing an existing provider hooks file. It does not remove `stoplight.sh` automatically.
+Side Glance never enables a second direct color writer beside recognized legacy
+Stoplight hooks. Migration removes only exact historical Stoplight commands;
+arbitrary hooks that merely mention `stoplight.sh` are preserved.
 
 ## Rollback
 
