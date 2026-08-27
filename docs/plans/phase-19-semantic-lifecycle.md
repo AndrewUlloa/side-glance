@@ -1,7 +1,7 @@
 # Plan: Semantic lifecycle colors and aggregate readiness
 
 > Derived from: `docs/specs/phase-19-semantic-lifecycle.md`
-> Status: in progress
+> Status: complete
 > Last updated: 2026-08-26
 
 ## Overview
@@ -162,13 +162,13 @@ and follow the protected feature/release/promotion/tag sequence.
   - **Depends on:** Task 12
   - **Size:** M
 
-- [ ] **Task 14: Promote staging to main and verify production**
+- [x] **Task 14: Promote staging to main and verify production**
   - **Acceptance:** Literal staging is merge-committed to protected main and
     Vercel production is Ready for that exact SHA at side-glance.vercel.app.
   - **Depends on:** Task 13
   - **Size:** M
 
-- [ ] **Task 15: Tag, publish, attest, and update Homebrew**
+- [x] **Task 15: Tag, publish, attest, and update Homebrew**
   - **Acceptance:** Protected annotated tag workflow publishes immutable GitHub
     prerelease and npm beta with matching integrity/provenance; public npx and
     native smokes pass; generated formula passes all tap platforms and public
