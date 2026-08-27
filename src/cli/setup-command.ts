@@ -97,6 +97,8 @@ Options:
   --notifications <list|none>  Side Glance computer-notification channels
   --notification-sound <name>  Installed sound name (default: Glass)
   --migrate-legacy-stoplight   Replace exact legacy Claude Stoplight hooks
+  --fresh-tabs                 Reset inherited Side Glance color in new zsh tabs
+  --no-fresh-tabs              Remove the managed fresh-tab zsh reset
   --dry-run                    Inspect the exact redacted plan without writing
   --yes                        Apply a fully specified non-interactive plan
   --json                       Emit exactly one versioned JSON result
@@ -105,7 +107,8 @@ Options:
   -h, --help                   Show this help without detection or writes
 
 Interactive:
-  Recommended keeps setup concise and preserves existing colors.
+  Recommended keeps setup concise, preserves existing colors, and starts new
+  supported zsh tabs with their configured terminal background.
   Customize includes providers, notifications, and Status, Heat, or Custom colors.
 
 After setup:
@@ -176,7 +179,8 @@ async function runInteractiveSetup(
     const hasFixedSelections =
       initialRequest.providers !== undefined ||
       initialRequest.notificationsSpecified ||
-      initialRequest.notificationSound !== undefined;
+      initialRequest.notificationSound !== undefined ||
+      initialRequest.freshTabs !== undefined;
     let setupMode: "recommended" | "customize" = "customize";
     if (!hasFixedSelections) {
       const selectedMode = await prompter.select(
@@ -222,6 +226,9 @@ async function runInteractiveSetup(
       );
     }
     if (options.signal?.aborted) return interruptedSetup(options, false);
+
+    let freshTabs =
+      initialRequest.freshTabs ?? preliminary.plan.freshTabs.recommended;
 
     let migrateLegacyStoplight = false;
     const legacyClaude = preliminary.plan.providers.find(
@@ -328,6 +335,32 @@ async function runInteractiveSetup(
       }
     }
 
+    if (
+      setupMode === "customize" &&
+      initialRequest.freshTabs === undefined &&
+      preliminary.plan.freshTabs.state === "eligible"
+    ) {
+      const freshTabsSelection = await prompter.select(
+        "How should new terminal tabs start?",
+        [
+          {
+            id: "clean",
+            label: "Clean background (recommended)",
+            selected: freshTabs,
+          },
+          {
+            id: "inherit",
+            label: "Keep the current background",
+            selected: !freshTabs,
+          },
+        ],
+      );
+      if (freshTabsSelection.status === "cancelled") {
+        return cancellationCode(freshTabsSelection);
+      }
+      freshTabs = freshTabsSelection.value === "clean";
+    }
+
     const currentAppearance = options.appearance?.config.appearance ?? {
       preset: "status" as const,
     };
@@ -355,6 +388,7 @@ async function runInteractiveSetup(
       notificationsSpecified: true,
       migrateLegacyStoplight,
       ...(notificationSound === undefined ? {} : { notificationSound }),
+      freshTabs,
     };
     const finalPlan = await discoverPlan(request, options);
     if (!finalPlan.ok) return finalPlan.code;
@@ -565,6 +599,7 @@ export function projectSetupPlan(plan: SetupPlan) {
         : [],
     ),
     notificationSound: plan.notificationSound,
+    freshTabs: projectFreshTabs(plan),
     guidance: plan.guidance,
   };
 }
@@ -594,6 +629,16 @@ function renderPlanNotes(
     }
   } else {
     writePromptDetail(prompter, `  ${setupColorSummary(appearance)}`);
+  }
+  if (plan.freshTabs.managed && plan.freshTabs.target) {
+    writePromptDetail(
+      prompter,
+      `  Fresh terminal tabs: ${plan.freshTabs.enabled ? "On" : "Off"}`,
+    );
+    writePromptDetail(
+      prompter,
+      `    ${displayHomeRelativePath(plan.freshTabs.target.path, plan.homeDirectory)}: ${plan.freshTabs.target.action}`,
+    );
   }
   writePromptDetail(prompter, "  Configuration:");
   for (const provider of plan.providers) {
@@ -681,6 +726,12 @@ function humanSetupPlan(plan: SetupPlan, dryRun = true): string[] {
   if (plan.notificationSound) {
     lines.push(`Notification sound: ${plan.notificationSound}`);
   }
+  if (plan.freshTabs.managed && plan.freshTabs.target) {
+    lines.push(
+      `Fresh terminal tabs: ${plan.freshTabs.enabled ? "on" : "off"}; ${plan.freshTabs.target.action}`,
+      `  zsh configuration: ${plan.freshTabs.target.path}`,
+    );
+  }
   lines.push(
     "Managed hooks use safe terminal discovery for supported local launches; side-glance run remains the fallback when discovery is unavailable.",
     "A caught apply or verification failure rolls back completed provider writes when they still match this setup.",
@@ -696,13 +747,15 @@ function projectSetupResult(
   result: SetupTransactionResult,
 ) {
   const byProvider = new Map(plan.providers.map((provider) => [provider.provider, provider]));
+  const freshTabsResult = result.providers.find(({ id }) => id === "fresh-tabs");
   return {
     schemaVersion: 1 as const,
     kind: "setup-result" as const,
     executablePath: plan.executablePath,
-    providers: result.providers.map((resultProvider) => {
+    providers: result.providers.flatMap((resultProvider) => {
       const provider = byProvider.get(resultProvider.id as SetupProvider);
-      return {
+      if (!provider) return [];
+      return [{
         ...resultProvider,
         integrationStatus: "installed" as const,
         verificationStatus: "verified" as const,
@@ -724,9 +777,21 @@ function projectSetupResult(
                 : {}),
             }
           : {}),
-      };
+      }];
     }),
     notificationSound: plan.notificationSound,
+    freshTabs: {
+      ...projectFreshTabs(plan),
+      ...(freshTabsResult ?? {}),
+      ...(freshTabsResult
+        ? {
+            integrationStatus: plan.freshTabs.enabled
+              ? ("installed" as const)
+              : ("not-installed" as const),
+            verificationStatus: "verified" as const,
+          }
+        : {}),
+    },
     guidance: plan.guidance,
   };
 }
@@ -764,6 +829,15 @@ function humanSetupResult(
     lines.push(
       "Computer notifications are configured; delivery and sound were not live-tested.",
     );
+  }
+  if (plan.freshTabs.managed && plan.freshTabs.target) {
+    lines.push(
+      `Fresh terminal tabs: ${plan.freshTabs.enabled ? "enabled" : "disabled"}`,
+      `  zsh configuration: ${plan.freshTabs.target.path}`,
+    );
+    if (projected.freshTabs.backupPath) {
+      lines.push(`  backup: ${projected.freshTabs.backupPath}`);
+    }
   }
   lines.push(
     "Hooks provide lifecycle events and safe terminal discovery for supported local launches; side-glance run remains the fallback when discovery is unavailable.",
@@ -803,6 +877,11 @@ function humanInteractiveSetupResult(
     }`,
     "  Change anytime: side-glance theme",
   );
+  if (plan.freshTabs.managed && plan.freshTabs.enabled) {
+    lines.push("  New terminal tabs start clean · existing tabs are unchanged");
+  } else if (plan.freshTabs.managed) {
+    lines.push("  Fresh terminal tab reset disabled");
+  }
 
   const launchCommands = projected.providers.flatMap((provider) =>
     provider.launchCommand ? [provider.launchCommand] : [],
@@ -824,6 +903,7 @@ function humanInteractiveSetupResult(
   const backups = projected.providers.flatMap((provider) =>
     provider.backupPath ? [provider.backupPath] : [],
   );
+  if (projected.freshTabs.backupPath) backups.push(projected.freshTabs.backupPath);
   if (backups.length > 0) {
     lines.push("", backups.length === 1 ? "Backup saved to:" : "Backups saved to:");
     for (const backup of backups) {
@@ -831,6 +911,19 @@ function humanInteractiveSetupResult(
     }
   }
   return lines.map(sanitizePromptDetail);
+}
+
+function projectFreshTabs(plan: SetupPlan) {
+  return {
+    state: plan.freshTabs.state,
+    integrationStatus: plan.freshTabs.integrationStatus,
+    shell: plan.freshTabs.shell,
+    managed: plan.freshTabs.managed,
+    enabled: plan.freshTabs.enabled,
+    recommended: plan.freshTabs.recommended,
+    ...(plan.freshTabs.reason ? { reason: plan.freshTabs.reason } : {}),
+    ...(plan.freshTabs.target ? { target: plan.freshTabs.target } : {}),
+  };
 }
 
 function hasUnresolvedLegacyStoplight(plan: SetupPlan): boolean {

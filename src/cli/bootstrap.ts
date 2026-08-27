@@ -968,6 +968,7 @@ function projectDelegatedPlan(
     "executablePath",
     "providers",
     "notificationSound",
+    "freshTabs",
     "guidance",
   ]);
   return {
@@ -981,6 +982,9 @@ function projectDelegatedPlan(
           providers: projectArray(value.providers, 4, projectDelegatedPlanProvider),
         }),
     ...optionalNullableSafeStringField(value, "notificationSound", 160),
+    ...(value.freshTabs === undefined
+      ? {}
+      : { freshTabs: projectDelegatedFreshTabs(value.freshTabs, false) }),
     ...(value.guidance === undefined
       ? {}
       : { guidance: projectArray(value.guidance, 8, projectDelegatedGuidance) }),
@@ -996,6 +1000,7 @@ function projectDelegatedSetupResult(
     "executablePath",
     "providers",
     "notificationSound",
+    "freshTabs",
     "guidance",
   ]);
   return {
@@ -1012,6 +1017,9 @@ function projectDelegatedSetupResult(
           ),
         }),
     ...optionalNullableSafeStringField(value, "notificationSound", 160),
+    ...(value.freshTabs === undefined
+      ? {}
+      : { freshTabs: projectDelegatedFreshTabs(value.freshTabs, true) }),
     ...(value.guidance === undefined
       ? {}
       : { guidance: projectArray(value.guidance, 8, projectDelegatedGuidance) }),
@@ -1138,6 +1146,81 @@ function projectDelegatedLegacyStoplight(
   return {
     detectedHookCount: legacy.detectedHookCount,
     migrated: legacy.migrated,
+  };
+}
+
+function projectDelegatedFreshTabs(
+  value: unknown,
+  result: boolean,
+): Readonly<Record<string, unknown>> {
+  const freshTabs = requiredRecord(value);
+  assertAllowedKeys(freshTabs, [
+    "state",
+    "integrationStatus",
+    "shell",
+    "managed",
+    "enabled",
+    "recommended",
+    "reason",
+    "target",
+    ...(result ? ["id", "configPath", "changed", "backupPath"] : []),
+  ]);
+  if (
+    typeof freshTabs.managed !== "boolean" ||
+    typeof freshTabs.enabled !== "boolean" ||
+    typeof freshTabs.recommended !== "boolean"
+  ) {
+    throw new Error("Delegated fresh terminal tab state is invalid.");
+  }
+  if (result && freshTabs.changed !== undefined && typeof freshTabs.changed !== "boolean") {
+    throw new Error("Delegated fresh terminal tab change state is invalid.");
+  }
+  return {
+    state: requiredEnum(freshTabs.state, ["eligible", "blocked", "unavailable"]),
+    integrationStatus: requiredEnum(freshTabs.integrationStatus, [
+      "installed",
+      "not-installed",
+      "partial",
+      "unknown",
+    ]),
+    shell:
+      freshTabs.shell === null ? null : requiredEnum(freshTabs.shell, ["zsh"]),
+    managed: freshTabs.managed,
+    enabled: freshTabs.enabled,
+    recommended: freshTabs.recommended,
+    ...optionalEnumField(freshTabs, "reason", [
+      "unsupported-shell",
+      "ownership-conflict",
+    ]),
+    ...(freshTabs.target === undefined
+      ? {}
+      : { target: projectDelegatedFreshTabsTarget(freshTabs.target) }),
+    ...(result
+      ? {
+          ...optionalEnumField(freshTabs, "id", ["fresh-tabs"]),
+          ...optionalSafeStringField(freshTabs, "configPath", 4_096),
+          ...(freshTabs.changed === undefined
+            ? {}
+            : { changed: freshTabs.changed }),
+          ...optionalSafeStringField(freshTabs, "backupPath", 4_096),
+        }
+      : {}),
+  };
+}
+
+function projectDelegatedFreshTabsTarget(
+  value: unknown,
+): Readonly<Record<string, unknown>> {
+  const target = requiredRecord(value);
+  assertAllowedKeys(target, ["path", "action"]);
+  return {
+    path: requiredSafeString(target.path, 4_096),
+    action: requiredEnum(target.action, [
+      "create",
+      "update",
+      "remove",
+      "unchanged",
+    ]),
   };
 }
 

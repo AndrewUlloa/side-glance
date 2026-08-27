@@ -29,6 +29,18 @@ import {
   type OpenCodePluginMutationPlan,
 } from "../adapters/opencode-installer.ts";
 import {
+  applyFreshTabsPlan,
+  backupFreshTabsPlan,
+  inspectFreshTabs,
+  planFreshTabs,
+  revalidateFreshTabsPlan,
+  restoreFreshTabsApplication,
+  verifyFreshTabsApplication,
+  verifyFreshTabsPlan,
+  type FreshTabsApplication,
+  type FreshTabsPlan,
+} from "../adapters/fresh-tabs.ts";
+import {
   inspectNotificationReadiness,
   type NotificationPathProbe,
   type NotificationReadinessInspection,
@@ -43,6 +55,7 @@ import {
   SETUP_PROVIDERS,
   createSetupPlan,
   type SetupPlanDependencies,
+  type SetupFreshTabsObservation,
   type SetupGuidanceObservation,
   type SetupProvider,
   type SetupProviderObservation,
@@ -106,6 +119,17 @@ export async function createDurableSetupDiscovery(
     options.environment,
     notifications.providers.aider.binaryAvailable,
   );
+  const plannedFreshTabs =
+    request.freshTabs === undefined
+      ? undefined
+      : await planFreshTabs({
+          homeDirectory,
+          environment: options.environment,
+          enabled: request.freshTabs,
+        });
+  const freshTabs = plannedFreshTabs
+    ? freshTabsObservationForPlan(plannedFreshTabs)
+    : await inspectFreshTabsSafely(homeDirectory, options.environment);
 
   const preliminary = await planProviders({
     homeDirectory,
@@ -124,6 +148,7 @@ export async function createDurableSetupDiscovery(
     notifications,
     preliminary,
     guidance,
+    freshTabs,
   );
   const recommendedPlan = createSetupPlan(request, preliminaryDependencies);
   const selectedNotifications = new Set(recommendedPlan.selectedNotifications);
@@ -144,6 +169,7 @@ export async function createDurableSetupDiscovery(
     notifications,
     exact,
     guidance,
+    freshTabs,
   );
   const approvedPlan = createSetupPlan(request, dependencies);
   const participants = new Map(
@@ -151,6 +177,9 @@ export async function createDurableSetupDiscovery(
       entry.participant ? [[entry.provider, entry.participant] as const] : [],
     ),
   );
+  const freshTabsParticipant = plannedFreshTabs
+    ? createFreshTabsParticipant(plannedFreshTabs)
+    : undefined;
 
   return {
     dependencies,
@@ -163,6 +192,12 @@ export async function createDurableSetupDiscovery(
         }
         return participant;
       });
+      if (plan.freshTabs.managed) {
+        if (!freshTabsParticipant) {
+          throw new SetupTransactionError("plan-changed");
+        }
+        selected.push(freshTabsParticipant);
+      }
       return await applySetupTransaction(selected, {
         withLock: (operation) =>
           withConfigWriterLock(homeDirectory, () => operation()),
@@ -414,6 +449,7 @@ function dependenciesFor(
   notifications: NotificationReadinessInspection,
   providers: readonly PlannedProvider[],
   guidance: readonly SetupGuidanceObservation[],
+  freshTabs: SetupFreshTabsObservation,
 ): SetupPlanDependencies {
   return {
     homeDirectory,
@@ -421,6 +457,7 @@ function dependenciesFor(
     notificationBackend: notifications.sideGlance,
     providers: providers.map(({ observation }) => observation),
     guidance,
+    freshTabs,
   };
 }
 
@@ -572,10 +609,73 @@ function assertSameApprovedSelection(
   if (
     !sameStrings(candidate.selectedProviders, approved.selectedProviders) ||
     !sameStrings(candidate.selectedNotifications, approved.selectedNotifications) ||
-    candidate.notificationSound !== approved.notificationSound
+    candidate.notificationSound !== approved.notificationSound ||
+    candidate.freshTabs.managed !== approved.freshTabs.managed ||
+    candidate.freshTabs.enabled !== approved.freshTabs.enabled ||
+    candidate.freshTabs.target?.path !== approved.freshTabs.target?.path ||
+    candidate.freshTabs.target?.action !== approved.freshTabs.target?.action
   ) {
     throw new SetupTransactionError("plan-changed");
   }
+}
+
+async function inspectFreshTabsSafely(
+  homeDirectory: string,
+  environment: Readonly<Record<string, string | undefined>>,
+): Promise<SetupFreshTabsObservation> {
+  try {
+    return await inspectFreshTabs({ homeDirectory, environment });
+  } catch {
+    return {
+      state: "blocked",
+      shell: path.basename(environment.SHELL ?? "") === "zsh" ? "zsh" : null,
+      integrationStatus: "unknown",
+      reason: "ownership-conflict",
+    };
+  }
+}
+
+function freshTabsObservationForPlan(
+  plan: FreshTabsPlan,
+): SetupFreshTabsObservation {
+  return {
+    state: "eligible",
+    shell: "zsh",
+    integrationStatus:
+      plan.action === "remove" || (plan.enabled && plan.action === "unchanged")
+        ? "installed"
+        : "not-installed",
+    target: {
+      path: plan.configPath,
+      action:
+        plan.action === "create" || plan.action === "update"
+          ? plan.action
+          : "unchanged",
+    },
+  };
+}
+
+function createFreshTabsParticipant(
+  plan: FreshTabsPlan,
+): SetupTransactionParticipant<unknown> {
+  let application: FreshTabsApplication | undefined;
+  return {
+    id: "fresh-tabs",
+    configPath: plan.configPath,
+    changed: plan.changed,
+    revalidate: () => revalidateFreshTabsPlan(plan),
+    backup: () => backupFreshTabsPlan(plan),
+    apply: async () => {
+      application = await applyFreshTabsPlan(plan);
+      return application;
+    },
+    verify: () =>
+      application
+        ? verifyFreshTabsApplication(application)
+        : verifyFreshTabsPlan(plan),
+    rollback: async (token) =>
+      rollbackApplication(token, application, restoreFreshTabsApplication),
+  };
 }
 
 function sameStrings(left: readonly string[], right: readonly string[]): boolean {

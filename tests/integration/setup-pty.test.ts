@@ -42,6 +42,7 @@ test(
     const environment = {
       HOME: home,
       PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+      SHELL: "/bin/zsh",
       NO_COLOR: "1",
       TERM: "xterm-256color",
     };
@@ -70,6 +71,10 @@ test(
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
     );
     assert.ok(JSON.stringify(settings).includes(executable));
+    assert.match(
+      await readFile(path.join(home, ".zshrc"), "utf8"),
+      /Side Glance fresh terminal tabs/u,
+    );
   },
 );
 
@@ -108,6 +113,7 @@ exit $status
       NO_COLOR: undefined,
       SIDE_GLANCE_ACCESSIBLE: undefined,
       SIDE_GLANCE_CONFIG_DIR: path.join(home, ".config", "side-glance"),
+      SHELL: "/bin/zsh",
       TERM: "xterm-256color",
     };
     const interactions = [
@@ -122,6 +128,10 @@ exit $status
       {
         prompt: "Select Side Glance computer notifications",
         answer: " \r",
+      },
+      {
+        prompt: "How should new terminal tabs start?",
+        answer: "\r",
       },
       {
         prompt: "What should colors communicate?",
@@ -650,6 +660,8 @@ expect {*Select provider integrations*}
 send "\\r"
 expect {*Select Side Glance computer notifications*}
 send " \\r"
+expect {*How should new terminal tabs start?*}
+send "\\r"
 expect {*What should colors communicate?*}
 send "\\033\\[B\\r"
 expect {*How should Heat set its ceiling?*}

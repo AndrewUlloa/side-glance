@@ -45,6 +45,9 @@ terminal, **Recommended** is focused first. For a new configuration,
 preserves an existing saved theme. **Customize** includes providers, notifications,
 and colors, using the same Status, Heat, and Custom selector as
 `side-glance theme`. Review and completion both show the selected color behavior.
+When zsh can be inspected safely, Recommended also reviews and installs one managed
+`.zshrc` block that resets an inherited Side Glance background in a fresh direct
+local tab before its first prompt.
 
 Side Glance considers a provider available only when its CLI command (`claude`,
 `codex`, `gemini`, or `opencode`) is executable on the `PATH` of the shell running
@@ -55,8 +58,9 @@ that shell. Install or expose the command, then rerun `side-glance init`.
 Use Up/Down to move, Space to toggle multiple choices, and Enter to continue. Set
 `SIDE_GLANCE_ACCESSIBLE=1` for static numbered prompts; `NO_COLOR`, `TERM=dumb`,
 select that same no-ANSI fallback automatically. Non-TTY input stays
-non-interactive and requires explicit automation flags. Setup does not edit shell
-profiles or start a daemon.
+non-interactive and requires explicit automation flags. Setup never starts a daemon
+or creates aliases. It edits a shell startup file only for the reviewed fresh-tab
+block and preserves all unrelated content.
 
 After setup, just run `claude`, `codex`, or the experimental `gemini` integration
 as usual and start prompting:
@@ -83,8 +87,15 @@ Preview and automation modes are explicit:
 
 ```bash
 side-glance setup --dry-run
-side-glance setup --providers claude,codex --notifications none --yes --json
+side-glance setup --providers claude,codex --notifications none --fresh-tabs --yes --json
 ```
+
+Terminal.app may copy an active tab's effective dynamic background into a Cmd-T
+tab. `--fresh-tabs` installs the exact zsh reset block; `--no-fresh-tabs` removes
+only that block. The reset emits OSC 111 only for an interactive, top-level,
+direct local shell and skips tmux, SSH, nested shells, redirected output, and
+unsupported shells. Automated setup preserves the current state when neither flag
+is present.
 
 Advanced one-provider install, uninstall, diagnosis, and supervision remain available:
 

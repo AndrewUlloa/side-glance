@@ -13,6 +13,7 @@ This audit records the failure modes found in the original personal `stoplight.s
 | `tmux -u` erases a user override | Exact local/inherited option snapshot and restore | Fixture and live tmux tests |
 | Multiple panes fight over one client background | tmux panes use status styling; terminal OSC wash is disabled in tmux | Surface channel test |
 | OSC reset pretends to recover an unknown custom wash | Explicit OSC 111 configured-default contract | Terminal byte test and docs |
+| A new Terminal.app tab inherits the prior tab's lifecycle wash | Reviewed, reversible zsh startup block emits only OSC 111 for a top-level direct local shell and skips tmux, SSH, nesting, and redirection | Fresh-tab installer and transaction tests |
 | Title is overwritten permanently | Title mutation is opt-in; reset bytes are validated | Terminal renderer test |
 | Ancestor PID walk races or reparents | Bounded discovery revalidates stable same-user process records and canonical TTY tokens; the renderer verifies the owned character device before writing; otherwise discovery fails targetless and wrapper identity remains the fallback | Target discovery and terminal safety tests |
 | Arbitrary paths receive escape bytes | Canonical path, symlink, device, ownership, and character-device checks | Terminal safety tests |
