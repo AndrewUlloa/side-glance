@@ -36,6 +36,7 @@ test("setup help returns before discovery", async () => {
   assert.equal(discoveries, 0);
   assert.match(stdout, /side-glance init/u);
   assert.match(stdout, /side-glance setup/u);
+  assert.match(stdout, /Customize includes providers, notifications.*colors/u);
 });
 
 test("durable JSON dry-run emits one selected-provider redacted plan", async () => {
@@ -234,6 +235,8 @@ test("interactive setup reports an existing Heat theme as unchanged", async () =
       },
     },
     discover: async () => discovery(),
+    saveAppearance: async () =>
+      assert.fail("Recommended must preserve the existing saved theme"),
     prompter,
     writeStdout: (value) => {
       stdout += value;
@@ -245,6 +248,12 @@ test("interactive setup reports an existing Heat theme as unchanged", async () =
   assert.match(prompter.rendered.join("\n"), /Colors: Heat \(unchanged\)/u);
   assert.match(stdout, /Colors: Heat \(unchanged\)/u);
   assert.doesNotMatch(stdout, /Colors: Status/u);
+  assert.equal(
+    prompter.calls.some(
+      ({ message }) => message === "What should colors communicate?",
+    ),
+    false,
+  );
 });
 
 test("interactive progress starts after approval and never reports success on failure", async () => {
@@ -377,6 +386,7 @@ test("interactive setup previews the final choices and applies only after confir
     { status: "value", value: ["codex", "claude"] },
     { status: "value", value: ["claude"] },
     { status: "value", value: "Ping" },
+    { status: "value", value: "status" },
     { status: "value", value: true },
   ]);
 
@@ -418,6 +428,94 @@ test("interactive setup previews the final choices and applies only after confir
   );
   assert.match(stdout, /Side Glance is ready/u);
   assert.equal(prompter.closed, true);
+});
+
+test("customized init includes color behavior in its review and completion", async () => {
+  let stdout = "";
+  const applyOrder: string[] = [];
+  let savedAppearance: unknown;
+  const prompter = scriptedPrompter([
+    { status: "value", value: "customize" },
+    { status: "value", value: ["claude"] },
+    { status: "value", value: [] },
+    { status: "value", value: "heat" },
+    { status: "value", value: "adaptive" },
+    { status: "value", value: true },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () =>
+      discovery(async () => {
+        applyOrder.push("providers");
+        return { providers: [] };
+      }),
+    saveAppearance: async (appearance) => {
+      applyOrder.push("colors");
+      savedAppearance = appearance;
+      return { changed: true };
+    },
+    prompter,
+    writeStdout: (value) => {
+      stdout += value;
+    },
+    writeStderr: () => assert.fail("customized setup must not fail"),
+  });
+
+  assert.equal(code, 0);
+  const themeCall = prompter.calls.find(
+    ({ message }) => message === "What should colors communicate?",
+  );
+  assert.ok(themeCall);
+  assert.match(
+    themeCall.choices?.map(({ label }) => label).join("\n") ?? "",
+    /Status[\s\S]*Heat[\s\S]*Custom/u,
+  );
+  assert.match(
+    prompter.rendered.join("\n"),
+    /Colors: Heat[\s\S]*Completion ceiling: Adaptive/u,
+  );
+  assert.match(stdout, /Colors: Heat · Adaptive/u);
+  assert.match(stdout, /Change anytime: side-glance theme/u);
+  assert.deepEqual(applyOrder, ["providers", "colors"]);
+  assert.deepEqual(savedAppearance, {
+    preset: "heat",
+    ceiling: { mode: "adaptive" },
+  });
+});
+
+test("customized init reports a truthful partial failure when colors cannot save", async () => {
+  let stderr = "";
+  const prompter = scriptedPrompter([
+    { status: "value", value: "customize" },
+    { status: "value", value: ["claude"] },
+    { status: "value", value: [] },
+    { status: "value", value: "status" },
+    { status: "value", value: true },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () => discovery(),
+    saveAppearance: async () => {
+      throw new Error("private persistence detail");
+    },
+    prompter,
+    writeStdout: () => assert.fail("partial failure must not claim readiness"),
+    writeStderr: (value) => {
+      stderr += value;
+    },
+  });
+
+  assert.equal(code, 1);
+  assert.match(stderr, /Provider configuration was verified/u);
+  assert.match(stderr, /colors could not be saved/u);
+  assert.match(stderr, /side-glance doctor --json.*side-glance theme/u);
+  assert.doesNotMatch(stderr, /private persistence detail/u);
+  assert.equal(prompter.calls.at(-1)?.kind, "progress-stop");
+  assert.equal(prompter.calls.at(-1)?.success, false);
 });
 
 test("human dry-run and apply render the complete truthful setup plan and result", async () => {
@@ -487,6 +585,7 @@ test("explicit interactive selections remain fixed and an unsafe sound reprompts
   const prompter = scriptedPrompter([
     { status: "value", value: "Bad/Sound" },
     { status: "value", value: "Ping" },
+    { status: "value", value: "status" },
     { status: "value", value: true },
   ]);
 
@@ -520,6 +619,7 @@ test("interactive notification choices explain defaults and provider coverage pl
     { status: "value", value: "customize" },
     { status: "value", value: ["claude", "codex"] },
     { status: "value", value: [] },
+    { status: "value", value: "status" },
     { status: "value", value: false },
   ]);
 
@@ -696,6 +796,7 @@ test("interactive No and EOF are successful no-write cancellations while SIGINT 
       { status: "value", value: "customize" },
       { status: "value", value: ["claude"] },
       { status: "value", value: [] },
+      { status: "value", value: "status" },
       fixture.final,
     ]);
     const code = await runSetupCommand("setup", [], {
@@ -707,6 +808,8 @@ test("interactive No and EOF are successful no-write cancellations while SIGINT 
           return { providers: [] };
         }),
       prompter,
+      saveAppearance: async () =>
+        assert.fail("cancelled setup must not save colors"),
       writeStdout: () => undefined,
       writeStderr: () => undefined,
     });

@@ -56,7 +56,11 @@ import { runInstallCommand } from "./install.ts";
 import { runSupervised } from "./run.ts";
 import { runSetupCommand } from "./setup-command.ts";
 import { createDurableSetupDiscovery } from "./setup-discovery.ts";
-import { runThemeCommand, themeHelpText } from "./theme-command.ts";
+import {
+  persistThemeAppearance,
+  runThemeCommand,
+  themeHelpText,
+} from "./theme-command.ts";
 
 const MAX_STDIN_BYTES = 1_048_576;
 
@@ -521,9 +525,8 @@ async function runGuidedSetupCommand(
   const interrupt = () => controller.abort();
   process.once("SIGINT", interrupt);
   try {
-    const appearance = await new FileSideGlanceConfig(
-      resolveConfigLocation(),
-    ).inspect();
+    const configStore = new FileSideGlanceConfig(resolveConfigLocation());
+    const appearance = await configStore.inspect();
     return await runSetupCommand(command, args, {
       execution,
       interactive,
@@ -539,6 +542,8 @@ async function runGuidedSetupCommand(
       writeStderr: (value) => process.stderr.write(value),
       signal: controller.signal,
       appearance,
+      saveAppearance: (selectedAppearance) =>
+        persistThemeAppearance(configStore, appearance, selectedAppearance),
     });
   } finally {
     process.removeListener("SIGINT", interrupt);

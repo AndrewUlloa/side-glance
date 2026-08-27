@@ -95,6 +95,14 @@ test("keeps guided setup, notification coverage, and recovery guidance aligned",
     assert.match(guide, /side-glance theme/u);
     assert.match(guide, /newest 12[\s\S]{0,40}completed turns/u);
     assert.match(guide, /known[^\n]*subagent[^\n]*work[^\n]*Ready/iu);
+    assert.match(
+      guide,
+      /Customize[\s\S]{0,100}providers[\s\S]{0,80}notifications[\s\S]{0,80}colors/iu
+    );
+    assert.match(
+      guide,
+      /Recommended[\s\S]{0,140}Status[\s\S]{0,80}(?:without|no)[\s\S]{0,80}(?:extra|additional)[\s\S]{0,80}(?:question|prompt)/iu
+    );
   }
 
   assert.match(
