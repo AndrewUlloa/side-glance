@@ -4,6 +4,12 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+### Changed
+
+- Guided setup keeps the Recommended path concise while Customize now includes
+  the shared Status, Heat, and Custom color selector. Review and completion show
+  the choice, and colors save only after provider configuration verifies.
+
 ## [0.1.0-beta.7] — 2026-08-26
 
 ### Added

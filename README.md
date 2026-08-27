@@ -63,8 +63,12 @@ a concise read-only review of the selected providers, notification choices,
 warnings, and owned configuration paths. It writes nothing until the whole plan is
 confirmed, then finishes with the launch command to run next. `side-glance setup`
 is its exact alias; both are safe to re-run. On an interactive terminal,
-**Recommended** is focused first; choose **Customize** to reveal provider and
-computer-notification choices.
+**Recommended** is focused first. For a new configuration, **Recommended** uses
+Status without an additional theme question; rerunning setup preserves an existing
+saved theme. **Customize** includes providers, notifications, and colors, using the
+same Status, Heat, and Custom selector as `side-glance theme`. The selected color
+behavior appears in Review and the completion summary before it applies to the next
+lifecycle event.
 
 Side Glance considers a provider available only when its CLI command (`claude`,
 `codex`, `gemini`, or `opencode`) is executable on the `PATH` of the shell running

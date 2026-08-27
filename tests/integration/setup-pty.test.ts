@@ -122,6 +122,14 @@ exit $status
         prompt: "Select Side Glance computer notifications",
         answer: " \r",
       },
+      {
+        prompt: "What should colors communicate?",
+        answer: "\u001b[B\r",
+      },
+      {
+        prompt: "How should Heat set its ceiling?",
+        answer: "\r",
+      },
       { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
     ];
     const result =
@@ -139,6 +147,16 @@ exit $status
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
     );
     assert.ok(JSON.stringify(settings).includes(executable));
+    const config = JSON.parse(
+      await readFile(
+        path.join(home, ".config", "side-glance", "config.json"),
+        "utf8",
+      ),
+    );
+    assert.deepEqual(config.appearance, {
+      preset: "heat",
+      ceiling: { mode: "adaptive" },
+    });
   },
 );
 
@@ -630,6 +648,10 @@ expect {*Select provider integrations*}
 send "\\r"
 expect {*Select Side Glance computer notifications*}
 send " \\r"
+expect {*What should colors communicate?*}
+send "\\033\\[B\\r"
+expect {*How should Heat set its ceiling?*}
+send "\\r"
 expect -exact {Apply this setup plan? [Y/n] }
 send "y\\r"
 expect eof

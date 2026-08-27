@@ -9,6 +9,7 @@ import {
   type SideGlanceColorPair,
   type SideGlanceColorState,
   type SideGlanceConfig,
+  type SideGlanceConfigInspection,
 } from "../core/appearance.ts";
 import type { SideGlanceState } from "../core/protocol.ts";
 import { visualForPhase } from "../core/visual.ts";
@@ -41,6 +42,15 @@ export interface ThemeCommandDependencies {
   input: Readable;
   output: Writable;
   signal?: AbortSignal;
+}
+
+export interface ThemePromptOptions {
+  includeExit?: boolean;
+}
+
+export interface ThemePersistenceResult {
+  changed: boolean;
+  backupPath?: string;
 }
 
 export function themeHelpText(): string {
@@ -246,7 +256,69 @@ async function runInteractiveTheme(
         `The current color configuration is invalid. Status is active until it is repaired.\n${inspection.error ?? "The configuration could not be read safely."}`,
       );
     }
-    const selected = await prompter.select("What should colors communicate?", [
+    const selected = await promptForThemeAppearance(
+      prompter,
+      currentAppearance,
+      { includeExit: true },
+    );
+    if (selected.status !== "value" || selected.value === "exit") {
+      return cancelled(prompter);
+    }
+    const appearance = selected.value;
+
+    prompter.detail?.(themeReviewText(appearance, dependencies.state));
+    const confirmed = await prompter.confirm("Apply these colors?", true);
+    if (confirmed.status !== "value" || !confirmed.value) {
+      return cancelled(prompter);
+    }
+    const persisted = await persistThemeAppearance(
+      dependencies.configStore,
+      inspection,
+      appearance,
+    );
+    if (!persisted.changed) {
+      prompter.note("Colors unchanged.");
+    } else {
+      prompter.note("Colors updated.");
+      if (persisted.backupPath) {
+        prompter.detail?.(
+          `Previous configuration backed up: ${persisted.backupPath}`,
+        );
+      }
+    }
+    prompter.detail?.(
+      "Active terminals update on their next lifecycle event.\nInspect or preview anytime: side-glance theme show --json",
+    );
+    return 0;
+  } finally {
+    prompter.close();
+  }
+}
+
+export async function persistThemeAppearance(
+  configStore: FileSideGlanceConfig,
+  inspection: SideGlanceConfigInspection,
+  appearance: SideGlanceAppearance,
+): Promise<ThemePersistenceResult> {
+  if (
+    inspection.valid &&
+    sameAppearance(inspection.config.appearance, appearance)
+  ) {
+    return { changed: false };
+  }
+  const config: SideGlanceConfig = { schemaVersion: 1, appearance };
+  const backupPath = inspection.valid
+    ? (await configStore.write(config), undefined)
+    : await configStore.writeWithBackup(config);
+  return { changed: true, ...(backupPath ? { backupPath } : {}) };
+}
+
+export async function promptForThemeAppearance(
+  prompter: SetupPrompter,
+  currentAppearance: SideGlanceAppearance,
+  options: ThemePromptOptions = {},
+): Promise<PromptOutcome<SideGlanceAppearance | "exit">> {
+  const choices = [
       {
         id: "status",
         label: `Status — Ready is green; failure is red${currentAppearance.preset === "status" ? " (current)" : " (recommended)"}`,
@@ -262,16 +334,24 @@ async function runInteractiveTheme(
         label: `Custom — Choose one color for each lifecycle state${currentAppearance.preset === "custom" ? " (current)" : ""}`,
         selected: currentAppearance.preset === "custom",
       },
-      { id: "exit", label: "Exit without changing colors" },
-    ]);
-    if (selected.status !== "value") return cancelled(prompter);
-    if (selected.value === "exit") return cancelled(prompter);
+      ...(options.includeExit
+        ? [{ id: "exit", label: "Exit without changing colors" }]
+        : []),
+    ];
+  const selected = await prompter.select(
+    "What should colors communicate?",
+    choices,
+  );
+  if (selected.status !== "value") return selected;
+  if (selected.value === "exit") {
+    return { status: "value", value: "exit" };
+  }
 
-    let appearance: SideGlanceAppearance;
-    if (selected.value === "status") {
-      appearance = { preset: "status" };
-    } else if (selected.value === "heat") {
-      const ceiling = await prompter.select("How should Heat set its ceiling?", [
+  if (selected.value === "status") {
+    return { status: "value", value: { preset: "status" } };
+  }
+  if (selected.value === "heat") {
+    const ceiling = await prompter.select("How should Heat set its ceiling?", [
         {
           id: "adaptive",
           label: `Adaptive — learn from 12 recent turns${currentAppearance.preset === "heat" && currentAppearance.ceiling.mode === "adaptive" ? " (current)" : " (recommended)"}`,
@@ -287,59 +367,41 @@ async function runInteractiveTheme(
             currentAppearance.ceiling.mode === "fixed",
         },
       ]);
-      if (ceiling.status !== "value") return cancelled(prompter);
-      if (ceiling.value === "adaptive") {
-        appearance = { preset: "heat", ceiling: { mode: "adaptive" } };
-      } else {
-        const seconds = await promptFixedCeiling(
-          prompter,
-          currentAppearance.preset === "heat" &&
-            currentAppearance.ceiling.mode === "fixed"
-            ? currentAppearance.ceiling.seconds
-            : 300,
-        );
-        if (seconds.status !== "value") return cancelled(prompter);
-        appearance = {
+    if (ceiling.status !== "value") return ceiling;
+    if (ceiling.value === "adaptive") {
+      return {
+        status: "value",
+        value: { preset: "heat", ceiling: { mode: "adaptive" } },
+      };
+    }
+    const seconds = await promptFixedCeiling(
+      prompter,
+      currentAppearance.preset === "heat" &&
+        currentAppearance.ceiling.mode === "fixed"
+        ? currentAppearance.ceiling.seconds
+        : 300,
+    );
+    if (seconds.status !== "value") return seconds;
+    return {
+      status: "value",
+      value: {
           preset: "heat",
           ceiling: { mode: "fixed", seconds: seconds.value },
-        };
-      }
-    } else {
-      const colors = {} as Record<SideGlanceColorState, SideGlanceColorPair>;
-      for (const state of COLOR_STATES) {
-        const initial =
-          currentAppearance.preset === "custom"
-            ? currentAppearance.colors[state]
-            : CUSTOM_DEFAULTS[state];
-        const answer = await promptColorPair(prompter, state, initial);
-        if (answer.status !== "value") return cancelled(prompter);
-        colors[state] = answer.value;
-      }
-      appearance = { preset: "custom", colors };
-    }
-
-    prompter.detail?.(reviewText(appearance, dependencies.state));
-    const confirmed = await prompter.confirm("Apply these colors?", true);
-    if (confirmed.status !== "value" || !confirmed.value) {
-      return cancelled(prompter);
-    }
-    const config: SideGlanceConfig = { schemaVersion: 1, appearance };
-    if (inspection.valid && sameAppearance(currentAppearance, appearance)) {
-      prompter.note("Colors unchanged.");
-    } else {
-      const backupPath = inspection.valid
-        ? (await dependencies.configStore.write(config), undefined)
-        : await dependencies.configStore.writeWithBackup(config);
-      prompter.note("Colors updated.");
-      if (backupPath) prompter.detail?.(`Previous configuration backed up: ${backupPath}`);
-    }
-    prompter.detail?.(
-      "Active terminals update on their next lifecycle event.\nInspect or preview anytime: side-glance theme show --json",
-    );
-    return 0;
-  } finally {
-    prompter.close();
+      },
+    };
   }
+
+  const colors = {} as Record<SideGlanceColorState, SideGlanceColorPair>;
+  for (const state of COLOR_STATES) {
+    const initial =
+      currentAppearance.preset === "custom"
+        ? currentAppearance.colors[state]
+        : CUSTOM_DEFAULTS[state];
+    const answer = await promptColorPair(prompter, state, initial);
+    if (answer.status !== "value") return answer;
+    colors[state] = answer.value;
+  }
+  return { status: "value", value: { preset: "custom", colors } };
 }
 
 async function promptFixedCeiling(
@@ -379,7 +441,10 @@ async function promptColorPair(
   }
 }
 
-function reviewText(appearance: SideGlanceAppearance, state: SideGlanceState): string {
+export function themeReviewText(
+  appearance: SideGlanceAppearance,
+  state?: SideGlanceState,
+): string {
   if (appearance.preset === "status") {
     return [
       "Colors: Status",
@@ -395,7 +460,7 @@ function reviewText(appearance: SideGlanceAppearance, state: SideGlanceState): s
       ),
     ].join("\n");
   }
-  const profiles = Object.entries(state.durationProfiles)
+  const profiles = Object.entries(state?.durationProfiles ?? {})
     .map(([source, profile]) => `${source} ${formatDuration(profile?.ceilingSeconds ?? 300)}`)
     .join(" · ");
   return [
