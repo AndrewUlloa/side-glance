@@ -107,6 +107,7 @@ exit $status
       PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
       NO_COLOR: undefined,
       SIDE_GLANCE_ACCESSIBLE: undefined,
+      SIDE_GLANCE_CONFIG_DIR: path.join(home, ".config", "side-glance"),
       TERM: "xterm-256color",
     };
     const interactions = [
@@ -134,7 +135,7 @@ exit $status
     ];
     const result =
       process.platform === "darwin"
-        ? await runExpectArrowPty(home, runner)
+        ? await runExpectArrowPty(home, runner, environment)
         : await runPty(["-qec", runner, "/dev/null"], environment, interactions);
 
     assert.equal(result.code, 0, result.output);
@@ -635,6 +636,7 @@ exit [lindex $result 3]
 async function runExpectArrowPty(
   home: string,
   runner: string,
+  environment: Record<string, string | undefined>,
 ): Promise<{ code: number | null; output: string }> {
   const expectScript = path.join(home, "arrow-setup.exp");
   await writeFile(
@@ -660,16 +662,7 @@ exit [lindex $result 3]
 `,
     { mode: 0o700 },
   );
-  return runProcess(
-    "/usr/bin/expect",
-    [expectScript, runner],
-    {
-      HOME: home,
-      NO_COLOR: undefined,
-      SIDE_GLANCE_ACCESSIBLE: undefined,
-      TERM: "xterm-256color",
-    },
-  );
+  return runProcess("/usr/bin/expect", [expectScript, runner], environment);
 }
 
 function runPty(
