@@ -4,6 +4,16 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.12] — 2026-08-27
+
+### Fixed
+
+- Fresh tabs in native macOS Terminal now reliably restore the configured
+  terminal-profile background instead of inheriting the prior Side Glance color.
+- Rerunning guided setup safely upgrades the exact beta.11 fresh-tab block, and
+  runtime cleanup uses the same Terminal-compatible reset without changing paint
+  or title behavior.
+
 ## [0.1.0-beta.11] — 2026-08-27
 
 ### Added
@@ -207,7 +217,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.11...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.12...HEAD
+[0.1.0-beta.12]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.12
 [0.1.0-beta.11]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.11
 [0.1.0-beta.10]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.10
 [0.1.0-beta.9]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.9

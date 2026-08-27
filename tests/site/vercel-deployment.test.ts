@@ -68,20 +68,17 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   assert.match(layout, /SIDE_GLANCE_SITE_URL/u);
   assert.doesNotMatch(layout, /VERCEL_PROJECT_PRODUCTION_URL/u);
   assert.doesNotMatch(layout, /terminal-signal\.pages\.dev/u);
-  assert.match(siteAssets, /https:\/\/side-glance\.vercel\.app/u);
+  assert.match(siteAssets, /https:\/\/sideglance\.dev/u);
   assert.doesNotMatch(readme, /https:\/\/terminal-signal\.vercel\.app/u);
-  assert.match(
-    readme,
-    /\[Vercel deployment\]\(https:\/\/side-glance\.vercel\.app\)/u
-  );
-  assert.match(launch, /DNS does not\s+resolve for `sideglance\.ai`/u);
-  assert.match(cicd, /https:\/\/sideglance\.ai/u);
+  assert.match(readme, /\[sideglance\.dev\]\(https:\/\/sideglance\.dev\)/u);
+  assert.match(launch, /`sideglance\.dev` resolves publicly/u);
+  assert.match(cicd, /https:\/\/sideglance\.dev/u);
   assert.match(launch, /https:\/\/side-glance\.vercel\.app/u);
+  assert.match(launch, /dpl_4xtEVYmKpyPesTsH5KswrUEd5zCU/u);
   assert.match(launch, /dpl_6Md5TDwM4tbiAATK6BvePWqSxDDY/u);
-  assert.match(launch, /dpl_F2sxFa81rpEymygfBDB742Xy31Rt/u);
   assert.match(
     launch,
-    /https:\/\/side-glance-e1wymwkuf-andrew-243s-projects\.vercel\.app/u
+    /https:\/\/side-glance-6whi8mebx-andrew-243s-projects\.vercel\.app/u
   );
   assert.doesNotMatch(launch, /No Side Glance deployment has been created/u);
 });

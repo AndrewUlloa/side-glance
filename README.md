@@ -17,8 +17,8 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 
 ## Installation status
 
-The verified public site is the [Vercel deployment](https://side-glance.vercel.app).
-`sideglance.ai` is only a future custom-domain option and does not currently resolve.
+The verified public site is [sideglance.dev](https://sideglance.dev). The
+[Vercel deployment](https://side-glance.vercel.app) remains the fallback alias.
 Side Glance is available as a beta package. Prereleases are published on npm's
 explicit `beta` channel. Source commits are not releases: a version becomes
 installable only after its matching protected-tag workflow completes. Confirm the
