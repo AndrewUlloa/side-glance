@@ -208,8 +208,11 @@ npx side-glance@latest init
   launch commands such as `side-glance run --label "Claude" -- claude`.
 - Setup states plainly that installed hooks provide lifecycle semantics while
   `side-glance run` supplies the stable terminal surface identity needed for reliable
-  lifecycle colors. It does not edit shell profiles, create aliases, start a daemon, or
-  claim that computer-notification clicks will focus the originating terminal.
+  lifecycle colors. It creates no aliases or daemon. When explicitly included in the
+  reviewed plan, it may add or remove one exact managed zsh startup block that resets
+  an inherited Side Glance background in a fresh direct local tab; every unrelated
+  shell byte is preserved. It does not claim that computer-notification clicks will
+  focus the originating terminal.
 - On a durable installation, `side-glance init` is an exact alias for
   `side-glance setup`. Both names share one parser, plan, prompt flow, and result shape;
   help presents `init` as the friendly onboarding command and `setup` as the explicit
@@ -380,8 +383,9 @@ deployment.
 
 **Never:** install permanent hooks from an ephemeral executable, silently enable duplicate
 notification channels, configure an unavailable/incompatible provider, expose unrelated
-configuration in a preview, rewrite shell startup files, or leave a failed multi-provider
-plan reported as successful, or overwrite a concurrent external edit during rollback.
+configuration in a preview, rewrite shell startup content outside the exact reviewed
+fresh-tab block, leave a failed multi-target plan reported as successful, or overwrite a
+concurrent external edit during rollback.
 
 ## Risks
 

@@ -4,6 +4,25 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.11] — 2026-08-27
+
+### Added
+
+- Guided setup can install a reviewed, reversible zsh startup reset so a fresh
+  direct local Terminal.app tab drops an inherited Side Glance background before
+  its first prompt.
+- Customize offers an arrow-key choice between a clean new-tab background and
+  inherited appearance. Automation exposes matching `--fresh-tabs` and
+  `--no-fresh-tabs` flags while preserving the current state by default.
+
+### Fixed
+
+- Fresh-tab reset bytes stay out of tmux, SSH, nested shells, redirected output,
+  and unsupported shells. The managed `.zshrc` block participates in the same
+  backup, verification, and caught-failure rollback as provider setup.
+- The packaged-install smoke test now isolates `node` and `npm` from unrelated
+  user-installed binaries, keeping the new-user bootstrap path deterministic.
+
 ## [0.1.0-beta.10] — 2026-08-27
 
 ### Added
@@ -188,7 +207,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.10...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.11...HEAD
+[0.1.0-beta.11]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.11
 [0.1.0-beta.10]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.10
 [0.1.0-beta.9]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.9
 [0.1.0-beta.8]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.8

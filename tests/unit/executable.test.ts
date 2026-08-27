@@ -26,7 +26,7 @@ import {
   type VersionProbe,
 } from "../../src/cli/executable.ts";
 
-const EXPECTED_VERSION = "0.1.0-beta.10";
+const EXPECTED_VERSION = "0.1.0-beta.11";
 
 async function fixtureDirectory(context: test.TestContext): Promise<string> {
   const directory = await mkdtemp(path.join(tmpdir(), "side-glance-executable-"));

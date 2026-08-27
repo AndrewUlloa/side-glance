@@ -76,6 +76,15 @@ test("durable JSON dry-run emits one selected-provider redacted plan", async () 
     "claude",
   ]);
   assert.equal(plan.providers[0].notifications.coverage.ready, "pre-final-silent");
+  assert.deepEqual(plan.freshTabs, {
+    state: "eligible",
+    integrationStatus: "not-installed",
+    shell: "zsh",
+    managed: false,
+    enabled: false,
+    recommended: true,
+    target: { path: `${homeDirectory}/.zshrc`, action: "update" },
+  });
   assert.equal(stdout.includes("PRIVATE_RAW_CONFIGURATION"), false);
 });
 
@@ -161,6 +170,7 @@ test("interactive init offers recommended settings first and applies planner def
   assert.deepEqual(requests[1]?.providers, ["claude", "codex", "gemini"]);
   assert.deepEqual(requests[1]?.notifications, ["claude"]);
   assert.equal(requests[1]?.notificationSound, "Glass");
+  assert.equal(requests[1]?.freshTabs, true);
   assert.deepEqual(applied[0]?.selectedProviders, ["claude", "codex", "gemini"]);
   const firstDecision = prompter.calls[0];
   assert.equal(firstDecision?.kind, "select");
@@ -186,6 +196,8 @@ test("interactive init offers recommended settings first and applies planner def
     /Colors: Status.*Working cyan.*Ready green.*Waiting amber.*Failed red/u,
   );
   assert.match(rendered, /Configuration:/u);
+  assert.match(rendered, /Fresh terminal tabs: On/u);
+  assert.match(rendered, /~\/\.zshrc/u);
   assert.match(rendered, /Claude: ~\/\.claude\/settings\.json/u);
   assert.doesNotMatch(rendered, /attention.*failure|launch:/u);
   assert.doesNotMatch(rendered, /write this configuration|roll back/iu);
@@ -204,6 +216,7 @@ test("interactive init offers recommended settings first and applies planner def
   assert.match(stdout, /Computer notifications enabled · Glass/u);
   assert.match(stdout, /delivery not tested/iu);
   assert.match(stdout, /Change anytime: side-glance theme/u);
+  assert.match(stdout, /New terminal tabs start clean/u);
   assert.match(stdout, /Next\s+claude/u);
   assert.doesNotMatch(stdout, /Next\s+side-glance run/u);
   assert.match(
@@ -513,6 +526,7 @@ test("an abort after provider apply never persists customized colors", async () 
     { status: "value", value: "customize" },
     { status: "value", value: ["claude"] },
     { status: "value", value: [] },
+    { status: "value", value: "clean" },
     { status: "value", value: "status" },
     { status: "value", value: true },
   ]);
@@ -575,6 +589,7 @@ test("interactive setup previews the final choices and applies only after confir
     { status: "value", value: ["codex", "claude"] },
     { status: "value", value: ["claude"] },
     { status: "value", value: "Ping" },
+    { status: "value", value: "clean" },
     { status: "value", value: "status" },
     { status: "value", value: true },
   ]);
@@ -627,6 +642,7 @@ test("customized init includes color behavior in its review and completion", asy
     { status: "value", value: "customize" },
     { status: "value", value: ["claude"] },
     { status: "value", value: [] },
+    { status: "value", value: "clean" },
     { status: "value", value: "heat" },
     { status: "value", value: "adaptive" },
     { status: "value", value: true },
@@ -657,6 +673,14 @@ test("customized init includes color behavior in its review and completion", asy
     ({ message }) => message === "What should colors communicate?",
   );
   assert.ok(themeCall);
+  const freshTabsCall = prompter.calls.find(
+    ({ message }) => message === "How should new terminal tabs start?",
+  );
+  assert.ok(freshTabsCall);
+  assert.match(
+    freshTabsCall.choices?.map(({ label }) => label).join("\n") ?? "",
+    /Clean background.*recommended[\s\S]*Keep the current background/iu,
+  );
   assert.match(
     themeCall.choices?.map(({ label }) => label).join("\n") ?? "",
     /Status[\s\S]*Heat[\s\S]*Custom/u,
@@ -674,12 +698,49 @@ test("customized init includes color behavior in its review and completion", asy
   });
 });
 
+test("customized init skips the fresh-tab choice when the shell is unsupported", async () => {
+  const prompter = scriptedPrompter([
+    { status: "value", value: "customize" },
+    { status: "value", value: ["claude"] },
+    { status: "value", value: [] },
+    { status: "value", value: "status" },
+    { status: "value", value: false },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () =>
+      discovery(undefined, {
+        ...setupDependencies(),
+        freshTabs: {
+          state: "unavailable",
+          shell: null,
+          integrationStatus: "unknown",
+          reason: "unsupported-shell",
+        },
+      }),
+    prompter,
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  });
+
+  assert.equal(code, 0);
+  assert.equal(
+    prompter.calls.some(
+      ({ message }) => message === "How should new terminal tabs start?",
+    ),
+    false,
+  );
+});
+
 test("customized init reports a truthful partial failure when colors cannot save", async () => {
   let stderr = "";
   const prompter = scriptedPrompter([
     { status: "value", value: "customize" },
     { status: "value", value: ["claude"] },
     { status: "value", value: [] },
+    { status: "value", value: "clean" },
     { status: "value", value: "status" },
     { status: "value", value: true },
   ]);
@@ -769,11 +830,52 @@ test("human dry-run and apply render the complete truthful setup plan and result
   assert.match(applyOutput, /launch: claude/u);
 });
 
+test("JSON apply reports the fresh-tab integration state after the change", async () => {
+  let stdout = "";
+  const code = await runSetupCommand(
+    "setup",
+    [
+      "--yes",
+      "--json",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--fresh-tabs",
+    ],
+    {
+      execution: "durable",
+      interactive: false,
+      discover: async () =>
+        discovery(async () => ({
+          providers: [
+            {
+              id: "fresh-tabs",
+              configPath: `${homeDirectory}/.zshrc`,
+              changed: true,
+            },
+          ],
+        })),
+      writeStdout: (value) => {
+        stdout += value;
+      },
+      writeStderr: () => assert.fail("JSON apply must not write stderr"),
+    },
+  );
+
+  assert.equal(code, 0);
+  const result = JSON.parse(stdout);
+  assert.equal(result.kind, "setup-result");
+  assert.equal(result.freshTabs.integrationStatus, "installed");
+  assert.equal(result.freshTabs.verificationStatus, "verified");
+});
+
 test("explicit interactive selections remain fixed and an unsafe sound reprompts", async () => {
   const requests: SetupRequest[] = [];
   const prompter = scriptedPrompter([
     { status: "value", value: "Bad/Sound" },
     { status: "value", value: "Ping" },
+    { status: "value", value: "clean" },
     { status: "value", value: "status" },
     { status: "value", value: true },
   ]);
@@ -808,6 +910,7 @@ test("interactive notification choices explain defaults and provider coverage pl
     { status: "value", value: "customize" },
     { status: "value", value: ["claude", "codex"] },
     { status: "value", value: [] },
+    { status: "value", value: "clean" },
     { status: "value", value: "status" },
     { status: "value", value: false },
   ]);
@@ -985,6 +1088,7 @@ test("interactive No and EOF are successful no-write cancellations while SIGINT 
       { status: "value", value: "customize" },
       { status: "value", value: ["claude"] },
       { status: "value", value: [] },
+      { status: "value", value: "clean" },
       { status: "value", value: "status" },
       fixture.final,
     ]);
@@ -1056,6 +1160,12 @@ function setupDependencies(): SetupPlanDependencies {
     homeDirectory,
     executablePath,
     notificationBackend: { status: "available", backend: "osascript" },
+    freshTabs: {
+      state: "eligible",
+      shell: "zsh",
+      integrationStatus: "not-installed",
+      target: { path: `${homeDirectory}/.zshrc`, action: "update" },
+    },
     providers: [
       observation("claude", "not-configured", "create"),
       observation("codex", "ready", "update"),
