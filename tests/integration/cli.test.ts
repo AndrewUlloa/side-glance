@@ -290,6 +290,29 @@ test("exposes a targetless Aider notification bridge with inherited session iden
   assert.match(undocumentedHook.stderr, /Unsupported hook provider: aider/u);
 });
 
+test("managed Codex hooks fail open when the hook subprocess has no terminal", async (context) => {
+  const directory = await stateDirectory(context);
+  const result = await runCli(["hook", "--provider", "codex", "--json"], {
+    stateDirectory: directory,
+    env: { SIDE_GLANCE_MANAGED_HOOK: "1" },
+    input: JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      session_id: "codex-targetless-managed-hook",
+    }),
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(result.stdout, "{}\n");
+  const status = await runCli(["status", "--json"], {
+    stateDirectory: directory,
+  });
+  const session = JSON.parse(status.stdout).sessions[
+    "codex:codex-targetless-managed-hook"
+  ];
+  assert.equal(session.phase, "working");
+  assert.equal(session.target, undefined);
+});
+
 test("uses the wrapper-provided surface for an installed hook command", async (context) => {
   const directory = await stateDirectory(context);
   const result = await runCli(["hook", "--provider", "claude", "--json"], {

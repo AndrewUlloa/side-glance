@@ -36,7 +36,10 @@ test("each visible terminal moment tells the truth about lifecycle and thermal s
   assert.match(terminal, /all focused adapter tests pass/u);
   assert.match(terminal, /All release checks pass/u);
   assert.match(terminal, /Release verification stopped before completion/u);
-  assert.match(terminal, /visualForPhase\(phase, elapsedSeconds\)/u);
+  assert.match(
+    terminal,
+    /visualForPhase\(phase, elapsedSeconds, appearance\)/u
+  );
   assert.match(terminal, /data-scenario=\{scenario\}/u);
   assert.doesNotMatch(terminal, /<p key=\{action\}>/u);
   assert.match(terminal, /key=\{`\$\{action\}:\$\{detail\}`\}/u);

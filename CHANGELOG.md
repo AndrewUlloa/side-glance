@@ -4,6 +4,19 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- The landing-page lifecycle demo now switches interactively between semantic
+  Status and duration-based Heat using the same production theme model as the
+  CLI, with explicit success, failure, quiet-turn, and adaptive-ceiling copy.
+
+### Fixed
+
+- Installed managed hooks now acknowledge targetless provider subprocesses
+  instead of surfacing a failed hook when Codex or another provider does not
+  expose a controlling terminal. Reliable per-terminal colors still use the
+  supervised wrapper.
+
 ## [0.1.0-beta.8] — 2026-08-26
 
 ### Changed

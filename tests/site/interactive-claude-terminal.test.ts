@@ -15,14 +15,17 @@ test("the Claude hero answers a local follow-up with an honest install handoff",
   assert.match(page, /<TerminalShowcase\s*\/>/u);
   assert.match(
     showcase,
-    /<InteractiveClaudeTerminal\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/u
+    /<InteractiveClaudeTerminal\s+appearance=\{appearance\}\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/u
   );
   assert.match(terminal, /^"use client";/u);
   assert.match(terminal, /<form[^>]*onSubmit=/u);
   assert.match(terminal, /name="follow-up"/u);
   assert.match(terminal, /aria-label="Ask Claude to continue"/u);
   assert.match(terminal, /aria-live="polite"/u);
-  assert.match(terminal, /visualForPhase\(phase, elapsedSeconds\)/u);
+  assert.match(
+    terminal,
+    /visualForPhase\(phase, elapsedSeconds, appearance\)/u
+  );
   assert.match(terminal, /To try Side Glance,/u);
   assert.match(terminal, /install the public beta\./u);
   assert.match(terminal, /scrollTo\([\s\S]*scrollHeight/u);
