@@ -150,8 +150,10 @@ beta.7 gates are complete:
 Phase 19 feature PR #64, release preparation PR #65, protected promotion PR #66,
 annotated beta.7 publication, and Homebrew tap PR #5 are complete. Future releases
 must repeat the same protected staging, main, tag, artifact, and tap sequence.
-Guided init theme selection merged through feature PR #72; this release branch
-prepares beta.8 before a fresh literal `staging` → `main` promotion PR.
+Guided init theme selection PR #72 and beta.8 release preparation PR #73 are
+complete on protected `staging`; literal `staging` → `main` promotion PR #74 is
+in progress. Only its exact green `main` merge commit may receive the
+`v0.1.0-beta.8` tag.
 
 ## Controlled migration from stoplight.sh
 

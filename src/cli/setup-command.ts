@@ -408,6 +408,11 @@ async function applyPlan(
       return interruptedSetup(options, json);
     }
     const result = await discovery.apply(plan, options.signal);
+    if (options.signal?.aborted) {
+      presentation?.failure();
+      progressFinished = true;
+      return interruptedSetup(options, json);
+    }
     if (presentation?.saveAppearance) {
       try {
         await presentation.saveAppearance();

@@ -349,6 +349,37 @@ test("an abort after approval always settles progress as unsuccessful", async ()
   assert.equal(prompter.calls.at(-1)?.success, false);
 });
 
+test("an abort after provider apply never persists customized colors", async () => {
+  const controller = new AbortController();
+  const prompter = scriptedPrompter([
+    { status: "value", value: "customize" },
+    { status: "value", value: ["claude"] },
+    { status: "value", value: [] },
+    { status: "value", value: "status" },
+    { status: "value", value: true },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () =>
+      discovery(async () => {
+        controller.abort();
+        return { providers: [] };
+      }),
+    prompter,
+    saveAppearance: async () =>
+      assert.fail("interrupted setup must not save colors"),
+    signal: controller.signal,
+    writeStdout: () => undefined,
+    writeStderr: () => undefined,
+  });
+
+  assert.equal(code, 130);
+  assert.equal(prompter.calls.at(-1)?.kind, "progress-stop");
+  assert.equal(prompter.calls.at(-1)?.success, false);
+});
+
 test("interactive init can exit from the first decision without applying", async () => {
   let discoveries = 0;
   let applies = 0;
