@@ -110,12 +110,12 @@ test("keeps the focused site accessible, responsive, and product-safe", async ()
   assert.match(page, /<TerminalShowcase\s*\/>/);
   assert.match(
     showcase,
-    /<InteractiveClaudeTerminal\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/
+    /<InteractiveClaudeTerminal\s+appearance=\{appearance\}\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/
   );
   assert.match(showcase, /aria-pressed=\{activeState\.id === state\.id\}/);
   assert.match(terminal, /Interactive Claude session/);
   assert.match(terminal, /aria-label="Sample agent conversation"/);
-  assert.match(terminal, /visualForPhase\(phase, elapsedSeconds\)/);
+  assert.match(terminal, /visualForPhase\(phase, elapsedSeconds, appearance\)/);
   assert.match(terminal, /name="follow-up"/);
   assert.doesNotMatch(terminal, /\bfetch\s*\(/);
   assert.match(css, /background:\s*var\(--terminal-current-wash\)/);

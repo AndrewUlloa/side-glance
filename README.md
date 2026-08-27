@@ -97,6 +97,12 @@ side-glance run --label "Claude" -- claude
 side-glance run --label "Codex" -- codex
 ```
 
+Running `claude` or `codex` directly still works, but provider hook subprocesses
+do not consistently inherit a controlling terminal. When no safe surface can be
+identified, an installed Side Glance hook acknowledges the lifecycle event
+without painting a terminal instead of failing inside the provider UI. Use the
+wrapper when you want reliable per-terminal colors.
+
 Advanced commands remain available for one-provider changes and diagnosis:
 
 ```bash

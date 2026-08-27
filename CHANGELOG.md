@@ -4,6 +4,21 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.9] — 2026-08-27
+
+### Added
+
+- The landing-page lifecycle demo now switches interactively between semantic
+  Status and duration-based Heat using the same production theme model as the
+  CLI, with explicit success, failure, quiet-turn, and adaptive-ceiling copy.
+
+### Fixed
+
+- Installed managed hooks now acknowledge targetless provider subprocesses
+  instead of surfacing a failed hook when Codex or another provider does not
+  expose a controlling terminal. Reliable per-terminal colors still use the
+  supervised wrapper.
+
 ## [0.1.0-beta.8] — 2026-08-26
 
 ### Changed
@@ -149,7 +164,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.8...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.9...HEAD
+[0.1.0-beta.9]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.9
 [0.1.0-beta.8]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.8
 [0.1.0-beta.7]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.7
 [0.1.0-beta.6]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.6

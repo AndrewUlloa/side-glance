@@ -2499,6 +2499,76 @@ a {
   gap: 12px;
 }
 
+.minimal-lifecycle-controls {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.minimal-theme-picker {
+  display: grid;
+  padding: 0;
+  border: 0;
+  gap: 4px;
+  font-family: var(--font-alan-sans);
+  justify-items: center;
+}
+
+.minimal-theme-toggle-label {
+  padding: 0;
+  color: #5f6663;
+  font-size: 11px;
+  letter-spacing: -0.11px;
+  line-height: 1;
+}
+
+.minimal-theme-toggle {
+  display: inline-flex;
+  padding: 3px;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid rgb(0 0 0 / 10%);
+  border-radius: 9999px;
+  background: #f6f5f3;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.minimal-theme-toggle-button {
+  appearance: none;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: #343937;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
+}
+
+.minimal-theme-toggle-button:hover {
+  color: #000;
+}
+
+.minimal-theme-toggle-button[aria-pressed="true"] {
+  background: #fff;
+  color: #000;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 14%);
+}
+
+.minimal-theme-toggle-button:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
 .minimal-lifecycle {
   display: flex;
   width: fit-content;
@@ -3241,6 +3311,10 @@ a {
   }
 
   .minimal-lifecycle-button {
+    transition: none;
+  }
+
+  .minimal-theme-toggle-button {
     transition: none;
   }
 
