@@ -39,17 +39,6 @@ export function createDefaultSurfaceRenderer(
       }
 
       const channels = surfaceChannels(target);
-      let tmuxSnapshot = previous?.tmuxSnapshot;
-      if (channels.tmux && target.tmuxPane) {
-        const runner = createTmuxRunner();
-        tmuxSnapshot ??= await captureTmuxSnapshot(runner, target.tmuxPane);
-        await applyTmuxPaint(
-          runner,
-          asTmuxSnapshot(tmuxSnapshot),
-          visual.accent,
-          session.phase,
-        );
-      }
       if (
         !channels.terminal &&
         target.tty &&
@@ -61,6 +50,17 @@ export function createDefaultSurfaceRenderer(
             title: previous.terminalTitlePainted,
           },
         });
+      }
+      let tmuxSnapshot = previous?.tmuxSnapshot;
+      if (channels.tmux && target.tmuxPane) {
+        const runner = createTmuxRunner();
+        tmuxSnapshot ??= await captureTmuxSnapshot(runner, target.tmuxPane);
+        await applyTmuxPaint(
+          runner,
+          asTmuxSnapshot(tmuxSnapshot),
+          visual.accent,
+          session.phase,
+        );
       }
       if (channels.terminal && target.tty) {
         if (previous?.terminalTitlePainted && !options.terminalTitle) {
@@ -145,6 +145,11 @@ async function resetSurface(
 }
 
 export function isGoneSurfaceError(error: unknown): boolean {
+  return isGoneSurfaceErrorAtDepth(error, 0);
+}
+
+function isGoneSurfaceErrorAtDepth(error: unknown, depth: number): boolean {
+  if (depth >= 4) return false;
   if (error instanceof TerminalGoneError) return true;
   if (typeof error !== "object" || error === null) return false;
   if (
@@ -156,9 +161,19 @@ export function isGoneSurfaceError(error: unknown): boolean {
     return true;
   }
   const message = "message" in error ? String(error.message) : "";
-  return /can't find (?:pane|window|session)|no server running|failed to connect|error connecting|terminal target (?:changed|is not|may not|must be)|direct terminal rendering is unsupported/iu.test(
-    message,
-  );
+  if (
+    /can't find (?:pane|window|session)|no server running|failed to connect|error connecting|terminal target (?:changed|is not|may not|must be)|direct terminal rendering is unsupported/iu.test(
+      message,
+    )
+  ) {
+    return true;
+  }
+  if (error instanceof AggregateError) {
+    return isGoneSurfaceErrorAtDepth(error.errors[0], depth + 1);
+  }
+  return "cause" in error
+    ? isGoneSurfaceErrorAtDepth(error.cause, depth + 1)
+    : false;
 }
 
 function asTmuxSnapshot(snapshot: SideGlanceTmuxSnapshot): TmuxSnapshot {
