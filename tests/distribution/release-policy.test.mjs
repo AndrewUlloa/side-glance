@@ -88,14 +88,14 @@ test("release validation accepts only Side Glance's public protected matching ve
     GITHUB_REPOSITORY: "AndrewUlloa/side-glance",
     GITHUB_EVENT_REPOSITORY_VISIBILITY: "public",
     GITHUB_REF_TYPE: "tag",
-    GITHUB_REF_NAME: "v0.1.0-beta.9",
+    GITHUB_REF_NAME: "v0.1.0-beta.10",
     GITHUB_REF_PROTECTED: "true",
     GITHUB_OUTPUT: output,
   };
 
   await command(process.execPath, [validator, repository], base);
   const fields = await readFile(output, "utf8");
-  assert.match(fields, /^version=0\.1\.0-beta\.9$/mu);
+  assert.match(fields, /^version=0\.1\.0-beta\.10$/mu);
   assert.match(fields, /^npm_tag=beta$/mu);
   assert.match(fields, /^prerelease=true$/mu);
 
@@ -144,8 +144,8 @@ test("release validation routes stable versions to latest and a normal GitHub re
 });
 
 test("release channels allow retries and upgrades but reject backward dist-tag moves", async () => {
-  await command(process.execPath, [channelValidator, "0.1.0-beta.9", "beta", "0.1.0-beta.8"]);
-  await command(process.execPath, [channelValidator, "0.1.0-beta.9", "beta", "0.1.0-beta.9"]);
+  await command(process.execPath, [channelValidator, "0.1.0-beta.10", "beta", "0.1.0-beta.9"]);
+  await command(process.execPath, [channelValidator, "0.1.0-beta.10", "beta", "0.1.0-beta.10"]);
   await command(process.execPath, [channelValidator, "1.0.0", "latest", "0.1.0-beta.3"]);
   await command(process.execPath, [channelValidator, "1.0.0", "latest"]);
 
