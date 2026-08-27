@@ -4,6 +4,8 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.9] — 2026-08-27
+
 ### Added
 
 - The landing-page lifecycle demo now switches interactively between semantic
@@ -162,7 +164,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.8...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.9...HEAD
+[0.1.0-beta.9]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.9
 [0.1.0-beta.8]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.8
 [0.1.0-beta.7]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.7
 [0.1.0-beta.6]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.6

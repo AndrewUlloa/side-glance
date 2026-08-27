@@ -1,21 +1,22 @@
 # Launch and rollback
 
-Side Glance is a beta. Version `0.1.0-beta.7` is public on npm, GitHub Releases,
+Side Glance is a beta. Version `0.1.0-beta.8` is public on npm, GitHub Releases,
 and the Homebrew tap. It ships semantic lifecycle colors, aggregate Claude
-readiness, truly adaptive Heat, and guarded user theme control. Guided init theme
-selection is merged to protected `staging` and prepared as the still-unpublished
-`0.1.0-beta.8` release candidate.
+readiness, truly adaptive Heat, guarded user theme control, and guided init theme
+selection. The interactive color-model preview and targetless managed-hook fix are
+merged to protected `staging` and prepared as the still-unpublished
+`0.1.0-beta.9` release candidate.
 
 ## Production deployment status
 
-- Current public URL: <https://side-glance.vercel.app> (HTTP 200 and HSTS verified 2026-08-26)
+- Current public URL: <https://side-glance.vercel.app> (HTTP 200 and HSTS verified 2026-08-27)
 - Custom apex status: aliases are configured in Vercel, but public DNS does not
   resolve for `sideglance.ai` or `www.sideglance.ai` as of 2026-08-26
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
-- Tagged beta.7 production deployment: `dpl_Gj6Hdddu1knpvzSHFM1WHxw3SbMG`
-- Tagged beta.7 immutable deployment URL: <https://side-glance-475eh8vt1-andrew-243s-projects.vercel.app>
-- Tagged beta.7 source commit: `3b29ca06f36f98b333a0a4f7fd7159e202e39253`
+- Tagged beta.8 production deployment: `dpl_GuwmqVegwgDFom31LcFtqWHLYCfW`
+- Tagged beta.8 immutable deployment URL: <https://side-glance-qj4koi5x9-andrew-243s-projects.vercel.app>
+- Tagged beta.8 source commit: `e45c764ff8be63ba6cc223ee34bddcbacb52fba3`
 - The canonical Vercel `npm run build` path passed on Node 24 and the public URL
   returned HTTP 200 with Side Glance metadata and rendered copy.
 - Vercel's Git integration creates previews for pull-request commits; the recorded
@@ -31,22 +32,22 @@ on 2026-08-24. `assets.sideglance.ai` is not connected and must remain condition
 See [the public-asset runbook](./docs/assets.md) for the cutover contract.
 
 The prior known-good production deployment is
-`dpl_7i8HYGBsNfeVPFiYNyUURpUptMRh`. It remains Vercel rollback evidence; immutable
+`dpl_EcVNY1xS1dim7A1dRJuixtNaC4vr`. It remains Vercel rollback evidence; immutable
 historical deployment identifiers are not rewritten during a product rename.
 
 ## npm beta status and next candidate
 
-- Current public release: `side-glance@0.1.0-beta.7`
-- Prepared candidate: `side-glance@0.1.0-beta.8` (unused; not published)
+- Current public release: `side-glance@0.1.0-beta.8`
+- Prepared candidate: `side-glance@0.1.0-beta.9` (unused; not published)
 - Channel: `beta`
-- Status: beta.8 is prepared for protected review; until its tag workflow
-  succeeds, `beta` points to beta.7 while `latest` deliberately remains beta.1
+- Status: beta.9 is prepared for protected review; until its tag workflow
+  succeeds, `beta` points to beta.8 while `latest` deliberately remains beta.1
 - Previously published: `side-glance@0.1.0-beta.6`, `side-glance@0.1.0-beta.5`,
   `side-glance@0.1.0-beta.4`, `side-glance@0.1.0-beta.3`, and
   `side-glance@0.1.0-beta.1`
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
   dry-run; no npm package or GitHub Release was published.
-- Current beta.7 integrity: `sha512-gIC+EBgbmI0yREHbz6lV/fubafz+VqFbNKha89EPHvSc2d59cRU8XO7yAN62uIv8kgaiCiOD8JCPp3aBJEPByw==`
+- Current beta.8 integrity: `sha512-iN+gcKAVh9AnYQibH2PU01d9+NByslaOL7/DQbBda8HjPOg7Fp0a5eZhvGtzi0KMyaS98N1G5qB3LmwxmcgjlA==`
 - Every candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
 
@@ -59,14 +60,14 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-Beta.7 passed every repository gate, exact-SHA-protected CI, the production Vercel
+Beta.8 passed every repository gate, exact-SHA-protected CI, the production Vercel
 deployment, the protected tag workflow, npm trusted publishing, immutable GitHub
 Release verification, checksums, and build attestations. Fresh public npx enhanced
 and `NO_COLOR` preview-only flows passed under Node 24.18.0. All four native
 archives passed their standalone jobs; the downloaded Apple Silicon archive was
-executed again locally. Homebrew PR #5 passed Linux, Apple Silicon macOS, and
-experimental Intel macOS `brew test-bot`; the public tap upgrade from beta.6 to
-beta.7 and the installed formula test passed without running setup or changing
+executed again locally. Homebrew PR #6 passed Linux, Apple Silicon macOS, and
+experimental Intel macOS `brew test-bot`; the public tap upgrade from beta.7 to
+beta.8 and the installed formula test passed without running setup or changing
 provider configuration.
 
 ## Vercel Preview annotation tooling
@@ -134,26 +135,25 @@ journal is retained.
 Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
 release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
-beta.7 gates are complete:
+beta.8 gates are complete:
 
-- semantic-lifecycle feature PR #64 and release preparation PR #65 merged to
+- guided-init theme feature PR #72 and release preparation PR #73 merged to
   protected `staging` with full checks;
-- literal `staging` → `main` promotion PR #66 preserved exact staging ancestry;
+- literal `staging` → `main` promotion PR #74 preserved exact staging ancestry;
 - protected `main` CI and the production Vercel deployment passed at the tagged SHA;
-- annotated tag `v0.1.0-beta.7` produced the verified npm and immutable GitHub prerelease;
-- npm `beta` points to beta.7 while `latest` remains beta.1, so beta examples stay explicit about `@beta`;
-- generated-formula Homebrew PR #5 passed every platform and merged only after
+- annotated tag `v0.1.0-beta.8` produced the verified npm and immutable GitHub prerelease;
+- npm `beta` points to beta.8 while `latest` remains beta.1, so beta examples stay explicit about `@beta`;
+- generated-formula Homebrew PR #6 passed every platform and merged only after
   immutable artifact URLs and hashes existed; public upgrade and formula smokes passed.
 
 ## Prepared pull request sequence
 
-Phase 19 feature PR #64, release preparation PR #65, protected promotion PR #66,
-annotated beta.7 publication, and Homebrew tap PR #5 are complete. Future releases
-must repeat the same protected staging, main, tag, artifact, and tap sequence.
-Guided init theme selection PR #72 and beta.8 release preparation PR #73 are
-complete on protected `staging`; literal `staging` → `main` promotion PR #74 is
-in progress. Only its exact green `main` merge commit may receive the
-`v0.1.0-beta.8` tag.
+Guided init theme selection PR #72, beta.8 release preparation PR #73, protected
+promotion PR #74, annotated beta.8 publication, and Homebrew tap PR #6 are complete.
+Interactive color-model preview and managed-hook resilience PR #77 is complete on
+protected `staging`; beta.9 release preparation and the literal `staging` → `main`
+promotion remain. Only the exact green `main` merge commit may receive the
+`v0.1.0-beta.9` tag.
 
 ## Controlled migration from stoplight.sh
 
