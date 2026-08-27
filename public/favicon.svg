@@ -1,20 +1,6 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    .background { fill: #fff; }
-    @media (prefers-color-scheme: dark) {
-      .background { fill: #000; }
-    }
-  </style>
-  <rect class="background" width="64" height="64"/>
-  <g clip-path="url(#clip0_8_46)">
-    <path d="M30 12.75H4V30H30V12.75Z" fill="#758A8A"/>
-    <path d="M60 12.75H34V30H60V12.75Z" fill="#20DF53"/>
-    <path d="M30 34H4V51.25H30V34Z" fill="#FF9F00"/>
-    <path d="M60 34H34V51.25H60V34Z" fill="#E0281F"/>
-  </g>
-  <defs>
-    <clipPath id="clip0_8_46">
-      <rect width="56" height="38.5" fill="white" transform="translate(4 12.75)"/>
-    </clipPath>
-  </defs>
+  <rect x="0" y="12.75" width="30" height="17.25" fill="#758A8A"/>
+  <rect x="34" y="12.75" width="30" height="17.25" fill="#20DF53"/>
+  <rect x="0" y="34" width="30" height="17.25" fill="#FF9F00"/>
+  <rect x="34" y="34" width="30" height="17.25" fill="#E0281F"/>
 </svg>

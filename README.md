@@ -2,6 +2,8 @@
 
 Side Glance is a local-first attention layer for coding-agent CLIs. It turns working, waiting, ready, failed, and inactive lifecycle events into a calm terminal or tmux status layer without allowing stale hooks or one session's cleanup to overwrite another.
 
+Side Glance originated at Design From, Inc. and is maintained by Andrew Ulloa as an Apache-2.0 open-source project.
+
 It is the tested successor to a personal `stoplight.sh`: one typed controller, one private state store, thin provider adapters, and a universal supervised wrapper.
 
 ## What is proven
@@ -17,7 +19,9 @@ It is the tested successor to a personal `stoplight.sh`: one typed controller, o
 
 ## Installation status
 
-The verified public site is [sideglance.dev](https://sideglance.dev). The
+The verified public site is [sideglance.dev](https://sideglance.dev). Cloudflare
+provides authoritative DNS, DNSSEC, TLS, and proxying in front of the Vercel
+deployment; `www.sideglance.dev` redirects to the canonical apex. The
 [Vercel deployment](https://side-glance.vercel.app) remains the fallback alias.
 Side Glance is available as a beta package. Prereleases are published on npm's
 explicit `beta` channel. Source commits are not releases: a version becomes
@@ -361,9 +365,9 @@ and the [edge-case audit](./docs/edge-case-audit.md).
 ## Status
 
 Public beta. The GitHub repository is public and protected branch/tag rulesets
-gate every release. The verified public site remains the Vercel hostname until a
-custom domain is configured. Gemini, OpenCode v1, and Aider remain experimental
-until their live provider matrices are signed off.
+gate every release. The verified public site is `https://sideglance.dev`. Gemini,
+OpenCode v1, and Aider remain experimental until their live provider matrices are
+signed off.
 
 ## License
 

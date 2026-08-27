@@ -70,7 +70,7 @@ test("focused homepage uses the exact static Figma assets and copy", async () =>
 
   assert.match(
     page,
-    /className="minimal-home gap-layout-stack px-site-gutter pb-page-block"/u
+    /className="minimal-home gap-layout-stack px-site-gutter"/u
   );
   assert.match(page, /Long loops\./u);
   assert.match(page, /Short glances\./u);

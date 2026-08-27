@@ -1,8 +1,10 @@
 import Image from "next/image";
 
+import { AgentOverview } from "./components/AgentOverview";
 import { InstallButton } from "./components/InstallButton";
 import { LoadingSequence } from "./components/LoadingSequence";
 import { MotionOrchestrator } from "./components/MotionOrchestrator";
+import { SiteFooter } from "./components/SiteFooter";
 import { TerminalShowcase } from "./components/TerminalShowcase";
 
 export default function Home() {
@@ -10,7 +12,7 @@ export default function Home() {
     <>
       <MotionOrchestrator />
       <LoadingSequence />
-      <div className="minimal-home gap-layout-stack px-site-gutter pb-page-block">
+      <div className="minimal-home gap-layout-stack px-site-gutter">
         <header className="minimal-header h-site-header">
           <a
             aria-label="Side Glance home"
@@ -73,6 +75,10 @@ export default function Home() {
             <TerminalShowcase />
           </div>
         </main>
+
+        <AgentOverview />
+
+        <SiteFooter />
       </div>
     </>
   );

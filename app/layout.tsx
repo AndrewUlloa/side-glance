@@ -1,4 +1,4 @@
-// biome-ignore-all lint/security/noDangerouslySetInnerHtml: The fixed theme bootstrap contains no user data and must run before first paint.
+// biome-ignore-all lint/security/noDangerouslySetInnerHtml: Fixed theme and JSON-LD payloads contain no user data; the theme must run before first paint and JSON-LD must remain parseable in raw HTML.
 import type { Metadata, Viewport } from "next";
 import { Alan_Sans, Geist_Mono } from "next/font/google";
 import Script from "next/script";
@@ -6,8 +6,11 @@ import type { CSSProperties } from "react";
 import "lenis/dist/lenis.css";
 import { AgentationToolbar } from "./components/AgentationToolbar";
 import { SmoothScroll } from "./components/SmoothScroll";
+import { WebMcpTools } from "./components/WebMcpTools";
 import { shouldShowAgentation } from "./lib/agentation-environment";
-import { SIDE_GLANCE_SITE_URL, SITE_ASSETS } from "./lib/site-assets";
+import { SITE_ASSETS } from "./lib/site-assets";
+import { SIDE_GLANCE_SITE_URL } from "./lib/site-identity";
+import { SIDE_GLANCE_STRUCTURED_DATA_JSON } from "./lib/structured-data";
 import "./globals.css";
 
 const showAgentation = shouldShowAgentation({
@@ -52,11 +55,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SIDE_GLANCE_SITE_URL),
   title: "Side Glance — Long loops. Short glances.",
-  description: "Know which loop needs judgment. Let the others keep running.",
+  description:
+    "Side Glance is a local-first attention layer for coding-agent CLIs. See working, waiting, ready, and failed state in your terminal or tmux.",
   applicationName: "Side Glance",
   alternates: {
     canonical: "/",
+    types: {
+      "text/markdown": "/index.md",
+    },
   },
+  authors: [{ name: "Andrew Ulloa", url: "https://github.com/AndrewUlloa" }],
+  category: "developer tools",
+  creator: "Design From, Inc.",
+  publisher: "Design From, Inc.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -73,7 +84,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     title: "Side Glance — Long loops. Short glances.",
-    description: "Know which loop needs judgment. Let the others keep running.",
+    description:
+      "A local-first attention layer for coding-agent CLIs. See lifecycle state in your terminal or tmux.",
     siteName: "Side Glance",
     url: SIDE_GLANCE_SITE_URL,
     images: [
@@ -89,7 +101,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Side Glance — Long loops. Short glances.",
-    description: "Know which loop needs judgment. Let the others keep running.",
+    description:
+      "A local-first attention layer for coding-agent CLIs. See lifecycle state in your terminal or tmux.",
     images: [
       {
         url: SITE_ASSETS.openGraph,
@@ -120,6 +133,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" style={rootStyle} suppressHydrationWarning>
+      <head>
+        <link
+          href="/.well-known/ai-catalog.json"
+          rel="ai-catalog"
+          type="application/json"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: SIDE_GLANCE_STRUCTURED_DATA_JSON,
+          }}
+          type="application/ld+json"
+        />
+      </head>
       <body className={`${alanSans.variable} ${geistMono.variable}`}>
         <Script
           dangerouslySetInnerHTML={{ __html: themeBootstrap }}
@@ -127,6 +153,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <SmoothScroll />
+        <WebMcpTools />
         {children}
         <AgentationToolbar enabled={showAgentation} />
         {cloudflareAnalyticsToken ? (
