@@ -42,7 +42,7 @@ test("social metadata publishes the captured OG image with complete dimensions a
   );
   assert.match(
     layout,
-    /description:\s*"Know which loop needs judgment\. Let the others keep running\."/u
+    /description:\s*\n\s*"Side Glance is a local-first attention layer for coding-agent CLIs\. See working, waiting, ready, and failed state in your terminal or tmux\."/u
   );
   assert.doesNotMatch(layout, /your terminal knows when it needs you/u);
   assert.match(layout, /images:\s*\[\s*\{/u);

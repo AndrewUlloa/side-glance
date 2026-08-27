@@ -10,10 +10,11 @@ and prepared as the still-unpublished `0.1.0-beta.12` release candidate.
 
 ## Production deployment status
 
-- Current public URL: <https://sideglance.dev> (HTTP 200 verified 2026-08-27)
+- Current public URL: <https://sideglance.dev> (HTTP 200, HSTS, and Cloudflare TLS verified 2026-08-27)
 - Vercel fallback URL: <https://side-glance.vercel.app> (HTTP 200 verified 2026-08-27)
-- Custom-domain status: `sideglance.dev` resolves publicly and
-  `www.sideglance.dev` redirects to the apex; both are attached to production
+- Custom-domain status: `sideglance.dev` uses Cloudflare authoritative DNS and
+  DNSSEC in front of Vercel; `www.sideglance.dev` redirects to the apex, and both
+  hostnames are attached to production
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
 - Tagged beta.11 production deployment: `dpl_4xtEVYmKpyPesTsH5KswrUEd5zCU`
@@ -23,7 +24,8 @@ and prepared as the still-unpublished `0.1.0-beta.12` release candidate.
   returned HTTP 200 with Side Glance metadata and rendered copy.
 - Vercel's Git integration creates previews for pull-request commits; the recorded
   Production deployment's source commit is the head of `main`.
-- The custom apex and Vercel fallback alias resolve to the same verified project.
+- The custom apex and Vercel fallback alias resolve to the same verified project;
+  the custom apex is the canonical public identity.
 
 The Next.js application remains on Vercel. Large site images are stored in the
 `side-glance-assets-prod` Cloudflare R2 bucket and use immutable, content-addressed

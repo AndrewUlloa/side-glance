@@ -2,6 +2,11 @@
   "name": "side-glance",
   "version": "0.1.0-beta.12",
   "description": "A local-first attention layer for coding-agent CLIs.",
+  "author": {
+    "name": "Design From, Inc.",
+    "email": "andrew@designfrom.com",
+    "url": "https://sideglance.dev"
+  },
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
@@ -22,7 +27,7 @@
   "bugs": {
     "url": "https://github.com/AndrewUlloa/side-glance/issues"
   },
-  "homepage": "https://github.com/AndrewUlloa/side-glance#readme",
+  "homepage": "https://sideglance.dev",
   "keywords": [
     "terminal",
     "claude-code",

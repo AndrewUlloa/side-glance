@@ -14,6 +14,7 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   const packageLock = await readFile("package-lock.json", "utf8");
   const layout = await readFile("app/layout.tsx", "utf8");
   const siteAssets = await readFile("app/lib/site-assets.ts", "utf8");
+  const siteIdentity = await readFile("app/lib/site-identity.ts", "utf8");
   const nextConfig = await readFile("next.config.ts", "utf8");
   const cicd = await readFile("docs/cicd.md", "utf8");
   const launch = await readFile("LAUNCH.md", "utf8");
@@ -68,10 +69,12 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   assert.match(layout, /SIDE_GLANCE_SITE_URL/u);
   assert.doesNotMatch(layout, /VERCEL_PROJECT_PRODUCTION_URL/u);
   assert.doesNotMatch(layout, /terminal-signal\.pages\.dev/u);
-  assert.match(siteAssets, /https:\/\/sideglance\.dev/u);
+  assert.match(siteAssets, /r2-manifest\.json/u);
+  assert.match(siteIdentity, /https:\/\/sideglance\.dev/u);
+  assert.doesNotMatch(siteIdentity, /side-glance\.vercel\.app/u);
   assert.doesNotMatch(readme, /https:\/\/terminal-signal\.vercel\.app/u);
   assert.match(readme, /\[sideglance\.dev\]\(https:\/\/sideglance\.dev\)/u);
-  assert.match(launch, /`sideglance\.dev` resolves publicly/u);
+  assert.match(launch, /`sideglance\.dev` uses Cloudflare authoritative DNS/u);
   assert.match(cicd, /https:\/\/sideglance\.dev/u);
   assert.match(launch, /https:\/\/side-glance\.vercel\.app/u);
   assert.match(launch, /dpl_4xtEVYmKpyPesTsH5KswrUEd5zCU/u);

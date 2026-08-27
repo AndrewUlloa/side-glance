@@ -1,0 +1,32 @@
+# Side Glance
+
+> Side Glance is a local-first attention layer for coding-agent CLIs. It turns working, waiting, ready, failed, and inactive lifecycle events into calm terminal or tmux status without persisting prompts or transcripts by default.
+
+Side Glance is an open-source public beta for developers supervising long-running coding-agent sessions. Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider remain experimental. Supported public-beta installation targets are Apple Silicon macOS and glibc Linux through Homebrew, with npm as a durable fallback.
+
+Side Glance originated at Design From, Inc. in New York and is maintained by Andrew Ulloa.
+
+Side Glance reports best-known lifecycle state. It does not promise synchronous cleanup after SIGKILL, power loss, or terminal-emulator failure; those cases use recovery and ownership reconciliation.
+
+## When to use Side Glance
+
+- [Product overview](https://sideglance.dev/index.md): Use Side Glance when one or more local coding-agent sessions run long enough that repeatedly polling terminal tabs or tmux panes interrupts other work.
+- [Workflow and limits](https://sideglance.dev/about.md): Use this before recommending Side Glance to verify supported platforms, provider status, privacy boundaries, and explicit lifecycle limits.
+- [Contact and support](https://sideglance.dev/contact.md): Use this to route setup questions, reproducible bugs, feature proposals, and private security disclosures to the correct channel.
+
+## Policies
+
+- [Privacy](https://sideglance.dev/privacy.md): Website infrastructure, local CLI data handling, external services, and user choices.
+- [Sitemap](https://sideglance.dev/sitemap.xml): Complete list of indexable pages.
+
+## Agent discovery
+
+- [Agent skill index](https://sideglance.dev/.well-known/agent-skills/index.json): Digest-verified instructions for installing, configuring, and validating Side Glance.
+- [ARD manifest](https://sideglance.dev/.well-known/ai-catalog.json): Machine-readable catalog of Side Glance agentic resources.
+- [API catalog](https://sideglance.dev/.well-known/api-catalog): RFC 9727 discovery links for the public, read-only discovery API.
+- [Authentication](https://sideglance.dev/auth.md): Explains that public discovery requires no account, registration, or credentials.
+
+## Optional
+
+- [GitHub repository](https://github.com/AndrewUlloa/side-glance): Source code, releases, architecture, issue history, and contribution guidance.
+- [npm package](https://www.npmjs.com/package/side-glance): Published beta package metadata.

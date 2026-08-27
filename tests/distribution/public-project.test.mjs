@@ -46,7 +46,7 @@ test("documents only durable installation and truthful beta availability", async
   assert.match(readme, /Intel macOS is experimental/u);
   assert.match(readme, /npm install --global \.\/packages\/cli/u);
   assert.match(readme, /available as a beta package/iu);
-  assert.match(readme, /https:\/\/side-glance\.vercel\.app/u);
+  assert.match(readme, /https:\/\/sideglance\.dev/u);
   assert.match(readme, /CLI command[\s\S]{0,200}`PATH`/iu);
   assert.match(readme, /desktop\s+app[\s\S]{0,120}may still be usable/iu);
   assert.match(

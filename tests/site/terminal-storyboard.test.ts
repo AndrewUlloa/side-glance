@@ -121,8 +121,9 @@ test("focused hero uses responsive Tailwind gutters and the vertical Figma stack
     stylesheet.match(/\.minimal-home\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
   assert.match(heroRule, /min-height:\s*100dvh/);
-  assert.match(heroRule, /max-width:\s*1512px/);
-  assert.match(pageSource, /gap-layout-stack px-site-gutter pb-page-block/);
+  assert.doesNotMatch(heroRule, /max-width:/);
+  assert.match(heroRule, /background:\s*#fff/);
+  assert.match(pageSource, /gap-layout-stack px-site-gutter/);
   assert.match(
     stylesheet,
     /--spacing-site-gutter:\s*clamp\(1\.5rem, 7\.937vw, 7\.5rem\)/
