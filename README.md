@@ -73,7 +73,9 @@ Status without an additional theme question; rerunning setup preserves an existi
 saved theme. **Customize** includes providers, notifications, and colors, using the
 same Status, Heat, and Custom selector as `side-glance theme`. The selected color
 behavior appears in Review and the completion summary before it applies to the next
-lifecycle event.
+lifecycle event. On a safely inspectable zsh setup, Recommended also adds one
+reviewed managed block to `.zshrc` so a new direct local terminal tab resets an
+inherited Side Glance background before its first prompt.
 
 Side Glance considers a provider available only when its CLI command (`claude`,
 `codex`, `gemini`, or `opencode`) is executable on the `PATH` of the shell running
@@ -90,7 +92,7 @@ For automation, start with:
 
 ```bash
 side-glance setup --dry-run
-side-glance setup --providers claude,codex --notifications none --yes --json
+side-glance setup --providers claude,codex --notifications none --fresh-tabs --yes --json
 ```
 
 After setup, just run `claude`, `codex`, or the experimental `gemini` integration
@@ -113,6 +115,21 @@ available, or when you want a private label or process-exit notification:
 ```bash
 side-glance run --label "Codex" -- codex
 ```
+
+### Fresh terminal tabs
+
+Terminal.app can copy the active tab's effective dynamic background when Cmd-T
+opens another tab. That new shell does not belong to the existing agent, so guided
+setup recommends a reversible zsh startup reset. The final Review names `.zshrc`
+and its action before anything changes. The managed block emits only OSC 111 and
+only for an interactive, top-level, direct local shell; tmux, SSH, nested shells,
+redirected output, and unsupported shells are skipped.
+
+Automation preserves the existing state unless the choice is explicit. Use
+`--fresh-tabs` to install or repair the exact block and `--no-fresh-tabs` to remove
+only that block. Existing shell content is bounded, backed up, written atomically,
+verified, and restored with the provider plan after a caught setup failure. A
+malformed or duplicated ownership marker blocks the change instead of guessing.
 
 Advanced commands remain available for one-provider changes and diagnosis:
 
@@ -311,12 +328,12 @@ Normal `SessionEnd`, child exit, `SIGINT`, `SIGTERM`, `SIGHUP`, and manual reset
 side-glance reset --all --json
 ```
 
-A power loss or `SIGKILL` between separate provider-file renames can leave setup
+A power loss or `SIGKILL` between separate configuration-file renames can leave setup
 partial. The next `side-glance init` or `side-glance doctor` reports that state so
 the idempotent setup can repair it; Side Glance does not retain a secret crash
 journal of provider configuration.
 
-OSC 111 restores the terminal's configured default background; terminals do not expose a portable way to recover an arbitrary dynamic OSC 11 value. Terminal.app OSC 11 remains manually unverified, so `doctor` warns and `--terminal-title` offers an opt-in phase-only fallback. Title mutation is disabled by default.
+OSC 111 restores the terminal's configured default background; terminals do not expose a portable way to recover an arbitrary dynamic OSC 11 value. Terminal.app OSC 11 remains manually unverified, so `doctor` warns and `--terminal-title` offers an opt-in phase-only fallback. Title mutation is disabled by default. The fresh-tab startup reset addresses inherited appearance only; it does not promise that every terminal emulator copies or resets dynamic colors identically.
 
 ## Development
 

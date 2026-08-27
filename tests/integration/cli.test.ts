@@ -606,8 +606,10 @@ test("doctor and preview are deterministic and do not require a live terminal", 
   );
 
   assert.equal(doctor.code, 0, doctor.stderr);
-  assert.equal(JSON.parse(doctor.stdout).stateDirectory, await realpath(directory));
-  assert.equal(JSON.parse(doctor.stdout).node.supported, true);
+  const doctorReport = JSON.parse(doctor.stdout);
+  assert.equal(doctorReport.stateDirectory, await realpath(directory));
+  assert.equal(doctorReport.node.supported, true);
+  assert.ok(["eligible", "blocked", "unavailable"].includes(doctorReport.freshTabs.state));
   assert.equal(preview.code, 0, preview.stderr);
   assert.deepEqual(JSON.parse(preview.stdout), {
     phase: "waiting",

@@ -551,6 +551,15 @@ test("accepts bounded legacy Stoplight metadata from delegated setup plans and r
     schemaVersion: 1,
     kind: "setup-plan",
     providers: [planProvider],
+    freshTabs: {
+      state: "eligible",
+      integrationStatus: "not-installed",
+      shell: "zsh",
+      managed: true,
+      enabled: true,
+      recommended: true,
+      target: { path: "/Users/test/.zshrc", action: "update" },
+    },
   };
   const planFixture = fixtureDependencies({
     durableResults: [durable],
@@ -575,6 +584,19 @@ test("accepts bounded legacy Stoplight metadata from delegated setup plans and r
         legacyStoplight,
       },
     ],
+    freshTabs: {
+      state: "eligible",
+      integrationStatus: "not-installed",
+      shell: "zsh",
+      managed: true,
+      enabled: true,
+      recommended: true,
+      target: { path: "/Users/test/.zshrc", action: "update" },
+      id: "fresh-tabs",
+      configPath: "/Users/test/.zshrc",
+      changed: true,
+      backupPath: "/Users/test/.zshrc.side-glance-backup-1",
+    },
   };
   const resultFixture = fixtureDependencies({
     durableResults: [durable],

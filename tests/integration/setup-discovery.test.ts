@@ -105,6 +105,52 @@ test("applies multiple exact plans under one transaction and re-runs idempotentl
   assert.equal(reapplied.providers.every(({ backupPath }) => !backupPath), true);
 });
 
+test("applies the fresh-tab zsh reset in the same verified setup transaction", async (context) => {
+  const fixture = await setupFixture(context);
+  const zshrc = path.join(fixture.home, ".zshrc");
+  const original = "export KEEP_ME=1\n";
+  await writeFile(zshrc, original, { mode: 0o640 });
+  const request: SetupRequest = {
+    ...setupRequest(["claude"], []),
+    freshTabs: true,
+  };
+  const options = {
+    defaultHomeDirectory: fixture.home,
+    defaultExecutablePath: fixture.executable,
+    expectedVersion: version,
+    environment: { PATH: fixture.bin, SHELL: "/bin/zsh" },
+    platform: "darwin" as const,
+    pathProbe: async (candidate: string) => candidate === "claude",
+    probeVersion: async () => ({ exitCode: 0, stdout: `${version}\n` }),
+  };
+
+  const discovery = await createDurableSetupDiscovery(request, options);
+  const plan = createSetupPlan(request, discovery.dependencies);
+  assert.equal(plan.freshTabs.managed, true);
+  assert.equal(plan.freshTabs.enabled, true);
+  assert.equal(plan.freshTabs.target?.action, "update");
+
+  const applied = await discovery.apply(plan);
+  assert.deepEqual(
+    applied.providers.map(({ id, changed }) => ({ id, changed })),
+    [
+      { id: "claude", changed: true },
+      { id: "fresh-tabs", changed: true },
+    ],
+  );
+  const installed = await readFile(zshrc, "utf8");
+  assert.ok(installed.startsWith(original));
+  assert.match(installed, /builtin printf '\\e\]111\\e\\\\'/u);
+  assert.equal((await stat(zshrc)).mode & 0o777, 0o640);
+
+  const rerun = await createDurableSetupDiscovery(request, options);
+  const rerunPlan = createSetupPlan(request, rerun.dependencies);
+  assert.equal(rerunPlan.freshTabs.target?.action, "unchanged");
+  const reapplied = await rerun.apply(rerunPlan);
+  assert.equal(reapplied.providers.at(-1)?.id, "fresh-tabs");
+  assert.equal(reapplied.providers.at(-1)?.changed, false);
+});
+
 test("rerunning setup upgrades otherwise-installed hooks for plain provider commands", async (context) => {
   const fixture = await setupFixture(context);
   await installProviderHooks({

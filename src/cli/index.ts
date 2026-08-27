@@ -9,6 +9,7 @@ import { adaptCodexHook } from "../adapters/codex.ts";
 import { adaptGeminiHook } from "../adapters/gemini.ts";
 import { adaptOpenCodeEvent } from "../adapters/opencode.ts";
 import { inspectProviderHooks } from "../adapters/installers.ts";
+import { inspectFreshTabs } from "../adapters/fresh-tabs.ts";
 import type { AdapterContext, AdapterResult } from "../adapters/types.ts";
 import { SideGlanceController } from "../core/controller.ts";
 import { visualForPhase } from "../core/visual.ts";
@@ -274,6 +275,15 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         hooks: providerInspections,
         notifications: notificationReadiness,
       });
+      const freshTabs = await inspectFreshTabs({
+        homeDirectory,
+        environment: process.env,
+      }).catch(() => ({
+        state: "blocked" as const,
+        shell: path.basename(process.env.SHELL ?? "") === "zsh" ? ("zsh" as const) : null,
+        integrationStatus: "unknown" as const,
+        reason: "ownership-conflict" as const,
+      }));
       writeJson({
         stateDirectory,
         node: { version: process.versions.node, supported: majorVersion >= 22 },
@@ -289,6 +299,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         providers: providerInspections,
         notifications: notificationReadiness,
         appearance: configInspection,
+        freshTabs,
         capabilities,
       });
       return 0;
@@ -444,6 +455,8 @@ Options:
   --notifications              Enable Side Glance desktop notifications
   --notification-sound <name>  Use an installed sound name (default: Glass)
   --migrate-legacy-stoplight   Replace exact legacy Claude Stoplight hooks
+  --fresh-tabs                 Reset inherited Side Glance color in new zsh tabs
+  --no-fresh-tabs              Remove the managed fresh-tab zsh reset
   --label <text>                Distinguish concurrent sessions privately
   --notify-on-exit              Notify when a supervised process exits
   --terminal-title              Opt into a sanitized lifecycle title fallback

@@ -57,6 +57,8 @@ Options:
   --providers <list>           Claude, Codex, Gemini, and/or OpenCode
   --notifications <list|none>  Side Glance computer-notification channels
   --notification-sound <name>  Installed sound name (default: Glass)
+  --fresh-tabs                 Reset inherited Side Glance color in new zsh tabs
+  --no-fresh-tabs              Remove the managed fresh-tab zsh reset
   --dry-run                    Preview without installing or configuring providers
   --yes                        Apply a fully specified non-interactive bootstrap
   --json                       Emit exactly one versioned JSON result

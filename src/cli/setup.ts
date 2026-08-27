@@ -35,6 +35,7 @@ export interface SetupRequest {
   homeDirectory?: string;
   executablePath?: string;
   installMethod?: SetupInstallMethod;
+  freshTabs?: boolean;
 }
 
 export type SetupProviderState =
@@ -98,6 +99,26 @@ export interface SetupPlanDependencies {
   };
   providers: readonly SetupProviderObservation[];
   guidance?: readonly SetupGuidanceObservation[];
+  freshTabs?: SetupFreshTabsObservation;
+}
+
+export interface SetupFreshTabsObservation {
+  state: "eligible" | "blocked" | "unavailable";
+  shell: "zsh" | null;
+  integrationStatus: "installed" | "not-installed" | "partial" | "unknown";
+  reason?: "unsupported-shell" | "ownership-conflict";
+  target?: { path: string; action: "create" | "update" | "unchanged" };
+}
+
+export interface SetupFreshTabsPlan
+  extends Omit<SetupFreshTabsObservation, "target"> {
+  managed: boolean;
+  enabled: boolean;
+  recommended: boolean;
+  target?: {
+    path: string;
+    action: "create" | "update" | "remove" | "unchanged";
+  };
 }
 
 export interface SetupPlanWarning {
@@ -157,6 +178,7 @@ export interface SetupPlan {
   selectedProviders: readonly SetupProvider[];
   selectedNotifications: readonly SetupProvider[];
   notificationSound: string | null;
+  freshTabs: SetupFreshTabsPlan;
   guidance: readonly {
     kind: "aider" | "generic";
     state: "guidance-only";
@@ -323,6 +345,8 @@ export function createSetupPlan(
     };
   });
 
+  const freshTabs = createFreshTabsPlan(request, dependencies.freshTabs);
+
   return {
     kind: "setup-plan",
     v: 1,
@@ -333,6 +357,7 @@ export function createSetupPlan(
     selectedProviders: requestedProviders,
     selectedNotifications: requestedNotifications,
     notificationSound,
+    freshTabs,
     guidance: projectGuidance(dependencies.guidance ?? []),
   };
 }
@@ -558,6 +583,8 @@ const BOOLEAN_OPTIONS = new Set([
   "--yes",
   "--json",
   "--migrate-legacy-stoplight",
+  "--fresh-tabs",
+  "--no-fresh-tabs",
 ]);
 
 export function parseSetupArguments(
@@ -603,6 +630,14 @@ export function parseSetupArguments(
   const yes = booleans.has("--yes");
   const json = booleans.has("--json");
   const migrateLegacyStoplight = booleans.has("--migrate-legacy-stoplight");
+  if (booleans.has("--fresh-tabs") && booleans.has("--no-fresh-tabs")) {
+    throw new Error("--fresh-tabs and --no-fresh-tabs cannot be used together.");
+  }
+  const freshTabs = booleans.has("--fresh-tabs")
+    ? true
+    : booleans.has("--no-fresh-tabs")
+      ? false
+      : undefined;
   const homeDirectory = values.has("--home")
     ? validateAbsolutePath(values.get("--home") as string, "--home")
     : undefined;
@@ -679,6 +714,49 @@ export function parseSetupArguments(
     ...(homeDirectory ? { homeDirectory } : {}),
     ...(executablePath ? { executablePath } : {}),
     ...(installMethod ? { installMethod } : {}),
+    ...(freshTabs === undefined ? {} : { freshTabs }),
+  };
+}
+
+function createFreshTabsPlan(
+  request: SetupRequest,
+  observation: SetupFreshTabsObservation | undefined,
+): SetupFreshTabsPlan {
+  const current: SetupFreshTabsObservation =
+    observation ??
+    ({
+      state: "unavailable",
+      shell: null,
+      integrationStatus: "unknown",
+      reason: "unsupported-shell",
+    } as const);
+  const managed = request.freshTabs !== undefined;
+  if (request.freshTabs === true && current.state !== "eligible") {
+    throw new Error("fresh terminal tabs are not eligible for setup.");
+  }
+  if (request.freshTabs === false && current.state === "blocked") {
+    throw new Error("fresh terminal tab ownership markers must be repaired manually.");
+  }
+  const installed = current.integrationStatus === "installed";
+  const enabled = request.freshTabs ?? installed;
+  const target = current.target
+    ? {
+        path: validateAbsolutePath(
+          current.target.path,
+          "fresh terminal tab configuration path",
+        ),
+        action:
+          managed && !enabled && installed
+            ? ("remove" as const)
+            : current.target.action,
+      }
+    : undefined;
+  return {
+    ...current,
+    managed,
+    enabled,
+    recommended: current.state === "eligible",
+    ...(target ? { target } : {}),
   };
 }
 

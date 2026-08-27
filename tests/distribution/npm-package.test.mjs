@@ -6,6 +6,7 @@ import {
   readFile,
   realpath,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -25,9 +26,17 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   const temporary = await mkdtemp(path.join(tmpdir(), "side-glance-npm-package-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const npmCache = path.join(temporary, "npm-cache");
+  const runtimeBin = path.join(temporary, "runtime-bin");
+  await mkdir(runtimeBin, { recursive: true });
+  await symlink(process.execPath, path.join(runtimeBin, "node"));
+  await symlink(
+    path.join(path.dirname(process.execPath), npmExecutable),
+    path.join(runtimeBin, npmExecutable),
+  );
+  const runtimePath = [runtimeBin, "/usr/bin", "/bin"].join(path.delimiter);
   const npmEnvironment = {
     NPM_CONFIG_CACHE: npmCache,
-    PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+    PATH: runtimePath,
   };
 
   await rm(path.join(repository, "packages/cli/dist"), { recursive: true, force: true });
@@ -75,7 +84,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     cwd: temporary,
     env: {
       SIDE_GLANCE_STATE_DIR: stateDirectory,
-      PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+      PATH: runtimePath,
     },
   });
   const report = JSON.parse(doctor.stdout);
@@ -87,7 +96,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
     SIDE_GLANCE_STATE_DIR: stateDirectory,
     SIDE_GLANCE_CONFIG_DIR: path.join(temporary, "theme-config"),
     SIDE_GLANCE_NOTIFICATION_BACKEND: "none",
-    PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+    PATH: runtimePath,
   };
   await command(
     executable,
@@ -161,12 +170,12 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
   );
   const version = await command(executable, ["--version"], {
     cwd: temporary,
-    env: { PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}` },
+    env: { PATH: runtimePath },
   });
   assert.equal(version.stdout.trim(), packageVersion);
   const help = await command(executable, ["--help"], {
     cwd: temporary,
-    env: { PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}` },
+    env: { PATH: runtimePath },
   });
   assert.match(
     help.stdout,
@@ -356,7 +365,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
       cwd: temporary,
       env: {
         ...npmEnvironment,
-        PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+        PATH: runtimePath,
       },
     },
   );
@@ -387,7 +396,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
       PATH: [
         path.dirname(executable),
         providerBin,
-        path.dirname(process.execPath),
+        runtimeBin,
         "/usr/bin",
         "/bin",
       ].join(path.delimiter),
@@ -428,9 +437,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
       NO_COLOR: undefined,
       SIDE_GLANCE_ACCESSIBLE: undefined,
       TERM: "xterm-256color",
-      PATH: [path.dirname(process.execPath), "/usr/bin", "/bin"].join(
-        path.delimiter,
-      ),
+      PATH: runtimePath,
     },
     interactions: [
       {
@@ -466,7 +473,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
       cwd: temporary,
       env: {
         ...npmEnvironment,
-        PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+        PATH: runtimePath,
       },
     },
   );
@@ -500,7 +507,7 @@ test("packs Side Glance as a minimal CLI and executes it from an isolated global
       cwd: temporary,
       env: {
         ...npmEnvironment,
-        PATH: `${providerBin}${path.delimiter}${path.dirname(process.execPath)}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+        PATH: `${providerBin}${path.delimiter}${runtimePath}`,
       },
     },
   );
@@ -553,7 +560,7 @@ printf '%s\n' "$@" > ${shellQuote(installerArguments)}
           fakeManagerBin,
           durableBin,
           providerBin,
-          path.dirname(process.execPath),
+          runtimeBin,
           "/usr/bin",
           "/bin",
         ].join(path.delimiter),
@@ -610,7 +617,7 @@ printf '%s\n' "$@" > ${shellQuote(installerArguments)}
       env: {
         ...npmEnvironment,
         PATH: [
-          path.dirname(process.execPath),
+          runtimeBin,
           durableBin,
           providerBin,
           "/usr/bin",
@@ -642,7 +649,7 @@ printf '%s\n' "$@" > ${shellQuote(installerArguments)}
           cwd: temporary,
           env: {
             ...npmEnvironment,
-            PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ""}`,
+            PATH: runtimePath,
           },
         },
       ),

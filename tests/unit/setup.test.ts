@@ -247,6 +247,95 @@ test("setup carries an explicit legacy Stoplight migration decision", () => {
   );
 });
 
+test("fresh terminal tabs are explicit in automation and preserve current state otherwise", () => {
+  const providers = [
+    providerObservation("claude", "eligible", "not-configured"),
+    providerObservation("codex", "unavailable", "unknown"),
+    providerObservation("gemini", "unavailable", "unknown"),
+    providerObservation("opencode", "unavailable", "unknown"),
+  ];
+  const enabled = parseSetupArguments(
+    [
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--fresh-tabs",
+      "--yes",
+    ],
+    { command: "setup", execution: "durable", interactive: false },
+  );
+  assert.equal(enabled.freshTabs, true);
+  const enabledPlan = createSetupPlan(enabled, {
+    ...planDependencies(),
+    providers,
+    freshTabs: {
+      state: "eligible",
+      shell: "zsh",
+      integrationStatus: "not-installed",
+      target: { path: "/Users/example/.zshrc", action: "update" },
+    },
+  });
+  assert.deepEqual(enabledPlan.freshTabs, {
+    state: "eligible",
+    shell: "zsh",
+    integrationStatus: "not-installed",
+    target: { path: "/Users/example/.zshrc", action: "update" },
+    managed: true,
+    enabled: true,
+    recommended: true,
+  });
+
+  const preserved = createSetupPlan(
+    { ...enabled, freshTabs: undefined },
+    {
+      ...planDependencies(),
+      providers,
+      freshTabs: {
+        state: "eligible",
+        shell: "zsh",
+        integrationStatus: "installed",
+        target: { path: "/Users/example/.zshrc", action: "unchanged" },
+      },
+    },
+  );
+  assert.equal(preserved.freshTabs.managed, false);
+  assert.equal(preserved.freshTabs.enabled, true);
+
+  const disabled = parseSetupArguments(
+    [
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+      "--no-fresh-tabs",
+      "--yes",
+    ],
+    { command: "setup", execution: "durable", interactive: false },
+  );
+  const disabledPlan = createSetupPlan(disabled, {
+    ...planDependencies(),
+    providers,
+    freshTabs: {
+      state: "eligible",
+      shell: "zsh",
+      integrationStatus: "installed",
+      target: { path: "/Users/example/.zshrc", action: "unchanged" },
+    },
+  });
+  assert.equal(disabledPlan.freshTabs.enabled, false);
+  assert.equal(disabledPlan.freshTabs.target?.action, "remove");
+
+  assert.throws(
+    () =>
+      parseSetupArguments(
+        ["--fresh-tabs", "--no-fresh-tabs", "--dry-run"],
+        { command: "setup", execution: "durable", interactive: false },
+      ),
+    /cannot be used together/u,
+  );
+});
+
 test("non-interactive setup requires a dry-run or a completely specified apply", () => {
   const context = {
     command: "setup" as const,
