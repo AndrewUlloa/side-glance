@@ -82,7 +82,7 @@ test("focused homepage uses the exact static Figma assets and copy", async () =>
   assert.match(page, /<TerminalShowcase\s*\/>/u);
   assert.match(
     showcase,
-    /<InteractiveClaudeTerminal\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/u
+    /<InteractiveClaudeTerminal\s+appearance=\{appearance\}\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/u
   );
   assert.match(terminal, /className="mock-terminal"/u);
   assert.match(terminal, /Interactive Claude session/u);

@@ -8,7 +8,11 @@ import type {
 } from "react";
 import { useEffect, useRef, useState } from "react";
 
-import { type PlaygroundPhase, visualForPhase } from "./playground-model";
+import {
+  type PlaygroundAppearance,
+  type PlaygroundPhase,
+  visualForPhase,
+} from "./playground-model";
 
 const INPUT_MAX_LENGTH = 120;
 
@@ -379,6 +383,7 @@ function getInteractionAnnouncement(
 }
 
 interface InteractiveClaudeTerminalProps {
+  appearance?: PlaygroundAppearance;
   elapsedSeconds?: number;
   phase?: PlaygroundPhase;
   scenario?: TerminalScenario;
@@ -386,6 +391,7 @@ interface InteractiveClaudeTerminalProps {
 }
 
 export function InteractiveClaudeTerminal({
+  appearance = "status",
   elapsedSeconds = 1122,
   phase = "completed",
   scenario = "ready-long",
@@ -452,7 +458,7 @@ export function InteractiveClaudeTerminal({
     closeMenu("Install Side Glance to try it in your terminal.");
   };
 
-  const visual = visualForPhase(phase, elapsedSeconds);
+  const visual = visualForPhase(phase, elapsedSeconds, appearance);
   const transcript = TERMINAL_SCENARIOS[scenario];
   const terminalStyle = {
     "--terminal-current-accent": `#${visual.accent}`,
@@ -471,6 +477,7 @@ export function InteractiveClaudeTerminal({
     <section
       aria-label={`Interactive Claude session showing the ${visual.label} Side Glance state`}
       className="mock-terminal"
+      data-appearance={appearance}
       data-phase={phase}
       data-scenario={scenario}
       id="side-glance-terminal"

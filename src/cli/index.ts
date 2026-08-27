@@ -122,7 +122,8 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     case "hook": {
       const provider = parseOption(args, "--provider");
       const notifications = args.includes("--notifications");
-      const target = await (notifications
+      const managedHook = process.env.SIDE_GLANCE_MANAGED_HOOK === "1";
+      const target = await (notifications || managedHook
         ? discoverOptionalTerminalTarget({
             environment: process.env,
             surfaceId: optionalOption(args, "--surface"),
