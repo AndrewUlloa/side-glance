@@ -38,9 +38,15 @@ export async function runInstallCommand(
     option(args, "--executable") ?? path.resolve(process.argv[1] ?? "side-glance");
   validateArguments(args.slice(1), action);
   const notifications = args.includes("--notifications");
+  const migrateLegacyStoplight = args.includes(
+    "--migrate-legacy-stoplight",
+  );
   const notificationSound = option(args, "--notification-sound");
   if (notificationSound !== undefined && !notifications) {
     throw new Error("--notification-sound requires --notifications.");
+  }
+  if (migrateLegacyStoplight && provider !== "claude") {
+    throw new Error("--migrate-legacy-stoplight is supported only for Claude.");
   }
   if (provider === "opencode" && action === "install") {
     await requireStableOpenCodeV1(process.env);
@@ -61,6 +67,10 @@ export async function runInstallCommand(
               provider,
               homeDirectory,
               executablePath,
+              directSurface: true,
+              ...(migrateLegacyStoplight
+                ? { migrateLegacyStoplight: true }
+                : {}),
               ...(notifications ? { notifications: true } : {}),
               ...(notificationSound !== undefined
                 ? { notificationSound }
@@ -172,6 +182,12 @@ function validateArguments(args: readonly string[], action: string): void {
     const argument = args[index];
     if (argument === "--json") continue;
     if (argument === "--notifications" && action === "install") continue;
+    if (
+      argument === "--migrate-legacy-stoplight" &&
+      action === "install"
+    ) {
+      continue;
+    }
     if (
       argument === "--home" ||
       argument === "--executable" ||

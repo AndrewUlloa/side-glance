@@ -1,11 +1,11 @@
 # Launch and rollback
 
-Side Glance is a beta. Version `0.1.0-beta.8` is public on npm, GitHub Releases,
+Side Glance is a beta. Version `0.1.0-beta.9` is public on npm, GitHub Releases,
 and the Homebrew tap. It ships semantic lifecycle colors, aggregate Claude
-readiness, truly adaptive Heat, guarded user theme control, and guided init theme
-selection. The interactive color-model preview and targetless managed-hook fix are
-merged to protected `staging` and prepared as the still-unpublished
-`0.1.0-beta.9` release candidate.
+readiness, truly adaptive Heat, guarded user theme control, guided init theme
+selection, and the interactive color-model preview. Secure normal-command terminal
+discovery plus controlled legacy Stoplight migration are merged to protected
+`staging` and prepared as the still-unpublished `0.1.0-beta.10` release candidate.
 
 ## Production deployment status
 
@@ -14,9 +14,9 @@ merged to protected `staging` and prepared as the still-unpublished
   resolve for `sideglance.ai` or `www.sideglance.ai` as of 2026-08-26
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
-- Tagged beta.8 production deployment: `dpl_GuwmqVegwgDFom31LcFtqWHLYCfW`
-- Tagged beta.8 immutable deployment URL: <https://side-glance-qj4koi5x9-andrew-243s-projects.vercel.app>
-- Tagged beta.8 source commit: `e45c764ff8be63ba6cc223ee34bddcbacb52fba3`
+- Tagged beta.9 production deployment: `dpl_F2sxFa81rpEymygfBDB742Xy31Rt`
+- Tagged beta.9 immutable deployment URL: <https://side-glance-qn4xs4pn3-andrew-243s-projects.vercel.app>
+- Tagged beta.9 source commit: `5f10fe4f7603cca49116abe6c143e54e1147aab9`
 - The canonical Vercel `npm run build` path passed on Node 24 and the public URL
   returned HTTP 200 with Side Glance metadata and rendered copy.
 - Vercel's Git integration creates previews for pull-request commits; the recorded
@@ -32,22 +32,24 @@ on 2026-08-24. `assets.sideglance.ai` is not connected and must remain condition
 See [the public-asset runbook](./docs/assets.md) for the cutover contract.
 
 The prior known-good production deployment is
-`dpl_EcVNY1xS1dim7A1dRJuixtNaC4vr`. It remains Vercel rollback evidence; immutable
+`dpl_GuwmqVegwgDFom31LcFtqWHLYCfW`. It remains Vercel rollback evidence; immutable
 historical deployment identifiers are not rewritten during a product rename.
 
 ## npm beta status and next candidate
 
-- Current public release: `side-glance@0.1.0-beta.8`
-- Prepared candidate: `side-glance@0.1.0-beta.9` (unused; not published)
+- Current public release: `side-glance@0.1.0-beta.9`
+- Prepared candidate: `side-glance@0.1.0-beta.10` (unused; not published)
 - Channel: `beta`
-- Status: beta.9 is prepared for protected review; until its tag workflow
-  succeeds, `beta` points to beta.8 while `latest` deliberately remains beta.1
-- Previously published: `side-glance@0.1.0-beta.6`, `side-glance@0.1.0-beta.5`,
+- Status: beta.10 release preparation is complete on protected `staging`; its
+  literal `staging` → `main` promotion is in review. Until the tag workflow
+  succeeds, `beta` points to beta.9 while `latest` deliberately remains beta.1
+- Previously published: `side-glance@0.1.0-beta.8`, `side-glance@0.1.0-beta.7`,
+  `side-glance@0.1.0-beta.6`, `side-glance@0.1.0-beta.5`,
   `side-glance@0.1.0-beta.4`, `side-glance@0.1.0-beta.3`, and
   `side-glance@0.1.0-beta.1`
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
   dry-run; no npm package or GitHub Release was published.
-- Current beta.8 integrity: `sha512-iN+gcKAVh9AnYQibH2PU01d9+NByslaOL7/DQbBda8HjPOg7Fp0a5eZhvGtzi0KMyaS98N1G5qB3LmwxmcgjlA==`
+- Current beta.9 integrity: `sha512-ydp/LcVCsAKzVUYvbVjNQ5P+ik/RF4pLoKmLJ5aHhKQBctDfdx/6BKQEcJhz8uA04QNrurnDHb+l5r2AmKgf0A==`
 - Every candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
 
@@ -60,14 +62,14 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-Beta.8 passed every repository gate, exact-SHA-protected CI, the production Vercel
+Beta.9 passed every repository gate, exact-SHA-protected CI, the production Vercel
 deployment, the protected tag workflow, npm trusted publishing, immutable GitHub
 Release verification, checksums, and build attestations. Fresh public npx enhanced
 and `NO_COLOR` preview-only flows passed under Node 24.18.0. All four native
 archives passed their standalone jobs; the downloaded Apple Silicon archive was
-executed again locally. Homebrew PR #6 passed Linux, Apple Silicon macOS, and
-experimental Intel macOS `brew test-bot`; the public tap upgrade from beta.7 to
-beta.8 and the installed formula test passed without running setup or changing
+executed again locally. Homebrew PR #7 passed Linux, Apple Silicon macOS, and
+experimental Intel macOS `brew test-bot`; the public tap upgrade from beta.8 to
+beta.9 and the installed formula test passed without running setup or changing
 provider configuration.
 
 ## Vercel Preview annotation tooling
@@ -107,7 +109,7 @@ the exact durable alias for `init`.
 3. Choose one notification path per provider unless duplicate alerts are intentional. When provider-native notifications are ready, Side Glance defaults off; when the native notification state is unknown, Side Glance also defaults off. Disabled/not-configured native delivery defaults Side Glance on only when its backend is available.
 4. Confirm the promised coverage: Claude attention/failure with pre-final Ready silent; Codex and Gemini attention with pre-final Ready silent; experimental OpenCode v1 Ready/attention/failure; Aider only through an explicit conflict-aware static bridge; generic wrapper process exit only.
 5. For an advanced one-provider trial, use `side-glance install <provider> --notifications --notification-sound Glass --json`; never point hooks at `npx`.
-6. In Terminal.app, iTerm, Ghostty, or another terminal, launch each session through `side-glance run --label "<private label>" -- <provider>`; hooks provide lifecycle semantics, while the wrapper provides the stable surface identity used for colors.
+6. In Terminal.app, iTerm, Ghostty, or another terminal, normally run `claude`, `codex`, or experimental `gemini`; supported local hooks discover and verify their originating TTY. Direct discovery is not guaranteed, so use `side-glance run --label "<private label>" -- <provider>` as the fallback for detached or unusual launch paths, or when a private label is useful.
 7. Manually verify terminal channels plus OS delivery and sound only in an approved migration window. Focus, notification preferences, Linux servers, and tmux prevent a universal delivery or click-to-pane guarantee.
 
 ## Guided setup smoke and rollback
@@ -117,7 +119,7 @@ Use a deliberately chosen provider and keep the initial preview read-only:
 ```bash
 side-glance setup --providers claude --notifications none --dry-run
 side-glance setup --providers claude --notifications none --yes
-side-glance run --label "Side Glance smoke" -- claude
+claude
 side-glance doctor --json
 side-glance uninstall claude --json
 side-glance reset --all --json
@@ -135,36 +137,38 @@ journal is retained.
 Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
 release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
-beta.8 gates are complete:
+beta.9 gates are complete:
 
-- guided-init theme feature PR #72 and release preparation PR #73 merged to
+- interactive color-model feature PR #77 and release preparation PR #78 merged to
   protected `staging` with full checks;
-- literal `staging` → `main` promotion PR #74 preserved exact staging ancestry;
+- literal `staging` → `main` promotion PR #79 preserved exact staging ancestry;
 - protected `main` CI and the production Vercel deployment passed at the tagged SHA;
-- annotated tag `v0.1.0-beta.8` produced the verified npm and immutable GitHub prerelease;
-- npm `beta` points to beta.8 while `latest` remains beta.1, so beta examples stay explicit about `@beta`;
-- generated-formula Homebrew PR #6 passed every platform and merged only after
+- annotated tag `v0.1.0-beta.9` produced the verified npm and immutable GitHub prerelease;
+- npm `beta` points to beta.9 while `latest` remains beta.1, so beta examples stay explicit about `@beta`;
+- generated-formula Homebrew PR #7 passed every platform and merged only after
   immutable artifact URLs and hashes existed; public upgrade and formula smokes passed.
 
 ## Prepared pull request sequence
 
-Guided init theme selection PR #72, beta.8 release preparation PR #73, protected
-promotion PR #74, annotated beta.8 publication, and Homebrew tap PR #6 are complete.
-Interactive color-model preview and managed-hook resilience PR #77 is complete on
-protected `staging`, as is beta.9 release preparation PR #78. This document reaches
-`main` through literal `staging` → `main` promotion PR #79, completing the protected
-promotion; only its exact green `main` merge commit may receive the
-`v0.1.0-beta.9` tag and begin publication.
+Interactive color-model preview PR #77, beta.9 release preparation PR #78,
+protected promotion PR #79, annotated beta.9 publication, and Homebrew tap PR #7
+are complete. Normal-command terminal discovery and controlled Stoplight migration
+PR #81 and beta.10 release preparation PR #82 are complete on protected
+`staging`. Literal `staging` → `main` promotion PR #83 remains in review. Only
+the exact green `main` merge commit may receive the `v0.1.0-beta.10` tag.
 
 ## Controlled migration from stoplight.sh
 
-1. Save the existing hook configuration and locate every reference to `stoplight.sh`.
-2. Install Side Glance durably for one provider in a chosen terminal session.
-3. Exercise working, waiting, completion, failure, normal exit, and `SIGINT` paths.
-4. Confirm unrelated hooks and Codex notification behavior still run.
-5. Remove old hook entries only after the Side Glance trial passes.
+1. Run `side-glance doctor --json` and review every recognized legacy Stoplight hook.
+2. Run guided init and choose Replace, or use
+   `side-glance install claude --migrate-legacy-stoplight --json` for automation.
+3. Confirm the timestamped backup exists and unrelated Claude hooks remain.
+4. Exercise working, waiting, completion, failure, normal exit, and `SIGINT` paths.
+5. Restore the backup if the controlled migration does not pass.
 
-Side Glance's installer creates a timestamped backup before changing an existing provider hooks file. It does not remove `stoplight.sh` automatically.
+Side Glance never enables a second direct color writer beside recognized legacy
+Stoplight hooks. Migration removes only exact historical Stoplight commands;
+arbitrary hooks that merely mention `stoplight.sh` are preserved.
 
 ## Rollback
 

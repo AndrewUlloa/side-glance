@@ -204,7 +204,8 @@ test("interactive init offers recommended settings first and applies planner def
   assert.match(stdout, /Computer notifications enabled · Glass/u);
   assert.match(stdout, /delivery not tested/iu);
   assert.match(stdout, /Change anytime: side-glance theme/u);
-  assert.match(stdout, /Next\s+side-glance run --label "Claude" -- claude/u);
+  assert.match(stdout, /Next\s+claude/u);
+  assert.doesNotMatch(stdout, /Next\s+side-glance run/u);
   assert.match(
     stdout,
     /Backup saved to:\s+~\/\.claude\/settings\.json\.side-glance-backup-1/u,
@@ -213,6 +214,163 @@ test("interactive init offers recommended settings first and applies planner def
   assert.equal(stdout.match(/Side Glance is ready/gu)?.length, 1);
   assert.doesNotMatch(stdout, /Setup complete|Durable executable/u);
   assert.doesNotMatch(stdout, /attention.*failure|Manual and wrapper guidance/iu);
+});
+
+test("interactive init explicitly replaces or skips a legacy Claude Stoplight painter", async () => {
+  for (const decision of ["replace", "skip"] as const) {
+    const requests: SetupRequest[] = [];
+    const applied: SetupPlan[] = [];
+    let stdout = "";
+    const prompter = scriptedPrompter([
+      { status: "value", value: "recommended" },
+      { status: "value", value: decision },
+      { status: "value", value: true },
+    ]);
+    const dependencies = setupDependencies();
+    dependencies.providers = dependencies.providers.map((provider) =>
+      provider.provider === "claude"
+        ? { ...provider, legacyStoplightHooks: 5 }
+        : provider,
+    );
+
+    const code = await runSetupCommand("init", [], {
+      execution: "durable",
+      interactive: true,
+      discover: async (request) => {
+        requests.push(request);
+        return discovery(async (plan) => {
+          applied.push(plan);
+          return {
+            providers: plan.selectedProviders.map((id) => ({
+              id,
+              configPath: `${homeDirectory}/.${id}/settings.json`,
+              changed: true,
+            })),
+          };
+        }, dependencies);
+      },
+      prompter,
+      writeStdout: (value) => {
+        stdout += value;
+      },
+      writeStderr: () => assert.fail("legacy migration decision must not fail"),
+    });
+
+    assert.equal(code, 0);
+    const conflictPrompt = prompter.calls.find(
+      ({ message }) => message === "Claude already has legacy Stoplight colors. What should Side Glance do?",
+    );
+    assert.deepEqual(
+      conflictPrompt?.choices?.map(({ id }) => id),
+      ["replace", "skip"],
+    );
+    assert.match(prompter.rendered.join("\n"), /two color hooks can compete/iu);
+    if (decision === "replace") {
+      assert.equal(requests[1]?.migrateLegacyStoplight, true);
+      assert.deepEqual(applied[0]?.selectedProviders, ["claude", "codex", "gemini"]);
+      assert.match(
+        prompter.rendered.join("\n"),
+        /legacy Stoplight colors[\s\S]*long-turn bell[\s\S]*disabled/iu,
+      );
+      assert.match(stdout, /Legacy Stoplight disabled/u);
+    } else {
+      assert.equal(requests[1]?.migrateLegacyStoplight, false);
+      assert.deepEqual(applied[0]?.selectedProviders, ["codex", "gemini"]);
+      assert.doesNotMatch(stdout, /Claude configured/u);
+      assert.match(prompter.rendered.join("\n"), /Keeping legacy Stoplight; Claude will be skipped/u);
+    }
+  }
+});
+
+test("interactive init stops if legacy Stoplight appears during its final discovery", async () => {
+  let discoveries = 0;
+  let applies = 0;
+  let stderr = "";
+  const prompter = scriptedPrompter([
+    { status: "value", value: "recommended" },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () => {
+      discoveries += 1;
+      const dependencies = setupDependencies();
+      if (discoveries === 2) {
+        dependencies.providers = dependencies.providers.map((provider) =>
+          provider.provider === "claude"
+            ? { ...provider, legacyStoplightHooks: 1 }
+            : provider,
+        );
+      }
+      return discovery(async () => {
+        applies += 1;
+        return { providers: [] };
+      }, dependencies);
+    },
+    prompter,
+    writeStdout: () => undefined,
+    writeStderr: (value) => {
+      stderr += value;
+    },
+  });
+
+  assert.equal(code, 1);
+  assert.equal(discoveries, 2);
+  assert.equal(applies, 0);
+  assert.deepEqual(prompter.calls.map(({ kind }) => kind), ["select"]);
+  assert.match(stderr, /--migrate-legacy-stoplight/u);
+  assert.match(stderr, /omit Claude from --providers/u);
+});
+
+test("automated setup reports the exact legacy migration action before apply", async () => {
+  const dependencies = setupDependencies();
+  dependencies.providers = dependencies.providers.map((provider) =>
+    provider.provider === "claude"
+      ? { ...provider, legacyStoplightHooks: 5 }
+      : provider,
+  );
+  let stderr = "";
+  const applyCode = await runSetupCommand(
+    "setup",
+    ["--providers", "claude", "--notifications", "none", "--yes"],
+    {
+      execution: "durable",
+      interactive: false,
+      discover: async () => discovery(undefined, dependencies),
+      writeStdout: () => undefined,
+      writeStderr: (value) => {
+        stderr += value;
+      },
+    },
+  );
+  assert.equal(applyCode, 1);
+  assert.match(stderr, /--migrate-legacy-stoplight/u);
+  assert.match(stderr, /omit Claude from --providers/u);
+
+  let dryRun = "";
+  const dryRunCode = await runSetupCommand(
+    "setup",
+    [
+      "--dry-run",
+      "--providers",
+      "claude",
+      "--notifications",
+      "none",
+    ],
+    {
+      execution: "durable",
+      interactive: false,
+      discover: async () => discovery(undefined, dependencies),
+      writeStdout: (value) => {
+        dryRun += value;
+      },
+      writeStderr: () => assert.fail("dry-run must remain readable"),
+    },
+  );
+  assert.equal(dryRunCode, 0);
+  assert.match(dryRun, /legacy Stoplight: conflict active/iu);
+  assert.match(dryRun, /--migrate-legacy-stoplight/u);
 });
 
 test("interactive setup reports an existing Heat theme as unchanged", async () => {
@@ -574,9 +732,9 @@ test("human dry-run and apply render the complete truthful setup plan and result
   assert.match(dryRunOutput, /contract-audited/u);
   assert.match(dryRunOutput, /managed hooks: 1/u);
   assert.match(dryRunOutput, /pre-final Ready stays silent/u);
-  assert.match(dryRunOutput, /side-glance run --label "Claude" -- claude/u);
+  assert.match(dryRunOutput, /launch: claude/u);
   assert.match(dryRunOutput, /side-glance run --notify-on-exit -- <command>/u);
-  assert.match(dryRunOutput, /stable terminal surface identity/u);
+  assert.match(dryRunOutput, /safe terminal discovery/u);
   assert.match(dryRunOutput, /caught apply or verification failure.*rolls back/u);
   assert.match(dryRunOutput, /SIGKILL.*next side-glance init or side-glance doctor/u);
 
@@ -608,7 +766,7 @@ test("human dry-run and apply render the complete truthful setup plan and result
   assert.equal(applyCode, 0);
   assert.match(applyOutput, /Claude: changed; integration installed and verified/u);
   assert.match(applyOutput, /settings\.json\.side-glance-backup-1/u);
-  assert.match(applyOutput, /side-glance run --label "Claude" -- claude/u);
+  assert.match(applyOutput, /launch: claude/u);
 });
 
 test("explicit interactive selections remain fixed and an unsafe sound reprompts", async () => {
@@ -885,9 +1043,10 @@ test("a caught apply interruption returns 130 with a versioned JSON failure", as
 
 function discovery(
   apply: SetupDiscovery["apply"] = async () => ({ providers: [] }),
+  dependencies: SetupPlanDependencies = setupDependencies(),
 ): SetupDiscovery {
   return {
-    dependencies: setupDependencies(),
+    dependencies,
     apply,
   };
 }

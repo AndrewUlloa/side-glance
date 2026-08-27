@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   discoverOptionalTerminalTarget,
   discoverTerminalTarget,
+  type TargetProcessRecord,
   type TargetDiscoveryOptions,
 } from "../../src/core/target.ts";
 
@@ -209,5 +210,213 @@ test("optional discovery permits targetless hooks but still rejects invalid expl
         resolveTty: async () => undefined,
       }),
     /surface|control/i,
+  );
+});
+
+test("opt-in process ancestry discovers and revalidates the nearest controlling tty", async () => {
+  const uid = process.getuid?.();
+  assert.notEqual(uid, undefined);
+  const self = process.pid;
+  const parent = self + 10_000;
+  const records = new Map<number, TargetProcessRecord>([
+    [
+      self,
+      {
+        pid: self,
+        ppid: parent,
+        uid: uid!,
+        tty: "??",
+        startedAt: "self-start",
+      },
+    ],
+    [
+      parent,
+      {
+        pid: parent,
+        ppid: 1,
+        uid: uid!,
+        tty: "ttys007",
+        startedAt: "parent-start",
+      },
+    ],
+  ]);
+  const inspections: number[][] = [];
+
+  const target = await discoverOptionalTerminalTarget({
+    environment: {},
+    discoverProcessAncestry: true,
+    resolveTty: async () => undefined,
+    inspectProcesses: async (pids) => {
+      inspections.push([...pids]);
+      return pids.flatMap((pid) => {
+        const record = records.get(pid);
+        return record ? [record] : [];
+      });
+    },
+  });
+
+  assert.deepEqual(inspections, [[self], [parent], [self, parent]]);
+  assert.deepEqual(target, {
+    surfaceId: "tty:/dev/ttys007",
+    tty: "/dev/ttys007",
+  });
+});
+
+test("process ancestry is inert by default and lower priority than explicit, tmux, and fd targets", async () => {
+  const failInspection = async (): Promise<readonly TargetProcessRecord[]> => {
+    throw new Error("ancestry should not run");
+  };
+
+  assert.equal(
+    await discoverOptionalTerminalTarget({
+      environment: {},
+      resolveTty: async () => undefined,
+      inspectProcesses: failInspection,
+    }),
+    undefined,
+  );
+  assert.equal(
+    (
+      await discoverTerminalTarget({
+        environment: {},
+        surfaceId: "logical:explicit",
+        discoverProcessAncestry: true,
+        inspectProcesses: failInspection,
+      })
+    ).surfaceId,
+    "logical:explicit",
+  );
+  assert.equal(
+    (
+      await discoverTerminalTarget({
+        environment: {
+          TMUX: "/private/tmp/tmux-501/default,123,0",
+          TMUX_PANE: "%3",
+        },
+        discoverProcessAncestry: true,
+        resolveTmuxWindow: async () => "@7",
+        inspectProcesses: failInspection,
+      })
+    ).surfaceId,
+    "tmux:/private/tmp/tmux-501/default,123,@7",
+  );
+  assert.equal(
+    (
+      await discoverTerminalTarget({
+        environment: {},
+        discoverProcessAncestry: true,
+        resolveTty: async () => "/dev/pts/4",
+        inspectProcesses: failInspection,
+      })
+    ).surfaceId,
+    "tty:/dev/pts/4",
+  );
+});
+
+test("process ancestry fails open when the chain changes during validation", async () => {
+  const uid = process.getuid?.();
+  assert.notEqual(uid, undefined);
+  const self = process.pid;
+  const parent = self + 10_000;
+  let inspection = 0;
+
+  const target = await discoverOptionalTerminalTarget({
+    environment: {},
+    discoverProcessAncestry: true,
+    resolveTty: async () => undefined,
+    inspectProcesses: async (pids) => {
+      inspection += 1;
+      if (pids.length > 1) {
+        return [
+          {
+            pid: self,
+            ppid: parent,
+            uid: uid!,
+            tty: "??",
+            startedAt: "self-start",
+          },
+          {
+            pid: parent,
+            ppid: 1,
+            uid: uid!,
+            tty: "ttys008",
+            startedAt: "reused-parent",
+          },
+        ];
+      }
+      return pids[0] === self
+        ? [
+            {
+              pid: self,
+              ppid: parent,
+              uid: uid!,
+              tty: "??",
+              startedAt: "self-start",
+            },
+          ]
+        : [
+            {
+              pid: parent,
+              ppid: 1,
+              uid: uid!,
+              tty: "ttys008",
+              startedAt: "parent-start",
+            },
+          ];
+    },
+  });
+
+  assert.equal(inspection, 3);
+  assert.equal(target, undefined);
+});
+
+test("process ancestry rejects unsafe records, cross-user parents, and chains beyond the depth bound", async () => {
+  const uid = process.getuid?.();
+  assert.notEqual(uid, undefined);
+  const self = process.pid;
+
+  for (const record of [
+    {
+      pid: self,
+      ppid: 1,
+      uid: uid!,
+      tty: "../../tmp/owned",
+      startedAt: "self-start",
+    },
+    {
+      pid: self,
+      ppid: 1,
+      uid: uid! + 1,
+      tty: "ttys009",
+      startedAt: "self-start",
+    },
+  ] satisfies TargetProcessRecord[]) {
+    assert.equal(
+      await discoverOptionalTerminalTarget({
+        environment: {},
+        discoverProcessAncestry: true,
+        resolveTty: async () => undefined,
+        inspectProcesses: async () => [record],
+      }),
+      undefined,
+    );
+  }
+
+  assert.equal(
+    await discoverOptionalTerminalTarget({
+      environment: {},
+      discoverProcessAncestry: true,
+      resolveTty: async () => undefined,
+      inspectProcesses: async ([pid]) => [
+        {
+          pid: pid!,
+          ppid: pid! + 1,
+          uid: uid!,
+          tty: "??",
+          startedAt: `start-${pid}`,
+        },
+      ],
+    }),
+    undefined,
   );
 });

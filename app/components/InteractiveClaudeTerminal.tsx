@@ -553,7 +553,10 @@ export function InteractiveClaudeTerminal({
                 <p className="mock-claude-response mock-claude-install-response mock-claude-new-line">
                   <span aria-hidden="true">●</span>
                   <span>
-                    To try Side Glance,{" "}
+                    Install or upgrade Side Glance, run{" "}
+                    <code>side-glance init</code>, then use <code>claude</code>,{" "}
+                    <code>codex</code>, or the experimental <code>gemini</code>{" "}
+                    normally. See how to{" "}
                     <a
                       href="https://github.com/AndrewUlloa/side-glance#installation-status"
                       rel="noreferrer"

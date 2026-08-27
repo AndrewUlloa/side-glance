@@ -598,3 +598,293 @@ planning-error path. Second, the PATH candidate now matches the full target iden
 (device, inode, mode, size, timestamps, and kind), not only device/inode. Red tests for
 both a current-directory decoy and an in-place identity change now pass green alongside
 the standalone regression.
+
+---
+
+# Installed Codex hooks succeed but the terminal does not change color
+
+## Observations
+
+- The installed executable is Side Glance `0.1.0-beta.9` at
+  `/opt/homebrew/bin/side-glance`.
+- `doctor --json` reports the Codex integration as installed and verified structurally:
+  all five expected managed hooks are present in `~/.codex/hooks.json`, and the Codex
+  binary is available.
+- The previous hook error is gone, which is consistent with beta.9's managed-hook
+  fail-open behavior when no terminal target is available.
+- `doctor --json` explicitly reports Codex stable-surface support as
+  `wrapper-required` and recommends `side-glance run -- codex`.
+- Live state contains recent Codex sessions in working, waiting, completed, and inactive
+  phases, proving that the hooks are reaching Side Glance and lifecycle state is being
+  updated.
+- None of the live Codex session records has a `target`. The only recorded surface is a
+  prior owned TTY from a wrapper/diagnostic session; no Codex session owns a terminal
+  surface that Side Glance may safely repaint.
+
+## Hypotheses
+
+### H1: Plain Codex hooks have no stable terminal identity (ROOT HYPOTHESIS)
+
+- Supports: live Codex events are recorded without `target`; doctor says
+  `wrapper-required`; managed hooks run with piped JSON rather than a controlling TTY;
+  beta.9 intentionally acknowledges targetless hooks instead of raising the former
+  Stop/UserPromptSubmit errors.
+- Conflicts: none.
+- Test: compare live Codex session records with wrapper-created records and inspect
+  whether each has a verified target.
+
+### H2: The Codex integration was not installed or is invoking an old binary
+
+- Supports: missing colors can result from absent hooks or a stale executable.
+- Conflicts: the executable reports beta.9, all expected hooks point to that durable
+  executable, and fresh Codex lifecycle events are present.
+- Test: inspect version, doctor output, installed hook commands, and live state.
+
+### H3: Codex events are not reaching Side Glance
+
+- Supports: no visible repaint could mean no lifecycle input.
+- Conflicts: live state contains multiple recent Codex sessions and current waiting and
+  completed phases.
+- Test: inspect `side-glance status --json` after using Codex.
+
+### H4: The terminal rejects Side Glance's background-color escape sequence
+
+- Supports: terminal capability differences can prevent a valid paint.
+- Conflicts: no Codex paint is attempted because the sessions have no target; capability
+  behavior is downstream and cannot explain the missing target.
+- Test: first attach Codex through the supported wrapper; only investigate OSC support
+  if a targeted session still does not repaint.
+
+## Experiments
+
+- H2 rejected: version, doctor, and `~/.codex/hooks.json` all identify the installed
+  beta.9 executable and the complete five-hook Codex integration.
+- H3 rejected: live status contains recent Codex lifecycle transitions, including
+  waiting and completed sessions.
+- H1 confirmed: every inspected Codex session is targetless, while wrapper-created
+  sessions include an owned `tty:/dev/ttys006` target. H4 is not yet in the execution
+  path because Side Glance's safety invariant forbids writing terminal bytes without a
+  verified owned character TTY.
+
+## Root Cause
+
+Codex launches hooks as subprocesses with JSON on standard input and does not give those
+processes a reliable controlling-terminal identity. Beta.9 fixed the noisy failure by
+accepting and recording managed targetless hooks, but it correctly does not guess which
+of several terminals to repaint. A plain `codex` launch therefore provides lifecycle
+state and native Codex notification readiness, but reliable terminal colors require the
+supervised wrapper to attach the session to its originating TTY.
+
+## Resolution
+
+Launch Codex with `side-glance run --label "Codex" -- codex` when terminal colors are
+wanted. If that targeted launch also fails to repaint, investigate the terminal's OSC
+11 support as a separate capability issue. Making the bare `codex` command transparently
+use the wrapper would require an explicit shell integration or launcher feature; that is
+a product change, not evidence of a broken beta.9 installation.
+
+---
+
+# Plain Claude colors while plain Codex does not
+
+## Observations
+
+- `~/.claude/settings.json` still contains four groups from the personal
+  `~/.claude/hooks/stoplight.sh` in addition to all nine Side Glance hook groups.
+- The legacy script handles Claude `SessionStart`, `UserPromptSubmit`, `Stop`, and two
+  `Notification` matchers. It walks up to twelve parent processes with `ps`, accepts the
+  first TTY-shaped name it sees, and writes OSC background/title bytes directly to that
+  device.
+- Side Glance's installer intentionally preserves hook groups it does not own. Its
+  doctor output therefore reports 14 existing Claude groups but only nine Side Glance
+  hooks.
+- `~/.codex/hooks.json` contains only the five Side Glance hook groups; there is no
+  Codex equivalent of the legacy script.
+- Live Side Glance state shows Claude sessions without targets as well as Codex sessions
+  without targets. The visible behavior of plain Claude therefore is not evidence that
+  Side Glance itself found Claude's terminal.
+- The repository's safety contract forbids terminal writes until an owned character TTY
+  is verified. The old script checks only a TTY-shaped ancestor value and writability,
+  and it sources per-session shell state; those shortcuts are intentionally outside the
+  Side Glance safety model.
+
+## Hypotheses
+
+### H1: The preserved legacy stoplight is painting plain Claude (ROOT HYPOTHESIS)
+
+- Supports: its hook commands remain active for exactly the lifecycle events that change
+  color; its code performs ancestor-TTY discovery and direct OSC writes; current Side
+  Glance Claude records are targetless.
+- Conflicts: none.
+- Test: compare installed Claude/Codex hook groups and Side Glance targets without
+  mutating either configuration.
+
+### H2: Claude passes a terminal target that Codex omits
+
+- Supports: provider hook implementations can expose different process environments.
+- Conflicts: current Side Glance state records plain Claude sessions without targets,
+  just like Codex.
+- Test: inspect live state for `target` on both providers.
+
+### H3: Side Glance has a Claude-only terminal output response
+
+- Supports: Claude supports provider-specific hook output such as
+  `terminalSequence`.
+- Conflicts: Side Glance's current Claude hook output is silent and does not return a
+  terminal sequence; the visible legacy script writes OSC directly instead.
+- Test: inspect the adapter protocol and invoke the hook contract in isolation.
+
+### H4: Codex's terminal emulator cannot display the configured colors
+
+- Supports: terminal capability differences can affect OSC rendering.
+- Conflicts: the same terminal renders colors when Codex is launched through the Side
+  Glance wrapper, proving the emulator and palette work.
+- Test: hold the terminal constant and compare `codex` with
+  `side-glance run -- codex`.
+
+## Experiments
+
+- H2 rejected: both providers have targetless native records in live Side Glance state.
+- H3 rejected: the documented and implemented Claude hook response is silent; the
+  preserved script independently writes terminal bytes.
+- H4 rejected: the user's wrapper reproduction succeeds in the same Codex terminal.
+- H1 confirmed by configuration/code inspection: plain Claude invokes
+  `stoplight.sh`, which discovers an ancestor TTY and paints it, while plain Codex has no
+  comparable hook.
+
+## Root Cause
+
+Plain `claude` appears to work because the installer preserved the user's old
+`stoplight.sh`, and that script uses a permissive parent-process TTY heuristic that Side
+Glance does not currently implement; plain `codex` exposes the actual targetless Side
+Glance behavior because it has no legacy painter alongside it.
+
+## Product Implication
+
+The wrapper requirement is a real zero-config adoption gap for new users, including new
+Claude users without the personal legacy script. A robust improvement should attempt
+bounded parent-process TTY discovery, validate the resolved device with Side Glance's
+ownership and character-device checks, and fail open when lineage is ambiguous. It must
+be proven independently for each provider and terminal topology rather than copying the
+legacy script's writable-device heuristic or shell-sourced state.
+
+---
+
+# Feasibility review: zero-wrapper native provider launches
+
+## Observations
+
+- Desired journey: install once, then run the provider's unchanged command (`claude` or
+  `codex`) and receive per-terminal lifecycle colors without remembering a Side Glance
+  wrapper.
+- Current target discovery accepts explicit wrapper identity, inherited tmux identity,
+  or the result of `tty` using the hook's standard input. Provider hooks receive JSON on
+  standard input, so that last path cannot identify their originating terminal.
+- The terminal renderer already defends the final write with an absolute `/dev` path,
+  no symlinks, character-device type, current-UID ownership, `O_NOFOLLOW`, and a
+  before/after device-and-inode identity check.
+- The old stoplight's success establishes that Claude CLI's hook remained a descendant
+  of a process with a TTY in the observed macOS topology. It does not by itself prove
+  the same invariant for Codex, Linux, tmux, SSH, provider updates, or detached hooks.
+- A wrapper is mechanically strongest because it captures the TTY before the provider
+  starts and passes an explicit identity. Shell aliases/shims can hide the wrapper but
+  mutate command resolution and shell configuration. Provider-hook discovery preserves
+  the original executables and normal commands but depends on process lineage.
+- Codex desktop has no terminal surface to repaint; the zero-wrapper goal applies to
+  provider CLIs running inside terminal emulators.
+
+## Hypotheses
+
+### H1: Bounded, validated parent-lineage discovery covers ordinary CLI hooks (ROOT HYPOTHESIS)
+
+- Supports: stoplight already succeeds for Claude by this mechanism; hooks are normally
+  child processes of the provider CLI; the existing renderer can validate the resulting
+  device before any write.
+- Conflicts: Codex has not yet been observed from inside a live hook, and providers may
+  launch hooks through detached helpers whose ancestry no longer reaches the terminal.
+- Test: capture PID/PPID/TTY metadata from real Claude and Codex CLI hook subprocesses
+  without changing terminal state, then verify the first TTY-bearing ancestor matches
+  the terminal that launched each CLI.
+
+### H2: Inherited environment alone can identify the originating terminal
+
+- Supports: tmux exports `TMUX`/`TMUX_PANE`; SSH commonly exports `SSH_TTY`; terminal
+  emulators export session identifiers.
+- Conflicts: ordinary macOS terminals do not provide a canonical `/dev` TTY path in a
+  portable environment variable, and emulator session IDs are not writable devices.
+- Test: compare bounded environment keys from wrapper-free native hooks across Terminal,
+  iTerm2, tmux, and SSH without recording unrelated environment values.
+
+### H3: A transparent shell shim is required for reliable normal-command behavior
+
+- Supports: a shim captures the terminal before launching any provider and is equivalent
+  to the proven supervised wrapper while preserving what the user types.
+- Conflicts: installation becomes shell- and PATH-dependent, command replacement can
+  surprise users, and stoplight demonstrates at least one provider can work at hook time.
+- Test: enumerate supported shells/install locations and compare failure coverage with
+  verified hook-time lineage discovery.
+
+### H4: Provider-native hook output can route colors without discovering a device
+
+- Supports: Claude supports a `terminalSequence` response emitted by its own terminal UI.
+- Conflicts: Side Glance currently keeps Claude hook stdout silent; Codex expects a
+  minimal JSON acknowledgement and has no established equivalent terminal-sequence
+  channel, so this cannot yet provide one cross-provider design.
+- Test: verify current provider contracts and safely probe whether each accepts an OSC
+  background sequence without corrupting its UI protocol.
+
+## Planned Experiments
+
+- Run a no-source-change PTY fixture where a hook-like grandchild has all stdio piped;
+  confirm whether bounded `ps` ancestry still resolves the launching PTY.
+- Inspect real provider hook process contracts and local installed behavior; do not
+  mutate user configuration during this review.
+- Compare the candidate device against Side Glance's existing renderer validations and
+  enumerate ambiguity/race cases before recommending production code.
+
+## Experiments
+
+- A controlled hook-shaped Node child was launched inside a real PTY with stdin, stdout,
+  and stderr piped. `process.stdin.isTTY` and `process.stdout.isTTY` were both false, but
+  `/bin/ps` reported the child and its parent on `ttys004`. The no-PTY control reported
+  `??`. This confirms that fd-0-based `tty` can fail while process TTY metadata remains
+  available, and that detached processes can fail closed.
+- Read-only process inspection found four active Codex CLI processes on distinct
+  `ttys000` through `ttys003`; their concrete `/dev/ttysNNN` devices are current-user
+  owned character devices. Codex desktop/app-server processes reported `??`.
+- A temporary additional Claude `UserPromptSubmit` diagnostic hook was run without
+  changing user configuration. The hook shell reported TTY `??`, while its immediate
+  parent `claude` process reported `ttys004`. This rejects a self-process-only solution
+  for Claude and confirms that a bounded ancestor fallback reaches the correct terminal
+  in a real plain-Claude hook.
+- Current upstream Codex hook-runner source pipes all three standard streams but does not
+  detach or create a new session. Current provider documentation confirms that hook JSON
+  contains no terminal identity. Claude's `terminalSequence` is race-free for its
+  allowlisted notifications, titles, and BEL, but rejects OSC palette/background
+  sequences such as OSC 11. H2 and H4 are therefore rejected as cross-provider color
+  solutions.
+- H3 is not required for normal local CLI launches: process metadata supplies a viable
+  target in the controlled and live provider topologies. A transparent shim remains a
+  possible deterministic fallback, but its PATH/shell mutation cost is unnecessary for
+  the primary journey.
+
+## Conclusion
+
+H1 is confirmed for the tested macOS Claude and Codex CLI topologies: ordinary commands
+can support Side Glance colors by consulting bounded process TTY metadata, while the
+current failure is specifically caused by consulting only fd 0 through `tty`. The
+implementation must prefer explicit wrapper and tmux identities, query the current
+process and then a bounded ancestor chain with an absolute non-shell `ps`, accept only a
+single canonical TTY token, and retain the renderer's ownership, character-device,
+nofollow, and identity-race checks. Missing, malformed, detached, desktop, or ambiguous
+lineage must remain targetless and fail open.
+
+## Rollout Constraint
+
+This capability must not silently activate for already-installed hooks on binary upgrade.
+Existing Claude users can have a preserved legacy painter; current Claude documentation
+says matching hooks run in parallel, so legacy Stoplight and auto-discovering Side Glance
+would race as last writers. A new install/init plan should explicitly enable direct
+discovery, detect exact known Stoplight color hooks, and offer a reviewed backup-backed
+migration or skip Side Glance for that provider. Existing beta.9 hook commands should
+remain unchanged until the user reruns setup and accepts that plan.

@@ -102,7 +102,7 @@ export function SideGlancePlayground() {
         </div>
         <div className="terminal-body">
           <div className="terminal-line terminal-muted">
-            <span>~</span> side-glance run -- claude
+            <span>~</span> claude
           </div>
           <div className="terminal-line">
             <span className="terminal-prompt">❯</span> Refactor the lifecycle

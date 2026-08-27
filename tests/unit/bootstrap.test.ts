@@ -32,7 +32,7 @@ import type {
   ValidatedDurableExecutable,
 } from "../../src/cli/executable.ts";
 
-const EXACT_VERSION = "0.1.0-beta.9";
+const EXACT_VERSION = "0.1.0-beta.10";
 
 function fileIdentity(seed: number): ExecutableFileIdentity {
   return {
@@ -518,6 +518,87 @@ test("returns a bounded versioned delegated setup result in JSON mode", async ()
     kind: "setup-plan",
     providers: [],
   });
+});
+
+test("accepts bounded legacy Stoplight metadata from delegated setup plans and results", async () => {
+  const durable = durableExecutable("/opt/homebrew/bin/side-glance");
+  const legacyStoplight = { detectedHookCount: 5, migrated: true };
+  const planProvider = {
+    id: "claude",
+    state: "eligible",
+    maturity: "contract-audited",
+    integrationStatus: "installed",
+    target: {
+      path: "/Users/test/.claude/settings.json",
+      action: "update",
+      managedHookCount: 9,
+    },
+    notifications: {
+      selected: false,
+      nativeStatus: "not-configured",
+      recommendation: "enable-side-glance",
+      coverage: {
+        ready: "pre-final-silent",
+        attention: "covered",
+        failure: "covered",
+      },
+    },
+    warnings: [],
+    legacyStoplight,
+    launchCommand: "claude",
+  };
+  const plan = {
+    schemaVersion: 1,
+    kind: "setup-plan",
+    providers: [planProvider],
+  };
+  const planFixture = fixtureDependencies({
+    durableResults: [durable],
+    commandResults: [{ exitCode: 0, stdout: `${JSON.stringify(plan)}\n` }],
+  });
+  const projectedPlan = await executeBootstrap(
+    executionOptions(planFixture.dependencies, {
+      installMethod: "none",
+      dryRun: true,
+      delegatedSetupArguments: ["--dry-run", "--json"],
+    }),
+  );
+  assert.deepEqual(projectedPlan, plan);
+
+  const result = {
+    schemaVersion: 1,
+    kind: "setup-result",
+    providers: [
+      {
+        id: "claude",
+        changed: true,
+        legacyStoplight,
+      },
+    ],
+  };
+  const resultFixture = fixtureDependencies({
+    durableResults: [durable],
+    commandResults: [{ exitCode: 0, stdout: `${JSON.stringify(result)}\n` }],
+  });
+  const projectedResult = await executeBootstrap(
+    executionOptions(resultFixture.dependencies, {
+      installMethod: "none",
+      delegatedSetupArguments: [
+        "--yes",
+        "--providers",
+        "claude",
+        "--notifications",
+        "none",
+        "--json",
+      ],
+    }),
+  );
+  assert.deepEqual(
+    projectedResult.kind === "bootstrap-result"
+      ? projectedResult.delegatedSetup?.result
+      : projectedResult,
+    result,
+  );
 });
 
 test("rejects delegated setup JSON with unknown or unsafe fields", async () => {
