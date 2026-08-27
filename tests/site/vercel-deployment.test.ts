@@ -77,11 +77,11 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   assert.match(launch, /DNS does not\s+resolve for `sideglance\.ai`/u);
   assert.match(cicd, /https:\/\/sideglance\.ai/u);
   assert.match(launch, /https:\/\/side-glance\.vercel\.app/u);
-  assert.match(launch, /dpl_Gj6Hdddu1knpvzSHFM1WHxw3SbMG/u);
-  assert.match(launch, /dpl_7i8HYGBsNfeVPFiYNyUURpUptMRh/u);
+  assert.match(launch, /dpl_GuwmqVegwgDFom31LcFtqWHLYCfW/u);
+  assert.match(launch, /dpl_EcVNY1xS1dim7A1dRJuixtNaC4vr/u);
   assert.match(
     launch,
-    /https:\/\/side-glance-475eh8vt1-andrew-243s-projects\.vercel\.app/u
+    /https:\/\/side-glance-qj4koi5x9-andrew-243s-projects\.vercel\.app/u
   );
   assert.doesNotMatch(launch, /No Side Glance deployment has been created/u);
 });
