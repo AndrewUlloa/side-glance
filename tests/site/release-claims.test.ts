@@ -116,3 +116,24 @@ test("keeps guided setup, notification coverage, and recovery guidance aligned",
     /brew install AndrewUlloa\/tap\/side-glance\\nside-glance init/u
   );
 });
+
+test("keeps shipped beta.7 phase launch records closed after publication", async () => {
+  const launchRecords = await Promise.all([
+    readFile("docs/launch/phase-18-concise-init-output.md", "utf8"),
+    readFile("docs/launch/phase-19-semantic-lifecycle.md", "utf8"),
+  ]);
+
+  for (const launchRecord of launchRecords) {
+    assert.match(launchRecord, /> Status: shipped in `0\.1\.0-beta\.7`/u);
+    assert.doesNotMatch(
+      launchRecord,
+      /## Candidate behavior|protected release in progress|included in the beta\.7 candidate|The next Side Glance beta|The candidate (?:does|migrates)/u
+    );
+
+    const checklist =
+      launchRecord.match(/## Public verification checklist([\s\S]*)/u)?.[1] ??
+      "";
+    assert.notEqual(checklist, "");
+    assert.doesNotMatch(checklist, /- \[ \]/u);
+  }
+});
