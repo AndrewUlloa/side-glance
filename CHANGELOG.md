@@ -4,6 +4,30 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0-beta.10] — 2026-08-27
+
+### Added
+
+- Managed Claude, Codex, and experimental Gemini hooks can securely discover
+  their originating local terminal, so users normally launch each provider with
+  its usual command instead of a Side Glance wrapper.
+- Guided setup detects exact historical Stoplight color hooks and can replace
+  them through a reviewed, backup-backed migration that preserves unrelated
+  provider configuration.
+
+### Changed
+
+- Existing installations remain inert after a package-only upgrade until the
+  user reruns `side-glance init`; doctor identifies older hooks and recommends
+  that migration step. The supervised wrapper remains the fallback for detached
+  or unusual launch paths.
+
+### Fixed
+
+- Managed hooks fail open when a discovered terminal disappears or cannot be
+  revalidated, preventing provider hook errors without weakening terminal-device
+  ownership and identity checks.
+
 ## [0.1.0-beta.9] — 2026-08-27
 
 ### Added
@@ -164,7 +188,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.9...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.10...HEAD
+[0.1.0-beta.10]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.10
 [0.1.0-beta.9]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.9
 [0.1.0-beta.8]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.8
 [0.1.0-beta.7]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.7
