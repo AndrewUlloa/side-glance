@@ -140,7 +140,7 @@ test("applies the fresh-tab zsh reset in the same verified setup transaction", a
   );
   const installed = await readFile(zshrc, "utf8");
   assert.ok(installed.startsWith(original));
-  assert.match(installed, /builtin printf '\\e\]111\\e\\\\'/u);
+  assert.match(installed, /builtin printf '\\e\]111\\a'/u);
   assert.equal((await stat(zshrc)).mode & 0o777, 0o640);
 
   const rerun = await createDurableSetupDiscovery(request, options);
