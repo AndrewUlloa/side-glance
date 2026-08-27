@@ -2,7 +2,7 @@
 
 > Spec: `docs/specs/phase-19-semantic-lifecycle.md`
 > Plan: `docs/plans/phase-19-semantic-lifecycle.md`
-> Status: feature preview and storyboard verified; protected release in progress
+> Status: shipped in `0.1.0-beta.7`; final public storyboard verified
 > Reviewed: 2026-08-26
 
 ## Outcome
@@ -97,6 +97,9 @@ silence, 12-turn window, provider-local sample counts, and learned ceilings.
 
 - Exact-SHA preview: the feature PR deployed the reviewed tree to Vercel and returned
   HTTP 200 with HSTS and a cached static Next.js response.
+- Production: tagged beta.7 deployment `dpl_Gj6Hdddu1knpvzSHFM1WHxw3SbMG`
+  returned HTTP 200 with HSTS, contained no Agentation controls, and kept a
+  keyboard-selected Working state selected after 4.5 seconds.
 - Desktop: 1280×720. Computed washes were Working `rgb(22, 53, 47)`, Waiting
   `rgb(77, 53, 16)`, both Ready moments `rgb(23, 51, 38)`, and Failed
   `rgb(115, 32, 24)`. A manual selection remained selected after the four-second
@@ -105,9 +108,9 @@ silence, 12-turn window, provider-local sample counts, and learned ceilings.
   width equaled viewport width, the terminal and all five controls stayed in
   bounds, and the input retained a 16px font size.
 - Keyboard: the semantic buttons receive focus and their production
-  `:focus-visible`/activation contracts pass. The preview-only Agentation
-  toolbar intercepted native Enter in this browser session; production is
-  tested again after promotion, where that toolbar is intentionally absent.
+  `:focus-visible`/activation contracts pass. Agentation intercepted native Enter
+  only in Preview; the final production build excludes the toolbar and native Enter
+  activated Working there.
 - Console/assets: the preview had no console warning or error, install copy
   feedback changed to `Copied setup`, and no image failed. The build emitted
   only the known non-fatal Alan Sans fallback-generation warning.
@@ -149,13 +152,14 @@ silence, 12-turn window, provider-local sample counts, and learned ceilings.
 - Integration: 133 passing; one intentional live-tmux skip.
 - Distribution: 19 passing, including packed npm and standalone theme smokes.
 - Site: 37 passing; rendered HTML: 2 passing.
-- Coverage: 320 passing and one skip; 93.36% lines, 83.97% branches,
+- Coverage: 320 passing and one skip; 93.36% lines, 84.14% branches,
   96.97% functions.
 - Lint, typecheck, production build, aggregate `npm test`, and
   `git diff --check`: passing.
 
 ## Rollback
 
-Before publication, revert through a protected PR. After an immutable beta tag,
-fix forward with the next unused beta. Users can immediately select Status,
-fixed/adaptive Heat, Custom, or reset to Status without rewriting provider hooks.
+Beta.7 is immutable, so release repair is fix-forward through protected branches
+with the next unused beta; never move or replace its tag. Users can immediately
+select Status, fixed/adaptive Heat, Custom, or reset to Status without rewriting
+provider hooks.

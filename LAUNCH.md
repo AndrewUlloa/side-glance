@@ -1,20 +1,19 @@
 # Launch and rollback
 
-Side Glance is a beta. Version `0.1.0-beta.6` is public on npm, GitHub Releases,
-and the Homebrew tap. Semantic lifecycle colors, aggregate Claude readiness,
-adaptive Heat, and user theme control are merged to protected `staging` and
-prepared as the still-unpublished `0.1.0-beta.7` release candidate.
+Side Glance is a beta. Version `0.1.0-beta.7` is public on npm, GitHub Releases,
+and the Homebrew tap. It ships semantic lifecycle colors, aggregate Claude
+readiness, truly adaptive Heat, and guarded user theme control.
 
 ## Production deployment status
 
-- Current public URL: <https://side-glance.vercel.app> (HTTP 200 verified 2026-08-24)
+- Current public URL: <https://side-glance.vercel.app> (HTTP 200 and HSTS verified 2026-08-26)
 - Custom apex status: aliases are configured in Vercel, but public DNS does not
   resolve for `sideglance.ai` or `www.sideglance.ai` as of 2026-08-26
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
-- Production deployment: `dpl_7i8HYGBsNfeVPFiYNyUURpUptMRh`
-- Immutable deployment URL: <https://side-glance-r5nutd8bn-andrew-243s-projects.vercel.app>
-- Current protected `main`: `759d92811f38fbc0e3df15eda3257599a42cf133`
+- Tagged beta.7 production deployment: `dpl_Gj6Hdddu1knpvzSHFM1WHxw3SbMG`
+- Tagged beta.7 immutable deployment URL: <https://side-glance-475eh8vt1-andrew-243s-projects.vercel.app>
+- Tagged beta.7 source commit: `3b29ca06f36f98b333a0a4f7fd7159e202e39253`
 - The canonical Vercel `npm run build` path passed on Node 24 and the public URL
   returned HTTP 200 with Side Glance metadata and rendered copy.
 - Vercel's Git integration creates previews for pull-request commits; the recorded
@@ -30,26 +29,26 @@ on 2026-08-24. `assets.sideglance.ai` is not connected and must remain condition
 See [the public-asset runbook](./docs/assets.md) for the cutover contract.
 
 The prior known-good production deployment is
-`dpl_12hgQd7peRczGnDuY4diahzdsbWE`. It remains Vercel rollback evidence; immutable
+`dpl_7i8HYGBsNfeVPFiYNyUURpUptMRh`. It remains Vercel rollback evidence; immutable
 historical deployment identifiers are not rewritten during a product rename.
 
 ## npm beta status and next candidate
 
-- Current public release: `side-glance@0.1.0-beta.6`
-- Prepared candidate: `side-glance@0.1.0-beta.7` (unused; not published)
+- Current public release: `side-glance@0.1.0-beta.7`
 - Channel: `beta`
-- Status: release PR #65 is merged to protected `staging`, and literal
-  `staging` → `main` promotion PR #66 is open; until its tag workflow succeeds,
-  `beta` points to beta.6 and `latest` remains beta.1
-- Previously published: `side-glance@0.1.0-beta.5`, `side-glance@0.1.0-beta.4`,
-  `side-glance@0.1.0-beta.3`, and `side-glance@0.1.0-beta.1`
+- Status: protected promotion PR #66, annotated tag `v0.1.0-beta.7`, and release
+  workflow run 33023621621 are complete; `beta` points to beta.7 while `latest`
+  deliberately remains beta.1
+- Previously published: `side-glance@0.1.0-beta.6`, `side-glance@0.1.0-beta.5`,
+  `side-glance@0.1.0-beta.4`, `side-glance@0.1.0-beta.3`, and
+  `side-glance@0.1.0-beta.1`
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
   dry-run; no npm package or GitHub Release was published.
-- Current beta.6 integrity: `sha512-C+S/sIve3sizGocjYPai+c3wDADIt6OQavCiFsdgr6/MalTzWJKHjqLYAjI5aepFis+NSS2lpbzR70vhVkMbQg==`
+- Current beta.7 integrity: `sha512-gIC+EBgbmI0yREHbz6lV/fubafz+VqFbNKha89EPHvSc2d59cRU8XO7yAN62uIv8kgaiCiOD8JCPp3aBJEPByw==`
 - Every candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
 
-## Local rename verification
+## Release verification
 
 On 2026-08-14, the renamed npm package, standalone archive, Homebrew formula,
 release policy, CLI migration paths, site, and rendered output passed their focused
@@ -58,20 +57,24 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-Beta.6 passed the protected tag workflow and is public on npm and GitHub Releases;
-its generated formula is the current Homebrew tap version. It adds progressive
-arrow-key setup with a protected static fallback. The next release preparation must
-repeat every local gate and protected CI must pass before tagging. Turbopack has
-previously reported a non-blocking missing
-fallback-override warning for Alan Sans; compilation, type checking, static
-generation, and rendered HTML verification still completed successfully.
+Beta.7 passed every repository gate, exact-SHA protected CI, the production Vercel
+deployment, the protected tag workflow, npm trusted publishing, immutable GitHub
+Release verification, checksums, and build attestations. Fresh public npx enhanced
+and `NO_COLOR` preview-only flows passed under Node 24.18.0. All four native
+archives passed their standalone jobs; the downloaded Apple Silicon archive was
+executed again locally. Homebrew PR #5 passed Linux, Apple Silicon macOS, and
+experimental Intel macOS `brew test-bot`; the public tap upgrade from beta.6 to
+beta.7 and the installed formula test passed without running setup or changing
+provider configuration.
 
 ## Vercel Preview annotation tooling
 
 Agentation remains enabled for local Next.js development and Vercel Preview or
 development environments, and disabled for production or unknown environments. No
-endpoint, MCP mutation, or remote sync is configured. Any future preview containing
-the toolbar must remain unpromoted; discarding that preview is its rollback path.
+endpoint, MCP mutation, or remote sync is configured. Previews may contain the
+toolbar; promotion is allowed only when the production-environment build excludes
+it. If Agentation appears in production, roll back to the recorded prior deployment
+and fix forward through the protected release path.
 
 ## Technical preflight
 
@@ -129,24 +132,23 @@ journal is retained.
 Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
 release and branch protections are active, private vulnerability reporting and
 secret scanning are enabled, and future GitHub Releases are immutable. The
-remaining beta.7 gates are:
+beta.7 gates are complete:
 
-- semantic-lifecycle feature PR #64 is merged to protected `staging`;
-- release preparation PR #65 is merged to protected `staging`;
-- merge literal `staging` → `main` promotion PR #66;
-- create the matching protected annotated tag only after `main` is green;
-- let the workflow stage every asset, publish npm, and then expose the immutable prerelease;
-- verify `beta` points to beta.7 while `latest` remains beta.1; npm rejects
-  removing `latest`, so beta examples must stay explicit about `@beta`;
-- open a separate Homebrew tap pull request after the immutable artifact URLs exist.
+- semantic-lifecycle feature PR #64 and release preparation PR #65 merged to
+  protected `staging` with full checks;
+- literal `staging` → `main` promotion PR #66 preserved exact staging ancestry;
+- protected `main` CI and the production Vercel deployment passed at the tagged SHA;
+- annotated tag `v0.1.0-beta.7` produced the verified npm and immutable GitHub prerelease;
+- npm `beta` points to beta.7 while `latest` remains beta.1, so beta examples stay explicit about `@beta`;
+- generated-formula Homebrew PR #5 passed every platform and merged only after
+  immutable artifact URLs and hashes existed; public upgrade and formula smokes passed.
 
 ## Prepared pull request sequence
 
-The arrow-key feature and beta.6 release are complete, the Phase 19 feature is
-merged to `staging`, and release preparation PR #65 updated the CLI and lockfile
-version, changelog, launch record, and current-version fixtures. Literal
-`staging` → `main` PR #66 is the active promotion. Tag only the exact green merge
-commit on `main`.
+Phase 19 feature PR #64, release preparation PR #65, protected promotion PR #66,
+annotated beta.7 publication, and Homebrew tap PR #5 are complete. Future releases
+must repeat the same protected staging, main, tag, artifact, and tap sequence with
+the next unused version.
 
 ## Controlled migration from stoplight.sh
 

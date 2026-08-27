@@ -1,18 +1,17 @@
 # Launch: Semantic lifecycle colors and aggregate readiness
 
-> Status: feature and beta.7 release preparation merged to `staging`; protected
-> `staging` → `main` promotion in progress
+> Status: shipped in `0.1.0-beta.7`
 > Date: 2026-08-26
 
-## Candidate behavior
+## Released behavior
 
-The next Side Glance beta makes semantic Status the default, adds explicit Heat
+Side Glance beta.7 makes semantic Status the default, adds explicit Heat
 and Custom theme control, learns optional Heat ceilings from recent provider-local
 turn durations, and keeps Claude Working while bounded known aggregate work
 remains. README, package README, setup, CLI help, architecture, protocol, and the
 homepage use the same meanings and claim boundary.
 
-The candidate migrates persisted runtime state from schema 1 to schema 2 and
+The release migrates persisted runtime state from schema 1 to schema 2 and
 upgrades existing managed Claude integrations from seven to nine hook groups.
 Both changes preserve compatible state and unrelated provider configuration.
 
@@ -52,9 +51,9 @@ Both changes preserve compatible state and unrelated provider configuration.
 
 - [x] Protected feature PR #64 merged to `staging` with exact-SHA checks green.
 - [x] Next unused beta preparation merged to `staging` with full gates green.
-- [ ] Literal `staging` promoted to `main`; production Vercel SHA verified.
-- [ ] Protected annotated tag workflow green.
-- [ ] npm `beta`, integrity, and provenance match the release manifest.
-- [ ] GitHub prerelease, native archives, `SHA256SUMS`, and attestations match.
-- [ ] Fresh public enhanced/static npx and native archive smokes pass.
-- [ ] Homebrew formula PR checks and post-merge public smoke pass.
+- [x] Literal `staging` promoted to `main`; production Vercel SHA verified.
+- [x] Protected annotated tag workflow green.
+- [x] npm `beta`, integrity, and provenance match the release manifest.
+- [x] GitHub prerelease, native archives, `SHA256SUMS`, and attestations match.
+- [x] Fresh public enhanced/static npx and native archive smokes pass.
+- [x] Homebrew formula PR checks and post-merge public smoke pass.
