@@ -21,7 +21,7 @@ import { createDurableSetupDiscovery } from "../../src/cli/setup-discovery.ts";
 import { createSetupPlan, type SetupRequest } from "../../src/cli/setup.ts";
 import { SetupTransactionError } from "../../src/cli/setup-transaction.ts";
 
-const version = "0.1.0-beta.11";
+const version = "0.1.0-beta.12";
 
 test("discovers canonical eligibility and creates an exact read-only provider plan", async (context) => {
   const fixture = await setupFixture(context);
@@ -140,7 +140,7 @@ test("applies the fresh-tab zsh reset in the same verified setup transaction", a
   );
   const installed = await readFile(zshrc, "utf8");
   assert.ok(installed.startsWith(original));
-  assert.match(installed, /builtin printf '\\e\]111\\e\\\\'/u);
+  assert.match(installed, /builtin printf '\\e\]111\\a'/u);
   assert.equal((await stat(zshrc)).mode & 0o777, 0o640);
 
   const rerun = await createDurableSetupDiscovery(request, options);

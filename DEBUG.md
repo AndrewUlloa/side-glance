@@ -888,3 +888,102 @@ would race as last writers. A new install/init plan should explicitly enable dir
 discovery, detect exact known Stoplight color hooks, and offer a reviewed backup-backed
 migration or skip Side Glance for that provider. Existing beta.9 hook commands should
 remain unchanged until the user reruns setup and accepts that plan.
+
+---
+
+# Fresh Terminal tab background investigation
+
+## Observations
+
+- Environment: macOS Terminal.app (`com.apple.Terminal`), zsh, Side Glance
+  `0.1.0-beta.11`, native Apple Silicon installation.
+- Minimal reproduction: allow Side Glance to paint an existing agent tab, press
+  `Cmd+T`, and wait for the new zsh prompt. The new tab remains the same green as
+  the previous tab instead of returning to the terminal profile background.
+- The affected new tab reached a normal prompt on `ttys005`, so zsh startup
+  completed without a visible error.
+- `side-glance doctor --json` reports the fresh-tab integration installed and
+  verified.
+- The managed block is present at the end of `~/.zshrc`. It emits OSC 111 only
+  for an interactive, TTY-backed, top-level, local zsh outside tmux and SSH.
+- Existing automated coverage proves the OSC 111 bytes in a pseudoterminal, but
+  does not prove that native Terminal.app interprets those bytes as intended.
+- Computer Use cannot inspect or operate Terminal.app in this environment, so
+  experiments use read-only process inspection and isolated terminal writes.
+
+## Hypotheses
+
+### H1: The startup guard is false in Terminal.app `Cmd+T` tabs
+
+- Supports: Terminal may preserve shell-level environment when creating a tab;
+  `${SHLVL}` greater than one would suppress the reset.
+- Conflicts: Terminal normally launches a fresh login shell for a new tab.
+- Test: inspect only the affected zsh process's guard-relevant environment and
+  TTY/process ancestry.
+
+### H2: Terminal.app does not implement OSC 111 reset (ROOT HYPOTHESIS)
+
+- Supports: the implementation was byte-tested in a PTY, not behavior-tested in
+  Terminal.app; terminal emulators differ in OSC reset support.
+- Conflicts: Terminal.app accepts OSC 11 background changes used by Side Glance.
+- Test: send only OSC 111 to the affected tab and observe whether its background
+  changes.
+
+### H3: A later zsh startup command repaints the tab after the reset
+
+- Supports: shell frameworks can emit terminal controls during prompt setup.
+- Conflicts: the managed block is currently the final `~/.zshrc` content.
+- Test: inspect the file tail and compare the tab before and after a delayed OSC
+  111 sent after the prompt is visible.
+
+### H4: OSC 111 succeeds, but Terminal.app copied green into the new tab's base settings
+
+- Supports: Terminal.app can create new tabs by copying the selected tab's
+  settings; resetting a dynamic override cannot recover a base color already
+  copied as green.
+- Conflicts: if dynamic and base colors remain distinct, OSC 111 should restore
+  the original profile color.
+- Test: compare OSC 111 with an explicit OSC 11 black update in the same affected
+  tab, one variable at a time.
+
+## Experiments
+
+### E1: Guard and startup ordering
+
+- The affected `ttys005` process tree is `Terminal login -> -zsh`; it is a fresh
+  top-level shell, not a nested provider shell.
+- The managed reset block is the final content in `~/.zshrc`.
+- Result: H1 and H3 are rejected as primary causes.
+
+### E2: OSC 111 with ST termination
+
+- Before: selected-tab RGB was `4690,10358,9025`; Terminal's default-profile RGB
+  was `6447,7462,10000`.
+- Sent exactly `ESC ] 111 ESC \\` to `/dev/ttys005` after the prompt appeared.
+- After: selected-tab RGB remained `4690,10358,9025`.
+- Result: the shipped bytes reproduce the failure independently of zsh startup.
+
+### E3: OSC 111 with BEL termination
+
+- Changed one variable: terminated the same OSC 111 command with BEL instead of
+  ST, sending `ESC ] 111 BEL` to `/dev/ttys005`.
+- After: selected-tab RGB became `6447,7462,10000`, exactly matching Terminal's
+  default-profile RGB.
+- Result: Terminal.app supports OSC 111, but the shipped ST framing is rejected;
+  H2's broad unsupported-command claim and H4 are rejected.
+
+## Root Cause
+
+Native Terminal.app requires BEL termination for OSC 111, while the beta.11
+fresh-tab integration emitted the otherwise valid ST-terminated form that our
+pseudoterminal test accepted without exercising emulator behavior.
+
+## Fix
+
+- Fresh zsh tabs now emit OSC 111 with BEL termination.
+- Runtime background cleanup uses the same Terminal-compatible BEL termination;
+  paint and optional title channels retain their existing ST framing.
+- Existing beta.11 ST-managed blocks are recognized exactly and atomically
+  upgraded instead of being left unchanged or treated as ownership conflicts.
+- Focused integration coverage proves exact bytes, PTY guards, setup migration,
+  and runtime reset encoding.

@@ -44,7 +44,7 @@ test("installs one reversible zsh startup reset without changing unrelated confi
   assert.match(installed, /\$\{SHLVL:-0\} -le 1/u);
   assert.match(installed, /-z \$\{TMUX-\}/u);
   assert.match(installed, /-z \$\{SSH_CONNECTION-\}/u);
-  assert.match(installed, /builtin printf '\\e\]111\\e\\\\'/u);
+  assert.match(installed, /builtin printf '\\e\]111\\a'/u);
   assert.equal((await statMode(zshrc)) & 0o777, 0o640);
 
   const second = await planFreshTabs({
@@ -84,6 +84,39 @@ test("uninstall removes only the exact managed block and is idempotent", async (
   assert.equal(await readFile(zshrc, "utf8"), original);
 });
 
+test("upgrades the beta.11 ST-terminated managed block to Terminal-compatible BEL", async (context) => {
+  const homeDirectory = await fixtureHome(context);
+  const zshrc = path.join(homeDirectory, ".zshrc");
+  await writeFile(
+    zshrc,
+    `# >>> Side Glance fresh terminal tabs v1 (join: empty) >>>
+if [[ -o interactive && -t 1 && \${SHLVL:-0} -le 1 && -z \${TMUX-} && -z \${SSH_CONNECTION-} && -z \${SSH_TTY-} ]]; then
+  builtin printf '\\e]111\\e\\\\'
+fi
+# <<< Side Glance fresh terminal tabs v1 <<<
+`,
+  );
+
+  const before = await inspectFreshTabs({
+    homeDirectory,
+    environment: { SHELL: "/bin/zsh" },
+  });
+  assert.equal(before.target?.action, "update");
+
+  const plan = await planFreshTabs({
+    homeDirectory,
+    environment: { SHELL: "/bin/zsh" },
+    enabled: true,
+  });
+  assert.equal(plan.action, "update");
+  assert.equal(plan.changed, true);
+  await applyFreshTabsPlan(plan);
+
+  const upgraded = await readFile(zshrc, "utf8");
+  assert.match(upgraded, /builtin printf '\\e\]111\\a'/u);
+  assert.doesNotMatch(upgraded, /builtin printf '\\e\]111\\e\\\\'/u);
+});
+
 test("disabling an absent integration does not create a shell startup file", async (context) => {
   const homeDirectory = await fixtureHome(context);
   const removed = await removeFreshTabs({
@@ -120,27 +153,28 @@ test(
     const direct = await runExpectZsh(homeDirectory, runner, {
       SHLVL: "0",
     });
-    assert.equal(direct.includes(Buffer.from("\u001b]111\u001b\\")), true);
+    assert.equal(direct.includes(Buffer.from("\u001b]111\u0007")), true);
+    assert.equal(direct.includes(Buffer.from("\u001b]111\u001b\\")), false);
 
     const tmux = await runExpectZsh(homeDirectory, runner, {
       SHLVL: "0",
       TMUX: "/tmp/fake-tmux",
     });
-    assert.equal(tmux.includes(Buffer.from("\u001b]111\u001b\\")), false);
+    assert.equal(tmux.includes(Buffer.from("\u001b]111\u0007")), false);
 
     const nested = await runExpectZsh(homeDirectory, runner, {
       SHLVL: "1",
     });
-    assert.equal(nested.includes(Buffer.from("\u001b]111\u001b\\")), false);
+    assert.equal(nested.includes(Buffer.from("\u001b]111\u0007")), false);
 
     const ssh = await runExpectZsh(homeDirectory, runner, {
       SHLVL: "0",
       SSH_CONNECTION: "192.0.2.1 1234 192.0.2.2 22",
     });
-    assert.equal(ssh.includes(Buffer.from("\u001b]111\u001b\\")), false);
+    assert.equal(ssh.includes(Buffer.from("\u001b]111\u0007")), false);
 
     const redirected = await runZshWithoutTty(homeDirectory, runner);
-    assert.equal(redirected.includes(Buffer.from("\u001b]111\u001b\\")), false);
+    assert.equal(redirected.includes(Buffer.from("\u001b]111\u0007")), false);
   },
 );
 

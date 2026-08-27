@@ -51,7 +51,7 @@ test("keeps public beta, provider, terminal, and domain claims within verified e
   assert.match(changelog, /\[0\.1\.0-beta\.3\] — 2026-08-24/u);
   assert.match(
     launch,
-    /Custom apex status: aliases are configured in Vercel,[\s\S]{0,80}DNS does not\s+resolve/iu
+    /Custom-domain status:[\s\S]{0,160}`sideglance\.dev` resolves publicly[\s\S]{0,120}`www\.sideglance\.dev` redirects to the apex/iu
   );
   assert.equal(
     manifest.defaultOrigin,
