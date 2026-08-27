@@ -27,10 +27,10 @@ test("encodes only the expected OSC background, title, and reset bytes", () => {
     ),
     "\u001b]11;#4d3510\u001b\\\u001b]0;Side Glance · waiting\u001b\\",
   );
-  assert.equal(decoder.decode(encodeTerminalReset()), "\u001b]111\u001b\\");
+  assert.equal(decoder.decode(encodeTerminalReset()), "\u001b]111\u0007");
   assert.equal(
     decoder.decode(encodeTerminalReset({ background: true, title: true })),
-    "\u001b]111\u001b\\\u001b]0;\u001b\\",
+    "\u001b]111\u0007\u001b]0;\u001b\\",
   );
 });
 

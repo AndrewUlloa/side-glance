@@ -25,6 +25,7 @@ const JOINERS = {
 } as const;
 
 type JoinKind = keyof typeof JOINERS;
+type ManagedBlockFormat = "bel" | "st";
 
 export type FreshTabsState = "eligible" | "blocked" | "unavailable";
 export type FreshTabsAction = "create" | "update" | "remove" | "unchanged";
@@ -98,7 +99,7 @@ export async function inspectFreshTabs(
     target: {
       path: targetPath,
       action:
-        parsed.status === "installed"
+        parsed.status === "installed" && parsed.format === "bel"
           ? "unchanged"
           : snapshot.exists
             ? "update"
@@ -127,7 +128,11 @@ export async function planFreshTabs(
   let action: FreshTabsAction;
   if (options.enabled) {
     const desired =
-      parsed.status === "installed" ? raw : appendManagedBlock(raw);
+      parsed.status === "installed"
+        ? parsed.format === "bel"
+          ? raw
+          : replaceManagedBlock(raw, parsed.join, parsed.format)
+        : appendManagedBlock(raw);
     targetPlan = planConfigTarget(snapshot, desired, { backupExisting: true });
     action = targetPlan.changed
       ? snapshot.exists
@@ -135,7 +140,7 @@ export async function planFreshTabs(
         : "create"
       : "unchanged";
   } else if (parsed.status === "installed") {
-    const desired = removeManagedBlock(raw, parsed.join);
+    const desired = removeManagedBlock(raw, parsed.join, parsed.format);
     targetPlan =
       desired === null
         ? planConfigTargetRemoval(snapshot, { backupExisting: true })
@@ -242,8 +247,24 @@ function appendManagedBlock(raw: string): string {
   return `${raw}${JOINERS[join]}${managedBlock(join)}`;
 }
 
-function removeManagedBlock(raw: string, join: JoinKind): string | null {
-  const block = managedBlock(join);
+function replaceManagedBlock(
+  raw: string,
+  join: JoinKind,
+  format: ManagedBlockFormat,
+): string {
+  const block = managedBlock(join, format);
+  if (!raw.endsWith(block)) {
+    throw new Error("Fresh terminal tab ownership markers changed before upgrade.");
+  }
+  return `${raw.slice(0, -block.length)}${managedBlock(join)}`;
+}
+
+function removeManagedBlock(
+  raw: string,
+  join: JoinKind,
+  format: ManagedBlockFormat,
+): string | null {
+  const block = managedBlock(join, format);
   if (join === "empty") return raw === block ? null : raw;
   const suffix = `${JOINERS[join]}${block}`;
   if (!raw.endsWith(suffix)) {
@@ -252,10 +273,14 @@ function removeManagedBlock(raw: string, join: JoinKind): string | null {
   return raw.slice(0, -suffix.length);
 }
 
-function managedBlock(join: JoinKind): string {
+function managedBlock(
+  join: JoinKind,
+  format: ManagedBlockFormat = "bel",
+): string {
+  const reset = format === "bel" ? "\\e]111\\a" : "\\e]111\\e\\\\";
   return `# >>> ${MARKER_TEXT} v1 (join: ${join}) >>>
 if [[ -o interactive && -t 1 && \${SHLVL:-0} -le 1 && -z \${TMUX-} && -z \${SSH_CONNECTION-} && -z \${SSH_TTY-} ]]; then
-  builtin printf '\\e]111\\e\\\\'
+  builtin printf '${reset}'
 fi
 ${END_MARKER}\n`;
 }
@@ -264,28 +289,32 @@ function parseManagedBlock(
   raw: string,
 ):
   | { status: "absent" }
-  | { status: "installed"; join: JoinKind }
+  | { status: "installed"; join: JoinKind; format: ManagedBlockFormat }
   | { status: "conflict" } {
   const hasMarker = raw.includes(MARKER_TEXT);
   for (const join of Object.keys(JOINERS) as JoinKind[]) {
-    const block = managedBlock(join);
-    if (join === "empty" && raw === block) return { status: "installed", join };
-    if (join !== "empty" && raw.endsWith(`${JOINERS[join]}${block}`)) {
-      const prefix = raw.slice(0, -(JOINERS[join].length + block.length));
-      if (
-        join === "lf" &&
-        prefix.endsWith("\n") &&
-        !prefix.includes(MARKER_TEXT)
-      ) {
-        return { status: "installed", join };
+    for (const format of ["bel", "st"] as const) {
+      const block = managedBlock(join, format);
+      if (join === "empty" && raw === block) {
+        return { status: "installed", join, format };
       }
-      if (
-        join === "none" &&
-        prefix.length > 0 &&
-        !prefix.endsWith("\n") &&
-        !prefix.includes(MARKER_TEXT)
-      ) {
-        return { status: "installed", join };
+      if (join !== "empty" && raw.endsWith(`${JOINERS[join]}${block}`)) {
+        const prefix = raw.slice(0, -(JOINERS[join].length + block.length));
+        if (
+          join === "lf" &&
+          prefix.endsWith("\n") &&
+          !prefix.includes(MARKER_TEXT)
+        ) {
+          return { status: "installed", join, format };
+        }
+        if (
+          join === "none" &&
+          prefix.length > 0 &&
+          !prefix.endsWith("\n") &&
+          !prefix.includes(MARKER_TEXT)
+        ) {
+          return { status: "installed", join, format };
+        }
       }
     }
   }

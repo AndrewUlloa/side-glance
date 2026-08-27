@@ -7,6 +7,7 @@ import { sanitizeTerminalLabel } from "../core/sanitize.ts";
 const encoder = new TextEncoder();
 const OSC_START = "\u001b]";
 const STRING_TERMINATOR = "\u001b\\";
+const BACKGROUND_RESET_TERMINATOR = "\u0007";
 
 export interface TerminalPaint {
   wash: string;
@@ -44,7 +45,7 @@ export function encodeTerminalReset(
   reset: TerminalReset = { background: true },
 ): Uint8Array {
   let sequence = reset.background
-    ? `${OSC_START}111${STRING_TERMINATOR}`
+    ? `${OSC_START}111${BACKGROUND_RESET_TERMINATOR}`
     : "";
   if (reset.title) sequence += `${OSC_START}0;${STRING_TERMINATOR}`;
   if (!sequence) throw new Error("Terminal reset must select an owned channel.");
