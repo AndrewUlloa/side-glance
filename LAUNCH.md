@@ -40,7 +40,8 @@ historical deployment identifiers are not rewritten during a product rename.
 - Current public release: `side-glance@0.1.0-beta.9`
 - Prepared candidate: `side-glance@0.1.0-beta.10` (unused; not published)
 - Channel: `beta`
-- Status: beta.10 is prepared for protected review; until its tag workflow
+- Status: beta.10 release preparation is complete on protected `staging`; its
+  literal `staging` → `main` promotion is in review. Until the tag workflow
   succeeds, `beta` points to beta.9 while `latest` deliberately remains beta.1
 - Previously published: `side-glance@0.1.0-beta.8`, `side-glance@0.1.0-beta.7`,
   `side-glance@0.1.0-beta.6`, `side-glance@0.1.0-beta.5`,
@@ -152,9 +153,9 @@ beta.9 gates are complete:
 Interactive color-model preview PR #77, beta.9 release preparation PR #78,
 protected promotion PR #79, annotated beta.9 publication, and Homebrew tap PR #7
 are complete. Normal-command terminal discovery and controlled Stoplight migration
-PR #81 is complete on protected `staging`; beta.10 release preparation and the
-literal `staging` → `main` promotion remain. Only the exact green `main` merge
-commit may receive the `v0.1.0-beta.10` tag.
+PR #81 and beta.10 release preparation PR #82 are complete on protected
+`staging`. Literal `staging` → `main` promotion PR #83 remains in review. Only
+the exact green `main` merge commit may receive the `v0.1.0-beta.10` tag.
 
 ## Controlled migration from stoplight.sh
 

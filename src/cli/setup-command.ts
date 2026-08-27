@@ -359,6 +359,13 @@ async function runInteractiveSetup(
     const finalPlan = await discoverPlan(request, options);
     if (!finalPlan.ok) return finalPlan.code;
     if (options.signal?.aborted) return interruptedSetup(options, false);
+    if (hasUnresolvedLegacyStoplight(finalPlan.plan)) {
+      return writeSetupFailure(
+        options,
+        false,
+        "legacy-stoplight-conflict",
+      );
+    }
     renderPlanNotes(
       finalPlan.plan,
       prompter,

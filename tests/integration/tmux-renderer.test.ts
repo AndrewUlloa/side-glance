@@ -18,8 +18,14 @@ const SIDE_GLANCE_OPTIONS = [
 class FakeTmuxRunner implements TmuxRunner {
   readonly commands: string[][] = [];
   readonly local = new Map<string, string>();
+  private paintSetAttempts = 0;
+  private readonly failOnPaintSetAttempt?: number;
 
-  constructor(initial: Record<string, string> = {}) {
+  constructor(
+    initial: Record<string, string> = {},
+    failOnPaintSetAttempt?: number,
+  ) {
+    this.failOnPaintSetAttempt = failOnPaintSetAttempt;
     for (const [name, value] of Object.entries(initial)) {
       this.local.set(name, value);
     }
@@ -40,6 +46,12 @@ class FakeTmuxRunner implements TmuxRunner {
 
     if (args[0] === "set-option") {
       const unset = args.includes("-u");
+      if (!unset) {
+        this.paintSetAttempts += 1;
+        if (this.paintSetAttempts === this.failOnPaintSetAttempt) {
+          throw new Error("injected tmux paint failure");
+        }
+      }
       const optionIndex = args.findIndex((value) =>
         SIDE_GLANCE_OPTIONS.includes(value as (typeof SIDE_GLANCE_OPTIONS)[number]),
       );
@@ -83,6 +95,21 @@ test("returns inherited options to inheritance instead of copying values", async
       .filter((args) => args[0] === "set-option" && args.includes("-u"))
       .every((args) => args.includes("-w") && args.includes("@7")),
   );
+});
+
+test("restores the exact snapshot when tmux painting fails partway", async () => {
+  const original = {
+    "window-status-style": "fg=#123456,bold",
+    "window-status-format": "#I:#W",
+  };
+  const runner = new FakeTmuxRunner(original, 2);
+  const snapshot = await captureTmuxSnapshot(runner, "%3");
+
+  await assert.rejects(
+    () => applyTmuxPaint(runner, snapshot, "009d89", "working"),
+    /injected tmux paint failure/u,
+  );
+  assert.deepEqual(Object.fromEntries(runner.local), original);
 });
 
 test("rejects pane, window, and color injection", async () => {

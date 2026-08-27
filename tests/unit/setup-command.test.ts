@@ -282,6 +282,47 @@ test("interactive init explicitly replaces or skips a legacy Claude Stoplight pa
   }
 });
 
+test("interactive init stops if legacy Stoplight appears during its final discovery", async () => {
+  let discoveries = 0;
+  let applies = 0;
+  let stderr = "";
+  const prompter = scriptedPrompter([
+    { status: "value", value: "recommended" },
+  ]);
+
+  const code = await runSetupCommand("init", [], {
+    execution: "durable",
+    interactive: true,
+    discover: async () => {
+      discoveries += 1;
+      const dependencies = setupDependencies();
+      if (discoveries === 2) {
+        dependencies.providers = dependencies.providers.map((provider) =>
+          provider.provider === "claude"
+            ? { ...provider, legacyStoplightHooks: 1 }
+            : provider,
+        );
+      }
+      return discovery(async () => {
+        applies += 1;
+        return { providers: [] };
+      }, dependencies);
+    },
+    prompter,
+    writeStdout: () => undefined,
+    writeStderr: (value) => {
+      stderr += value;
+    },
+  });
+
+  assert.equal(code, 1);
+  assert.equal(discoveries, 2);
+  assert.equal(applies, 0);
+  assert.deepEqual(prompter.calls.map(({ kind }) => kind), ["select"]);
+  assert.match(stderr, /--migrate-legacy-stoplight/u);
+  assert.match(stderr, /omit Claude from --providers/u);
+});
+
 test("automated setup reports the exact legacy migration action before apply", async () => {
   const dependencies = setupDependencies();
   dependencies.providers = dependencies.providers.map((provider) =>

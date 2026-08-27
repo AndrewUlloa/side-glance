@@ -116,15 +116,27 @@ export async function applyTmuxPaint(
     "window-status-current-format": `#[fg=#${color},bold]${marker} #I:#W#[default]`,
   };
 
-  for (const name of TMUX_OPTIONS) {
-    await runner.run([
-      "set-option",
-      "-w",
-      "-t",
-      snapshot.windowId,
-      name,
-      values[name],
-    ]);
+  try {
+    for (const name of TMUX_OPTIONS) {
+      await runner.run([
+        "set-option",
+        "-w",
+        "-t",
+        snapshot.windowId,
+        name,
+        values[name],
+      ]);
+    }
+  } catch (paintError) {
+    try {
+      await restoreTmuxSnapshot(runner, snapshot);
+    } catch (restoreError) {
+      throw new AggregateError(
+        [paintError, restoreError],
+        "tmux painting failed and its prior options could not be restored.",
+      );
+    }
+    throw paintError;
   }
 }
 
