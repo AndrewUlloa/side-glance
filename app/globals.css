@@ -2310,7 +2310,6 @@ a {
 .minimal-home {
   display: flex;
   width: 100%;
-  max-width: 1512px;
   min-height: 100dvh;
   margin-inline: auto;
   flex-direction: column;
@@ -3073,6 +3072,413 @@ a {
   color: #ffc400;
 }
 
+.agent-overview {
+  display: grid;
+  padding-block: clamp(4rem, 9vw, 8rem) clamp(2rem, 5vw, 4rem);
+  border-top: 1px solid #e6e3de;
+  gap: clamp(3rem, 6vw, 5rem);
+  color: #171817;
+  font-family: var(--font-alan-sans);
+}
+
+.agent-overview-introduction {
+  display: grid;
+  max-width: 800px;
+  gap: 1rem;
+}
+
+.agent-overview-grid {
+  display: grid;
+  gap: clamp(2.5rem, 5vw, 5rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.agent-overview-grid section {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.agent-overview h2,
+.trust-main h1,
+.trust-main h2,
+.not-found-main h1 {
+  margin: 0;
+  color: #000;
+  font-family: var(--font-alan-sans);
+  font-weight: 430;
+  letter-spacing: -0.035em;
+}
+
+.agent-overview h2 {
+  font-size: clamp(2rem, 4vw, 3.75rem);
+  line-height: 1.02;
+}
+
+.agent-overview-grid h2 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+}
+
+.agent-overview p,
+.trust-main p,
+.not-found-main p {
+  margin: 0;
+  color: #505653;
+  font-family: var(--font-alan-sans);
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  letter-spacing: -0.012em;
+  line-height: 1.62;
+}
+
+.trust-eyebrow {
+  color: #79807c !important;
+  font-size: 0.75rem !important;
+  font-weight: 650;
+  letter-spacing: 0.12em !important;
+  line-height: 1.2 !important;
+  text-transform: uppercase;
+}
+
+.site-footer {
+  display: flex;
+  width: 100%;
+  padding-block: 1.5rem;
+  border-top: 1px solid #e6e3de;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  color: #6b716e;
+  font-family: var(--font-alan-sans);
+  font-size: 0.875rem;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+.site-footer nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.site-footer a,
+.trust-navigation a,
+.trust-resources a,
+.not-found-main a {
+  color: inherit;
+  text-decoration-color: #b8bcb9;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
+.site-footer a:hover,
+.trust-navigation a:hover,
+.trust-resources a:hover,
+.not-found-main a:hover {
+  color: #000;
+  text-decoration-color: currentcolor;
+}
+
+.site-footer a:focus-visible,
+.trust-navigation a:focus-visible,
+.trust-resources a:focus-visible,
+.not-found-main a:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid #000;
+  outline-offset: 4px;
+}
+
+.trust-page {
+  display: flex;
+  width: 100%;
+  max-width: 1512px;
+  min-height: 100dvh;
+  margin-inline: auto;
+  flex-direction: column;
+  background: #fff;
+  color: #000;
+}
+
+.trust-header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trust-navigation {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.85rem, 2.5vw, 1.75rem);
+  font-family: var(--font-alan-sans);
+  font-size: 0.875rem;
+}
+
+.trust-navigation a {
+  text-decoration: none;
+}
+
+.trust-navigation a[aria-current="page"] {
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.trust-main {
+  display: grid;
+  width: min(100%, 880px);
+  margin-inline: auto;
+  padding-block: clamp(5rem, 10vw, 9rem);
+  gap: clamp(4rem, 8vw, 7rem);
+}
+
+.trust-introduction {
+  display: grid;
+  gap: 1rem;
+}
+
+.trust-main h1,
+.not-found-main h1 {
+  font-size: clamp(3rem, 7vw, 5.75rem);
+  line-height: 0.98;
+}
+
+.trust-description {
+  max-width: 680px;
+  font-size: clamp(1.15rem, 2.1vw, 1.5rem) !important;
+  line-height: 1.45 !important;
+}
+
+.trust-sections {
+  display: grid;
+  gap: clamp(3rem, 6vw, 5rem);
+}
+
+.trust-sections section {
+  display: grid;
+  gap: 1rem;
+}
+
+.trust-main h2 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1.1;
+}
+
+.trust-resources {
+  display: grid;
+  padding-top: clamp(2rem, 4vw, 3rem);
+  border-top: 1px solid #e6e3de;
+  gap: 1.5rem;
+}
+
+.trust-resources ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: 1.25rem;
+  list-style: none;
+}
+
+.trust-resources li {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.trust-resources a {
+  width: fit-content;
+  color: #000;
+  font-family: var(--font-alan-sans);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.trust-resources span {
+  color: #6b716e;
+  font-family: var(--font-alan-sans);
+  line-height: 1.5;
+}
+
+.not-found-page {
+  justify-content: space-between;
+}
+
+.not-found-main {
+  display: grid;
+  width: min(100%, 760px);
+  margin: auto;
+  padding-block: clamp(5rem, 12vw, 10rem);
+  gap: 1.25rem;
+}
+
+.not-found-main nav {
+  display: flex;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  color: #000;
+  font-family: var(--font-alan-sans);
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --spacing-site-gutter: clamp(7.5rem, 7vw, 14rem);
+    --spacing-page-block: clamp(2.5rem, 2.5vw, 4rem);
+    --spacing-site-header: clamp(3.25rem, 3.1vw, 4.5rem);
+    --spacing-layout-stack: clamp(6rem, 5vw, 9rem);
+    --spacing-hero-copy: clamp(2rem, 2vw, 3rem);
+    --spacing-showcase: clamp(2rem, 2vw, 3rem);
+    --spacing-terminal-stage-x: clamp(8rem, 7vw, 12rem);
+    --spacing-terminal-stage-y: clamp(4rem, 4vw, 7rem);
+    --spacing-lifecycle-control-height: clamp(2.5rem, 2.4vw, 3.5rem);
+    --spacing-lifecycle-gap: clamp(4rem, 4vw, 6rem);
+    --spacing-lifecycle-state: clamp(0.625rem, 0.65vw, 0.875rem);
+    --spacing-lifecycle-x: clamp(1rem, 1vw, 1.5rem);
+    --spacing-lifecycle-y: clamp(0.5rem, 0.55vw, 0.75rem);
+    --spacing-lifecycle-icon: clamp(1.5rem, 1.35vw, 2rem);
+    --spacing-brand-mark-width: clamp(2.1875rem, 1.95vw, 3rem);
+    --spacing-brand-mark-height: clamp(1.5rem, 1.35vw, 2rem);
+    --spacing-brand-gap: clamp(0.4375rem, 0.45vw, 0.6875rem);
+    --spacing-header-action-icon: clamp(1rem, 0.9vw, 1.375rem);
+    --spacing-header-action-gap: clamp(0.375rem, 0.4vw, 0.625rem);
+    --spacing-header-action-x: clamp(0.75rem, 0.75vw, 1.125rem);
+    --spacing-header-action-y: clamp(0.5rem, 0.5vw, 0.75rem);
+    --spacing-header-actions-gap: clamp(0.5rem, 0.5vw, 0.75rem);
+    --spacing-header-icon-button: clamp(2rem, 1.8vw, 2.75rem);
+    --text-brand: clamp(1.5rem, 1.35vw, 2rem);
+    --text-header-action: clamp(1rem, 0.9vw, 1.375rem);
+    --text-lifecycle: clamp(1.5rem, 1.35vw, 2rem);
+  }
+
+  .loading-brand-large {
+    font-size: clamp(72px, 4vw, 104px);
+  }
+
+  .loading-brand-large .loading-brand-mark {
+    width: clamp(104px, 5.8vw, 148px);
+    height: clamp(72px, 4vw, 102px);
+  }
+
+  .minimal-copy {
+    width: clamp(461px, 30vw, 720px);
+  }
+
+  .minimal-copy h1 {
+    font-size: clamp(72px, 4vw, 104px);
+    letter-spacing: -0.03em;
+  }
+
+  .minimal-copy p {
+    font-size: clamp(24px, 1.45vw, 34px);
+    letter-spacing: -0.03em;
+  }
+
+  .mock-terminal {
+    width: auto;
+    height: min(56dvh, 900px);
+    max-width: 100%;
+    aspect-ratio: 1472 / 912;
+    font-size: clamp(12.5px, 0.625vw, 16px);
+    grid-template-rows: clamp(42px, 2.2vw, 56px) minmax(0, 1fr);
+  }
+
+  .mock-terminal-bar {
+    padding-inline: clamp(14px, 0.85vw, 22px);
+    gap: clamp(14px, 0.85vw, 22px);
+    font-size: clamp(12px, 0.55vw, 14px);
+  }
+
+  .mock-window-dots {
+    gap: clamp(5px, 0.3vw, 8px);
+  }
+
+  .mock-window-dots span {
+    width: clamp(10px, 0.55vw, 14px);
+    height: clamp(10px, 0.55vw, 14px);
+  }
+
+  .mock-folder {
+    width: clamp(13px, 0.7vw, 18px);
+    height: clamp(9px, 0.5vw, 13px);
+  }
+
+  .mock-terminal-body {
+    gap: clamp(8px, 0.45vw, 12px);
+    padding: clamp(14px, 0.8vw, 20px) clamp(18px, 1vw, 26px)
+      clamp(9px, 0.6vw, 15px);
+  }
+
+  .mock-claude-transcript {
+    gap: clamp(7px, 0.4vw, 10px);
+  }
+
+  .mock-claude-brand {
+    gap: clamp(8px, 0.5vw, 12px);
+    grid-template-columns: clamp(16px, 0.9vw, 22px) minmax(0, 1fr);
+  }
+
+  .mock-claude-brand > span {
+    font-size: clamp(16px, 0.9vw, 22px);
+  }
+
+  .mock-claude-brand strong {
+    font-size: clamp(13px, 0.72vw, 18px);
+  }
+
+  .mock-claude-brand small {
+    font-size: clamp(9px, 0.48vw, 12px);
+  }
+
+  .mock-claude-actions,
+  .mock-claude-error {
+    font-size: clamp(9.5px, 0.52vw, 13px);
+  }
+
+  .mock-claude-worked {
+    font-size: clamp(10px, 0.56vw, 14px);
+  }
+
+  .mock-claude-command-menu button {
+    min-height: clamp(26px, 1.5vw, 38px);
+    font-size: clamp(10px, 0.56vw, 14px);
+  }
+
+  .mock-claude-composer {
+    min-height: clamp(40px, 2.25vw, 56px);
+    padding-inline: clamp(8px, 0.5vw, 13px);
+    font-size: clamp(14px, 0.75vw, 19px);
+  }
+
+  .mock-claude-composer input {
+    font-size: clamp(11px, 0.64vw, 16px);
+  }
+
+  .mock-claude-chrome {
+    gap: clamp(1px, 0.1vw, 3px);
+    font-size: clamp(9px, 0.52vw, 13px);
+  }
+
+  .agent-overview-introduction {
+    max-width: 1000px;
+  }
+
+  .agent-overview h2 {
+    font-size: clamp(3.75rem, 3vw, 4.75rem);
+  }
+
+  .agent-overview-grid h2 {
+    font-size: clamp(2.5rem, 2vw, 3.25rem);
+  }
+
+  .agent-overview p {
+    font-size: clamp(1.125rem, 0.9vw, 1.375rem);
+  }
+
+  .site-footer {
+    font-size: clamp(0.875rem, 0.7vw, 1.0625rem);
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -3161,6 +3567,29 @@ a {
     font-size: 20px;
     letter-spacing: -0.02em;
     line-height: 1.25;
+  }
+
+  .agent-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .site-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .trust-header {
+    height: auto;
+    min-height: var(--spacing-site-header);
+    padding-block: 1rem;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .trust-navigation {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .mock-terminal {

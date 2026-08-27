@@ -35,7 +35,7 @@ test("header scale is expressed as Tailwind theme tokens and consumed as utiliti
 
   assert.match(
     page,
-    /className="minimal-home gap-layout-stack px-site-gutter pb-page-block"/u
+    /className="minimal-home gap-layout-stack px-site-gutter"/u
   );
   assert.match(page, /className="minimal-header h-site-header"/u);
   assert.match(

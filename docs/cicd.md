@@ -47,7 +47,9 @@ Vercel token or create duplicate builds.
 - A push to `staging` updates its stable Vercel branch URL.
 - A merge to `main` creates the Production deployment at the verified custom
   domain, `https://sideglance.dev`; `https://side-glance.vercel.app` remains the
-  fallback Vercel alias. Both must resolve to the same production deployment.
+  fallback Vercel alias. Both must resolve to the same production deployment;
+  Cloudflare remains authoritative for the custom domain's DNS, DNSSEC, TLS, and
+  proxying.
 
 The Vercel project must stay connected to `AndrewUlloa/side-glance`, with
 Production Branch set to `main` and Node.js 24.x. Preview-only environment values

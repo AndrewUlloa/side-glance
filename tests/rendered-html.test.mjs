@@ -14,6 +14,7 @@ async function render() {
 function renderedText(html) {
   return html
     .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<(?:script|style)\b[^>]*>[\s\S]*?<\/(?:script|style)>/gi, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -32,11 +33,50 @@ test("server-renders the focused Side Glance launch hero", async () => {
   );
   assert.match(
     html,
-    /<meta name="description" content="Know which loop needs judgment\. Let the others keep running\."\/>/i
+    /<meta name="description" content="Side Glance is a local-first attention layer for coding-agent CLIs\. See working, waiting, ready, and failed state in your terminal or tmux\."\/>/i
   );
   assert.match(text, /Long loops\. Short glances\./);
   assert.match(text, /Know which loop needs judgment\./);
   assert.match(text, /Let the others keep running\./);
+  assert.match(text, /What Side Glance does/);
+  assert.match(text, /When Side Glance helps/);
+  assert.match(text, /How it fits your workflow/);
+  assert.ok(
+    text.length >= 500,
+    `raw homepage text is only ${text.length} chars`
+  );
+  assert.equal(html.match(/<h1\b/gu)?.length, 1);
+  assert.ok((html.match(/<h2\b/gu)?.length ?? 0) >= 3);
+  assert.ok(
+    html.indexOf("<h1") < html.indexOf("<h2"),
+    "the H1 must precede supporting H2 sections"
+  );
+  assert.match(
+    html,
+    /<link rel="canonical" href="https:\/\/sideglance\.dev"\/>/i
+  );
+  const jsonLdMatch = html.match(
+    /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/iu
+  );
+  assert.ok(jsonLdMatch, "missing server-rendered JSON-LD");
+  const jsonLd = JSON.parse(jsonLdMatch[1]);
+  assert.deepEqual(
+    jsonLd["@graph"].map((entry) => entry["@type"]),
+    ["Organization", "WebSite", "SoftwareApplication"]
+  );
+  const organization = jsonLd["@graph"][0];
+  assert.equal(organization.name, "Design From, Inc.");
+  assert.equal(organization.email, "andrew@designfrom.com");
+  assert.deepEqual(organization.address, {
+    "@type": "PostalAddress",
+    addressCountry: "US",
+    addressLocality: "New York",
+    addressRegion: "NY",
+  });
+  assert.match(
+    html,
+    /<link href="\/\.well-known\/ai-catalog\.json" rel="ai-catalog" type="application\/json"\/>/iu
+  );
   assert.match(text, /Install/);
   assert.match(
     html,
@@ -82,6 +122,42 @@ test("server-renders the focused Side Glance launch hero", async () => {
   ).join("\n");
   assert.doesNotMatch(loadedJavaScript, /Manage MCP & Webhooks/);
   assert.doesNotMatch(loadedJavaScript, /data-agentation-theme/);
+  assert.match(loadedJavaScript, /get-side-glance-install-command/);
+  assert.match(loadedJavaScript, /get-side-glance-project-info/);
+});
+
+test("server-renders substantive trust pages", async () => {
+  for (const [route, heading] of [
+    ["about", "About Side Glance"],
+    ["contact", "Contact and support"],
+    ["privacy", "Privacy"],
+  ]) {
+    const html = await readFile(
+      new URL(`../.next/server/app/${route}.html`, import.meta.url),
+      "utf8"
+    );
+    const text = renderedText(html);
+
+    assert.match(html, new RegExp(`<h1[^>]*>${heading}</h1>`, "iu"));
+    assert.ok(
+      text.length >= 500,
+      `${route} raw HTML text is only ${text.length} chars`
+    );
+    assert.ok((html.match(/<h2\b/gu)?.length ?? 0) >= 3);
+    assert.match(
+      html,
+      new RegExp(
+        `<link rel="canonical" href="https:\\/\\/sideglance\\.dev\\/${route}"\\/>`,
+        "iu"
+      )
+    );
+    if (route === "about") {
+      assert.match(text, /originated at Design From, Inc\./u);
+    }
+    if (route === "contact") {
+      assert.match(text, /andrew@designfrom\.com/u);
+    }
+  }
 });
 
 test("keeps the focused site accessible, responsive, and product-safe", async () => {

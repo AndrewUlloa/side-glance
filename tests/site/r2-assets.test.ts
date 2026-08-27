@@ -9,6 +9,7 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
     globals,
     ogStyles,
     siteAssets,
+    siteIdentity,
     manifestSource,
     uploadScript,
     packageSource,
@@ -18,6 +19,7 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
     readFile("app/globals.css", "utf8"),
     readFile("app/og-image/og-image.css", "utf8"),
     readFile("app/lib/site-assets.ts", "utf8"),
+    readFile("app/lib/site-identity.ts", "utf8"),
     readFile("assets/r2-manifest.json", "utf8"),
     readFile("scripts/assets/upload-r2.mjs", "utf8"),
     readFile("package.json", "utf8"),
@@ -41,7 +43,7 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
     scripts: Record<string, string>;
   };
 
-  assert.match(siteAssets, /https:\/\/sideglance\.dev/u);
+  assert.match(siteIdentity, /https:\/\/sideglance\.dev/u);
   assert.match(siteAssets, /NEXT_PUBLIC_ASSET_ORIGIN/u);
   assert.match(siteAssets, /r2-manifest\.json/u);
   assert.match(layout, /SITE_ASSETS\.openGraph/u);
