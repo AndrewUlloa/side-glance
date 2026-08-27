@@ -57,7 +57,7 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-Beta.7 passed every repository gate, exact-SHA protected CI, the production Vercel
+Beta.7 passed every repository gate, exact-SHA-protected CI, the production Vercel
 deployment, the protected tag workflow, npm trusted publishing, immutable GitHub
 Release verification, checksums, and build attestations. Fresh public npx enhanced
 and `NO_COLOR` preview-only flows passed under Node 24.18.0. All four native
