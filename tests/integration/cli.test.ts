@@ -491,12 +491,16 @@ test("rejects malformed event JSON without creating executable state", async (co
 
 test("doctor and preview are deterministic and do not require a live terminal", async (context) => {
   const directory = await stateDirectory(context);
+  const env = {
+    SIDE_GLANCE_CONFIG_DIR: path.join(directory, "appearance"),
+  };
   const doctor = await runCli(["doctor", "--json"], {
+    env,
     stateDirectory: directory,
   });
   const preview = await runCli(
     ["preview", "--phase", "waiting", "--elapsed", "60", "--json"],
-    { stateDirectory: directory },
+    { env, stateDirectory: directory },
   );
 
   assert.equal(doctor.code, 0, doctor.stderr);

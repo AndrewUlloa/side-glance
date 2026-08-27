@@ -36,8 +36,11 @@ exact-version durable install. Side Glance deliberately refuses permanent provid
 notification choices, warnings, and owned configuration paths before it asks for
 one confirmation, then finishes with the launch command to run next.
 `side-glance setup` is its exact alias and is safe to re-run. On an interactive
-terminal, **Recommended** is focused first; choose **Customize** for provider and
-notification controls.
+terminal, **Recommended** is focused first. For a new configuration,
+**Recommended** uses Status without an additional theme question; rerunning setup
+preserves an existing saved theme. **Customize** includes providers, notifications,
+and colors, using the same Status, Heat, and Custom selector as
+`side-glance theme`. Review and completion both show the selected color behavior.
 
 Side Glance considers a provider available only when its CLI command (`claude`,
 `codex`, `gemini`, or `opencode`) is executable on the `PATH` of the shell running

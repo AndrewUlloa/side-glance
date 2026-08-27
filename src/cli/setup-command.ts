@@ -1,4 +1,7 @@
-import type { SideGlanceConfigInspection } from "../core/appearance.ts";
+import type {
+  SideGlanceAppearance,
+  SideGlanceConfigInspection,
+} from "../core/appearance.ts";
 import { DEFAULT_NOTIFICATION_SOUND } from "../notifications/policy.ts";
 import {
   createReadlineSetupPrompter,
@@ -21,6 +24,11 @@ import {
   SetupTransactionError,
   type SetupTransactionResult,
 } from "./setup-transaction.ts";
+import {
+  promptForThemeAppearance,
+  themeReviewText,
+  type ThemePersistenceResult,
+} from "./theme-command.ts";
 
 export interface SetupDiscovery {
   dependencies: SetupPlanDependencies;
@@ -39,6 +47,9 @@ export interface SetupCommandOptions {
   prompter?: SetupPrompter;
   signal?: AbortSignal;
   appearance?: SideGlanceConfigInspection;
+  saveAppearance?(
+    appearance: SideGlanceAppearance,
+  ): Promise<ThemePersistenceResult>;
 }
 
 export async function runSetupCommand(
@@ -91,6 +102,10 @@ Options:
   --home <absolute-path>       Override the inspected home directory
   --executable <absolute-path> Override the durable Side Glance executable
   -h, --help                   Show this help without detection or writes
+
+Interactive:
+  Recommended keeps setup concise and preserves existing colors.
+  Customize includes providers, notifications, and Status, Heat, or Custom colors.
 
 Safety:
   A caught apply or verification failure rolls back completed writes when safe.
@@ -161,7 +176,7 @@ async function runInteractiveSetup(
           },
           {
             id: "customize",
-            label: "Customize providers and computer notifications",
+            label: "Customize providers, notifications, and colors",
           },
           { id: "exit", label: "Exit without making changes" },
         ],
@@ -252,6 +267,26 @@ async function runInteractiveSetup(
       }
     }
 
+    const currentAppearance = options.appearance?.config.appearance ?? {
+      preset: "status" as const,
+    };
+    let selectedAppearance: SideGlanceAppearance = currentAppearance;
+    if (setupMode === "customize") {
+      const themeSelection = await promptForThemeAppearance(
+        prompter,
+        currentAppearance,
+      );
+      if (themeSelection.status === "cancelled") {
+        return cancellationCode(themeSelection);
+      }
+      if (themeSelection.value === "exit") {
+        prompter.note("Setup cancelled. Nothing was changed.");
+        return 0;
+      }
+      selectedAppearance = themeSelection.value;
+    }
+    if (options.signal?.aborted) return interruptedSetup(options, false);
+
     const request: SetupRequest = {
       ...initialRequest,
       providers: canonicalPromptProviders(selectedProviderValues),
@@ -262,7 +297,13 @@ async function runInteractiveSetup(
     const finalPlan = await discoverPlan(request, options);
     if (!finalPlan.ok) return finalPlan.code;
     if (options.signal?.aborted) return interruptedSetup(options, false);
-    renderPlanNotes(finalPlan.plan, prompter, options.appearance);
+    renderPlanNotes(
+      finalPlan.plan,
+      prompter,
+      options.appearance,
+      selectedAppearance,
+      setupMode === "customize",
+    );
     const confirmation = await prompter.confirm("Apply this setup plan?", true);
     if (confirmation.status === "cancelled") {
       return cancellationCode(confirmation);
@@ -272,7 +313,8 @@ async function runInteractiveSetup(
       prompter.note("Setup cancelled. Nothing was changed.");
       return 0;
     }
-    prompter.startProgress?.("Writing and verifying provider configuration…");
+    prompter.startProgress?.("Writing and verifying setup…");
+    const saveAppearance = options.saveAppearance;
     return await applyPlan(finalPlan.discovery, finalPlan.plan, false, options, {
       success: () =>
         prompter.stopProgress?.("Configuration saved.", true),
@@ -281,8 +323,24 @@ async function runInteractiveSetup(
           "Provider configuration could not be verified.",
           false,
         ),
+      appearanceFailure: () =>
+        prompter.stopProgress?.(
+          "Providers were configured, but colors could not be saved.",
+          false,
+        ),
+      ...(setupMode === "customize" && saveAppearance
+        ? {
+            saveAppearance: () => saveAppearance(selectedAppearance),
+          }
+        : {}),
       renderResult: (plan, result) =>
-        humanInteractiveSetupResult(plan, result, options.appearance),
+        humanInteractiveSetupResult(
+          plan,
+          result,
+          options.appearance,
+          selectedAppearance,
+          setupMode === "customize",
+        ),
     });
   } finally {
     prompter.close();
@@ -337,6 +395,8 @@ async function applyPlan(
   presentation?: {
     success(): void;
     failure(): void;
+    appearanceFailure?(): void;
+    saveAppearance?(): Promise<ThemePersistenceResult>;
     renderResult?(plan: SetupPlan, result: SetupTransactionResult): string[];
   },
 ): Promise<number> {
@@ -348,6 +408,23 @@ async function applyPlan(
       return interruptedSetup(options, json);
     }
     const result = await discovery.apply(plan, options.signal);
+    if (options.signal?.aborted) {
+      presentation?.failure();
+      progressFinished = true;
+      return interruptedSetup(options, json);
+    }
+    if (presentation?.saveAppearance) {
+      try {
+        await presentation.saveAppearance();
+      } catch {
+        presentation.appearanceFailure?.();
+        progressFinished = true;
+        options.writeStderr(
+          "side-glance: Provider configuration was verified, but colors could not be saved. Run side-glance doctor --json, then side-glance theme.\n",
+        );
+        return 1;
+      }
+    }
     const projected = projectSetupResult(plan, result);
     const output = json
       ? `${JSON.stringify(projected)}\n`
@@ -423,6 +500,8 @@ function renderPlanNotes(
   plan: SetupPlan,
   prompter: SetupPrompter,
   appearance?: SideGlanceConfigInspection,
+  selectedAppearance?: SideGlanceAppearance,
+  customizedColors = false,
 ): void {
   prompter.note("Review");
   prompter.note("");
@@ -436,10 +515,13 @@ function renderPlanNotes(
       ? "  Computer notifications: Off"
       : `  Computer notifications: ${humanList(plan.selectedNotifications.map(providerLabel))} · ${plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND}`,
   );
-  writePromptDetail(
-    prompter,
-    `  ${setupColorSummary(appearance)}`,
-  );
+  if (customizedColors && selectedAppearance) {
+    for (const line of themeReviewText(selectedAppearance).split("\n")) {
+      writePromptDetail(prompter, `  ${line}`);
+    }
+  } else {
+    writePromptDetail(prompter, `  ${setupColorSummary(appearance)}`);
+  }
   writePromptDetail(prompter, "  Configuration:");
   for (const provider of plan.providers) {
     if (!provider.selected || !provider.target) continue;
@@ -585,6 +667,8 @@ function humanInteractiveSetupResult(
   plan: SetupPlan,
   result: SetupTransactionResult,
   appearance?: SideGlanceConfigInspection,
+  selectedAppearance?: SideGlanceAppearance,
+  customizedColors = false,
 ): string[] {
   const projected = projectSetupResult(plan, result);
   const lines = ["✓ Side Glance is ready", ""];
@@ -597,7 +681,11 @@ function humanInteractiveSetupResult(
     plan.selectedNotifications.length > 0
       ? `  Computer notifications enabled · ${plan.notificationSound ?? DEFAULT_NOTIFICATION_SOUND} (delivery not tested)`
       : "  Computer notifications off",
-    `  ${setupColorSummary(appearance)}`,
+    `  ${
+      customizedColors && selectedAppearance
+        ? setupSelectedColorSummary(selectedAppearance)
+        : setupColorSummary(appearance)
+    }`,
     "  Change anytime: side-glance theme",
   );
 
@@ -628,6 +716,16 @@ function humanInteractiveSetupResult(
     }
   }
   return lines.map(sanitizePromptDetail);
+}
+
+function setupSelectedColorSummary(appearance: SideGlanceAppearance): string {
+  if (appearance.preset === "status") {
+    return "Colors: Status · Working cyan · Ready green · Waiting amber · Failed red";
+  }
+  if (appearance.preset === "custom") return "Colors: Custom";
+  return appearance.ceiling.mode === "adaptive"
+    ? "Colors: Heat · Adaptive"
+    : `Colors: Heat · Fixed ${appearance.ceiling.seconds}s`;
 }
 
 function setupColorSummary(inspection?: SideGlanceConfigInspection): string {

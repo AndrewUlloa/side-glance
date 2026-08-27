@@ -107,6 +107,7 @@ exit $status
       PATH: `${bin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
       NO_COLOR: undefined,
       SIDE_GLANCE_ACCESSIBLE: undefined,
+      SIDE_GLANCE_CONFIG_DIR: path.join(home, ".config", "side-glance"),
       TERM: "xterm-256color",
     };
     const interactions = [
@@ -122,11 +123,19 @@ exit $status
         prompt: "Select Side Glance computer notifications",
         answer: " \r",
       },
+      {
+        prompt: "What should colors communicate?",
+        answer: "\u001b[B\r",
+      },
+      {
+        prompt: "How should Heat set its ceiling?",
+        answer: "\r",
+      },
       { prompt: "Apply this setup plan? [Y/n] ", answer: "y\n" },
     ];
     const result =
       process.platform === "darwin"
-        ? await runExpectArrowPty(home, runner)
+        ? await runExpectArrowPty(home, runner, environment)
         : await runPty(["-qec", runner, "/dev/null"], environment, interactions);
 
     assert.equal(result.code, 0, result.output);
@@ -139,6 +148,16 @@ exit $status
       await readFile(path.join(home, ".claude", "settings.json"), "utf8"),
     );
     assert.ok(JSON.stringify(settings).includes(executable));
+    const config = JSON.parse(
+      await readFile(
+        path.join(home, ".config", "side-glance", "config.json"),
+        "utf8",
+      ),
+    );
+    assert.deepEqual(config.appearance, {
+      preset: "heat",
+      ceiling: { mode: "adaptive" },
+    });
   },
 );
 
@@ -617,6 +636,7 @@ exit [lindex $result 3]
 async function runExpectArrowPty(
   home: string,
   runner: string,
+  environment: Record<string, string | undefined>,
 ): Promise<{ code: number | null; output: string }> {
   const expectScript = path.join(home, "arrow-setup.exp");
   await writeFile(
@@ -630,6 +650,10 @@ expect {*Select provider integrations*}
 send "\\r"
 expect {*Select Side Glance computer notifications*}
 send " \\r"
+expect {*What should colors communicate?*}
+send "\\033\\[B\\r"
+expect {*How should Heat set its ceiling?*}
+send "\\r"
 expect -exact {Apply this setup plan? [Y/n] }
 send "y\\r"
 expect eof
@@ -638,16 +662,7 @@ exit [lindex $result 3]
 `,
     { mode: 0o700 },
   );
-  return runProcess(
-    "/usr/bin/expect",
-    [expectScript, runner],
-    {
-      HOME: home,
-      NO_COLOR: undefined,
-      SIDE_GLANCE_ACCESSIBLE: undefined,
-      TERM: "xterm-256color",
-    },
-  );
+  return runProcess("/usr/bin/expect", [expectScript, runner], environment);
 }
 
 function runPty(
