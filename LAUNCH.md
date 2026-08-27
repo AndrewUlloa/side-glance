@@ -151,9 +151,10 @@ beta.8 gates are complete:
 Guided init theme selection PR #72, beta.8 release preparation PR #73, protected
 promotion PR #74, annotated beta.8 publication, and Homebrew tap PR #6 are complete.
 Interactive color-model preview and managed-hook resilience PR #77 is complete on
-protected `staging`; beta.9 release preparation and the literal `staging` → `main`
-promotion remain. Only the exact green `main` merge commit may receive the
-`v0.1.0-beta.9` tag.
+protected `staging`, as is beta.9 release preparation PR #78. This document reaches
+`main` through literal `staging` → `main` promotion PR #79, completing the protected
+promotion; only its exact green `main` merge commit may receive the
+`v0.1.0-beta.9` tag and begin publication.
 
 ## Controlled migration from stoplight.sh
 
