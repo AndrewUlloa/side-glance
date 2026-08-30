@@ -48,21 +48,21 @@ test("defines an explicit standard Next.js deployment contract for Vercel", asyn
   for (const generatedDirectory of ["dist", "outputs", "work"]) {
     assert.match(vercelIgnore, new RegExp(`^${generatedDirectory}$`, "mu"));
   }
-  for (const obsoletePath of [
-    "vite.config.ts",
-    "worker/index.ts",
-    "worker-configuration.d.ts",
-    "build/sites-vite-plugin.ts",
-    ".openai/hosting.json",
-    "db/index.ts",
-    "db/schema.ts",
-    "drizzle.config.ts",
-    "drizzle/meta/_journal.json",
-    "examples/d1/app/api/notes/route.ts",
-    "examples/d1/db/schema.ts",
-  ]) {
-    await assert.rejects(access(obsoletePath));
-  }
+  await Promise.all(
+    [
+      "vite.config.ts",
+      "worker/index.ts",
+      "worker-configuration.d.ts",
+      "build/sites-vite-plugin.ts",
+      ".openai/hosting.json",
+      "db/index.ts",
+      "db/schema.ts",
+      "drizzle.config.ts",
+      "drizzle/meta/_journal.json",
+      "examples/d1/app/api/notes/route.ts",
+      "examples/d1/db/schema.ts",
+    ].map((obsoletePath) => assert.rejects(access(obsoletePath)))
+  );
   assert.equal(dependencies["drizzle-orm"], undefined);
   assert.doesNotMatch(
     packageLock,

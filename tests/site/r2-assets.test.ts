@@ -89,15 +89,15 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
     /static\.cloudflareinsights\.com\/beacon\.min\.js/u
   );
 
-  for (const localAsset of [
-    "public/hero-surface.png",
-    "public/hero-terminal.png",
-    "public/loading-life-01.png",
-    "public/loading-life-02.png",
-    "public/loading-life-03.png",
-    "public/loading-life-04.png",
-    "public/og-image.png",
-  ]) {
-    await assert.rejects(access(localAsset));
-  }
+  await Promise.all(
+    [
+      "public/hero-surface.png",
+      "public/hero-terminal.png",
+      "public/loading-life-01.png",
+      "public/loading-life-02.png",
+      "public/loading-life-03.png",
+      "public/loading-life-04.png",
+      "public/og-image.png",
+    ].map((localAsset) => assert.rejects(access(localAsset)))
+  );
 });

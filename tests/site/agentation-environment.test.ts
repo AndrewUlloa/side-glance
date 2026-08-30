@@ -3,10 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 interface EnvironmentModule {
-  shouldShowAgentation(input: {
+  shouldShowAgentation: (input: {
     nodeEnv?: string;
     vercelEnv?: string;
-  }): boolean;
+  }) => boolean;
 }
 
 const environmentModuleUrl = new URL(

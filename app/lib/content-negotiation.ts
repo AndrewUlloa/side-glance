@@ -74,12 +74,12 @@ export const preferredRepresentation = (
     | undefined;
 
   for (const representation of REPRESENTATIONS) {
-    const match = entries
+    const [match] = entries
       .filter((entry) => matches(entry, representation))
       .sort(
         (left, right) =>
           right.specificity - left.specificity || left.position - right.position
-      )[0];
+      );
 
     if (!match || match.quality <= 0) {
       continue;
