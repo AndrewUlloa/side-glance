@@ -57,8 +57,9 @@ may be scoped to `staging` when the staging environment needs to differ. A custo
 staging domain is optional; Vercel's stable branch URL is sufficient by default.
 Cloudflare Web Analytics is automatic for the `sideglance.dev` zone; the app does
 not embed a Cloudflare analytics token. Vercel Web Analytics is part of the app.
-Production and Preview use the verified R2 development URL until
-`assets.sideglance.dev` is connected and the explicit asset cutover checklist passes.
+Production and Preview use `https://assets.sideglance.dev`, the verified custom
+domain attached directly to the production R2 bucket. Preserve the explicit asset
+verification and rollback checklist in `docs/assets.md`.
 
 Rollback is a Vercel promotion of the last known-good production deployment. A
 follow-up fix still moves through `staging` so the Git history and deployed state
