@@ -2516,14 +2516,6 @@ a {
   justify-items: center;
 }
 
-.minimal-theme-toggle-label {
-  padding: 0;
-  color: #5f6663;
-  font-size: 11px;
-  letter-spacing: -0.11px;
-  line-height: 1;
-}
-
 .minimal-theme-toggle {
   display: inline-flex;
   padding: 3px;

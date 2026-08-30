@@ -104,7 +104,7 @@ const LIFECYCLE_STATES: ReadonlyArray<{
 export function TerminalShowcase() {
   const [stage, setStage] = useState<number>(STORYBOARD_STAGE.waiting);
   const [isPlaybackPaused, setPlaybackPaused] = useState(false);
-  const [appearance, setAppearance] = useState<PlaygroundAppearance>("status");
+  const [appearance, setAppearance] = useState<PlaygroundAppearance>("heat");
   const shouldReduceMotion = useReducedMotion();
   const activeStateIndex =
     stage === STORYBOARD_STAGE.waiting
@@ -188,7 +188,6 @@ export function TerminalShowcase() {
             aria-label="Choose a Side Glance color model"
             className="minimal-theme-picker"
           >
-            <legend className="minimal-theme-toggle-label">Color model</legend>
             <div className="minimal-theme-toggle">
               <button
                 aria-pressed={appearance === "status"}

@@ -33,7 +33,7 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(showcase, /const phase = activeState\.phase/u);
   assert.match(
     showcase,
-    /const \[appearance, setAppearance\]\s*=\s*useState<PlaygroundAppearance>\("status"\)/u
+    /const \[appearance, setAppearance\]\s*=\s*useState<PlaygroundAppearance>\("heat"\)/u
   );
   assert.match(showcase, /terminalId:\s*"tmux_01"/u);
   assert.match(showcase, /terminalId:\s*"tmux_04"/u);
@@ -44,6 +44,8 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   );
   assert.match(showcase, /<button/u);
   assert.match(showcase, /aria-label="Choose a Side Glance color model"/u);
+  assert.doesNotMatch(showcase, />\s*Color model\s*</u);
+  assert.doesNotMatch(css, /\.minimal-theme-toggle-label/u);
   assert.match(showcase, /aria-pressed=\{appearance === "status"\}/u);
   assert.match(showcase, /aria-pressed=\{appearance === "heat"\}/u);
   assert.match(showcase, /onClick=\{\(\) => setAppearance\("status"\)\}/u);
