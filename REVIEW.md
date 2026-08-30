@@ -99,11 +99,10 @@ actions recorded for that release were:
    the protected workflow to publish npm and the immutable GitHub prerelease. The
    Homebrew tap remains a separate post-release pull request.
 
-The custom domain is optional for this candidate. The verified, content-addressed R2
-development origin is the selected temporary asset origin; Cloudflare documents the
-managed `r2.dev` endpoint as rate-limited and unsuitable for sustained production
-traffic, so `assets.sideglance.dev` remains the recommended later cutover after DNS and
-TLS verification.
+The content-addressed R2 assets now use `assets.sideglance.dev`, attached directly
+to the production bucket with minimum TLS 1.2. This removes the rate-limited managed
+development hostname from sustained production traffic while preserving immutable
+asset keys and the temporary origin for retained rollback deployments.
 
 ## Five-axis review
 

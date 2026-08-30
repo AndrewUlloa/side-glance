@@ -1,11 +1,11 @@
 # Public site assets
 
 Side Glance keeps the Next.js application on Vercel and serves substantial public
-media from the `side-glance-assets-prod` Cloudflare R2 bucket. The currently
-verified candidate origin is
-`https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev`. The custom hostname
-`assets.sideglance.dev` is not connected. Fonts, JavaScript, CSS, the favicon, and
-sub-kilobyte interface SVGs remain with the Vercel application.
+media from the `side-glance-assets-prod` Cloudflare R2 bucket through
+`https://assets.sideglance.dev`. The custom hostname is attached directly to the
+bucket with minimum TLS 1.2 so public traffic receives Cloudflare caching without
+depending on the rate-limited R2 development hostname. Fonts, JavaScript, CSS, the
+favicon, and sub-kilobyte interface SVGs remain with the Vercel application.
 
 ## Compression contract
 
@@ -39,8 +39,8 @@ Cache-Control: public, max-age=31536000, immutable
 
 ## Runtime configuration
 
-The application defaults to the verified R2 development URL until custom DNS and
-TLS pass the cutover checklist. Another origin can be selected at build time with:
+The application defaults to the verified custom asset domain. Another origin can
+be selected at build time for an isolated preview with:
 
 ```text
 NEXT_PUBLIC_ASSET_ORIGIN=https://preview-asset-origin.example
@@ -51,16 +51,18 @@ only read public immutable URLs. The loading sequence uses unoptimized Next.js
 images deliberately so R2 responses do not pass back through Vercel's
 `/_next/image` endpoint.
 
-## Domain cutover
+## Domain verification and rollback
 
-The `sideglance.dev` zone is active in the same Cloudflare account as the bucket.
-When the asset hostname is ready for cutover:
+The `sideglance.dev` zone and R2 bucket share the same Cloudflare account. The
+custom-domain cutover completed on August 30, 2026. Preserve these checks for every
+asset or DNS change:
 
-1. Connect `assets.sideglance.dev` to `side-glance-assets-prod` with minimum TLS 1.2.
+1. Confirm `assets.sideglance.dev` remains connected to `side-glance-assets-prod`
+   with minimum TLS 1.2.
 2. Verify every manifest URL and its `Cache-Control` and `Content-Type` headers.
 3. Warm an asset twice and confirm a Cloudflare cache hit on the custom domain.
-4. Change the manifest default and Vercel environment only after the custom-domain
-   verification is recorded.
+4. Keep the manifest default and Vercel Production and Preview environments set to
+   `https://assets.sideglance.dev`.
 5. Keep the temporary `r2.dev` public URL enabled while any retained Vercel
    deployment still references it. Disable it only after every retained rollback
    target has either been retired or rebuilt and verified against the custom

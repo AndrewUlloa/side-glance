@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("serves substantial site media from immutable R2 URLs without the Vercel image proxy", async () => {
+test("serves substantial site media from the custom R2 domain without the Vercel image proxy", async () => {
   const [
     layout,
     loadingSequence,
@@ -56,10 +56,8 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
   assert.match(ogStyles, /var\(--side-glance-hero-surface\)/u);
   assert.doesNotMatch(ogStyles, /url\("\/hero-surface\.png"\)/u);
   assert.equal(manifest.bucket, "side-glance-assets-prod");
-  assert.equal(
-    manifest.defaultOrigin,
-    "https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev"
-  );
+  assert.equal(manifest.defaultOrigin, "https://assets.sideglance.dev");
+  assert.doesNotMatch(siteAssets, /r2\.dev/u);
   assert.equal(manifest.cacheControl, "public, max-age=31536000, immutable");
   assert.equal(Object.keys(manifest.assets).length, 6);
   let totalBytes = 0;
