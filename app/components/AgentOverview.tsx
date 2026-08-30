@@ -117,7 +117,6 @@ export function AgentOverview() {
         initial={false}
         transition={introductionTransition}
       >
-        <p className="trust-eyebrow">Local-first agent attention</p>
         <h2 id="side-glance-overview">What Side Glance does</h2>
         {HOME_PAGE_CONTENT.sections[0].paragraphs.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>

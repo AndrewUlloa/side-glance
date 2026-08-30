@@ -118,6 +118,7 @@ test("server-rendered homepage contains a useful heading hierarchy and substanti
   assert.match(homepageSource, /<h2/u);
   assert.match(homepageSource, /What Side Glance does/u);
   assert.match(homepageSource, /When Side Glance helps/u);
+  assert.doesNotMatch(homepageSource, /Local-first agent attention/u);
   assert.ok(agentContent.length > 2500, "agent-readable content is too thin");
 });
 
