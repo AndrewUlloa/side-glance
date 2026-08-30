@@ -17,8 +17,11 @@ export async function collectAdoptionSnapshot({
   period,
   webEvents,
 }) {
-  validateDate(period.from, "from");
-  validateDate(period.to, "to");
+  const fromTimestamp = validateDate(period.from, "from");
+  const toTimestamp = validateDate(period.to, "to");
+  if (fromTimestamp > toTimestamp) {
+    throw new Error("--from must not be later than --to");
+  }
   const normalizedWebEvents = normalizeWebEvents(webEvents);
   const npmUrl = `https://api.npmjs.org/downloads/point/${period.from}:${period.to}/side-glance`;
 
@@ -26,7 +29,7 @@ export async function collectAdoptionSnapshot({
     fetchJson(fetchImpl, npmUrl, "npm downloads"),
     fetchJson(fetchImpl, HOMEBREW_ANALYTICS_API, "Homebrew analytics"),
     fetchJson(fetchImpl, REPOSITORY_API, "GitHub repository"),
-    fetchJson(
+    fetchPaginatedJson(
       fetchImpl,
       `${REPOSITORY_API}/releases?per_page=100`,
       "GitHub releases"
@@ -94,13 +97,61 @@ function isSideGlanceBinaryAsset(name) {
 }
 
 async function fetchJson(fetchImpl, url, label) {
+  const response = await fetchResponse(fetchImpl, url, label);
+  return response.json();
+}
+
+async function fetchPaginatedJson(fetchImpl, initialUrl, label) {
+  const items = [];
+  const visited = new Set();
+  let url = initialUrl;
+
+  while (url) {
+    if (visited.has(url)) {
+      throw new Error(`${label} pagination repeated a page`);
+    }
+    visited.add(url);
+
+    const response = await fetchResponse(fetchImpl, url, label);
+    const page = await response.json();
+    if (Array.isArray(page)) {
+      items.push(...page);
+    }
+    url = nextRepositoryPage(response.headers?.get("link"));
+  }
+
+  return items;
+}
+
+async function fetchResponse(fetchImpl, url, label) {
   const response = await fetchImpl(url, {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
     throw new Error(`${label} request failed (${response.status})`);
   }
-  return response.json();
+  return response;
+}
+
+function nextRepositoryPage(linkHeader) {
+  const nextLink = linkHeader
+    ?.split(",")
+    .find((link) => /;\s*rel="next"\s*$/u.test(link));
+  const match = nextLink?.match(/<([^>]+)>/u);
+  if (!match) {
+    return undefined;
+  }
+
+  const nextUrl = new URL(match[1]);
+  const repositoryUrl = new URL(REPOSITORY_API);
+  if (
+    nextUrl.protocol !== "https:" ||
+    nextUrl.origin !== repositoryUrl.origin ||
+    nextUrl.pathname !== `${repositoryUrl.pathname}/releases`
+  ) {
+    throw new Error("GitHub releases pagination returned an unexpected URL");
+  }
+  return nextUrl.href;
 }
 
 function normalizeWebEvents(events) {
@@ -118,6 +169,17 @@ function validateDate(value, label) {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(value ?? "")) {
     throw new Error(`--${label} must use YYYY-MM-DD`);
   }
+
+  const timestamp = Date.parse(`${value}T00:00:00.000Z`);
+  if (
+    !Number.isFinite(timestamp) ||
+    new Date(timestamp).toISOString().slice(0, 10) !== value
+  ) {
+    throw new Error(
+      `--${label} must be a valid calendar date in YYYY-MM-DD format`
+    );
+  }
+  return timestamp;
 }
 
 async function main() {
