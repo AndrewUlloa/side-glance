@@ -30,3 +30,11 @@ test("the shared header hides on downward scroll and returns after a small upwar
     /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.minimal-header\s*\{[^}]*transition:\s*none/u
   );
 });
+
+test("the shared header keeps a solid background while content scrolls beneath it", async () => {
+  const css = await read("app/globals.css");
+  const headerRule = css.match(/\.minimal-header\s*\{([^}]*)\}/u)?.[1] ?? "";
+
+  assert.match(headerRule, /background:\s*#fff/u);
+  assert.doesNotMatch(headerRule, /backdrop-filter/u);
+});
