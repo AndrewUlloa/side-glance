@@ -2330,6 +2330,14 @@ a {
   background: rgb(255 255 255 / 92%);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
+  transform: translateY(0);
+  transition: transform 200ms var(--ease-out-quad);
+  will-change: transform;
+}
+
+.minimal-header[data-scroll-state="hidden"] {
+  pointer-events: none;
+  transform: translateY(-100%);
 }
 
 :root[data-loading-stage="images"] .minimal-header {
@@ -3744,6 +3752,10 @@ a {
     filter: none;
     transform: none;
     will-change: auto;
+  }
+
+  .minimal-header {
+    transition: none;
   }
 
   :root[data-page-motion] .minimal-page-enter {
