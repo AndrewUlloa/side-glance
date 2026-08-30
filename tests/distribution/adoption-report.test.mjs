@@ -7,7 +7,10 @@ import {
   renderAdoptionReport,
 } from "../../scripts/analytics/adoption-report.mjs";
 
-const response = (body) => ({
+const response = (body, headers = {}) => ({
+  headers: {
+    get: (name) => headers[name.toLowerCase()] ?? null,
+  },
   json: async () => body,
   ok: true,
   status: 200,
@@ -38,14 +41,31 @@ test("compares web intent with npm and clearly bounded GitHub distribution signa
       });
     }
     if (String(url).endsWith("/releases?per_page=100")) {
+      return response(
+        [
+          {
+            assets: [
+              {
+                download_count: 11,
+                name: "side-glance-v0.1.0-beta.12-darwin-arm64.tar.gz",
+              },
+              { download_count: 4, name: "checksums.txt" },
+            ],
+          },
+        ],
+        {
+          link: '<https://api.github.com/repos/AndrewUlloa/side-glance/releases?per_page=100&page=2>; rel="next"',
+        }
+      );
+    }
+    if (String(url).endsWith("/releases?per_page=100&page=2")) {
       return response([
         {
           assets: [
             {
-              download_count: 11,
-              name: "side-glance-v0.1.0-beta.12-darwin-arm64.tar.gz",
+              download_count: 6,
+              name: "side-glance-v0.1.0-beta.11-linux-x64.tar.gz",
             },
-            { download_count: 4, name: "checksums.txt" },
           ],
         },
       ]);
@@ -72,8 +92,8 @@ test("compares web intent with npm and clearly bounded GitHub distribution signa
   assert.equal(snapshot.homebrew.installOnRequestEvents, 4);
   assert.equal(snapshot.github.stars, 19);
   assert.equal(snapshot.github.forks, 3);
-  assert.equal(snapshot.github.releaseAssetDownloads, 11);
-  assert.equal(requests.length, 4);
+  assert.equal(snapshot.github.releaseAssetDownloads, 17);
+  assert.equal(requests.length, 5);
 
   const markdown = renderAdoptionReport(snapshot);
   assert.match(markdown, /Homebrew install-on-request/u);
@@ -92,6 +112,32 @@ test("fails clearly when an adoption source is unavailable", async () => {
     }),
     /request failed \(503\)/u
   );
+});
+
+test("rejects invalid or reversed periods before requesting adoption sources", async () => {
+  let requestCount = 0;
+  const fetchImpl = async () => {
+    requestCount += 1;
+    return response({});
+  };
+
+  await assert.rejects(
+    collectAdoptionSnapshot({
+      fetchImpl,
+      period: { from: "2026-02-30", to: "2026-03-01" },
+      webEvents: {},
+    }),
+    /--from must be a valid calendar date in YYYY-MM-DD format/u
+  );
+  await assert.rejects(
+    collectAdoptionSnapshot({
+      fetchImpl,
+      period: { from: "2026-03-02", to: "2026-03-01" },
+      webEvents: {},
+    }),
+    /--from must not be later than --to/u
+  );
+  assert.equal(requestCount, 0);
 });
 
 test("parses the documented adoption-report command", () => {
