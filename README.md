@@ -18,7 +18,7 @@ into a calm terminal or tmux status layer.</p>
 [Quick start](#quick-start) · [Lifecycle](#lifecycle-at-a-glance) · [Providers](#providers) · [Safety](#security-privacy-and-recovery) · [Documentation](#documentation) · [Releases](https://github.com/AndrewUlloa/side-glance/releases)
 
 <p align="center">
-  <img alt="Four Side Glance terminals showing Working, Ready · short, Waiting, and Ready · long with the Heat theme." src="./assets/readme/side-glance-lifecycle.gif" width="800">
+  <img alt="Four Side Glance terminals showing Working, Ready · short, Waiting, and Ready · long with the Heat theme." src="./assets/readme/side-glance-heat-grid.gif" width="800">
 </p>
 
 Install with Homebrew, then run the guided setup:

@@ -83,7 +83,7 @@ test("documents only durable installation and truthful beta availability", async
 
 test("ships a compact favicon-ordered Heat GIF for the root README", async () => {
   const readme = await text("README.md");
-  const assetPath = "assets/readme/side-glance-lifecycle.gif";
+  const assetPath = "assets/readme/side-glance-heat-grid.gif";
   const asset = await readFile(path.join(repository, assetPath));
 
   assert.match(readme, new RegExp(assetPath.replaceAll("/", "\\/"), "u"));
