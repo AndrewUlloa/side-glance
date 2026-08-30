@@ -47,11 +47,11 @@ const DETAILS = {
   },
   items: [
     {
-      title: "When Side Glance helps",
+      title: HOME_PAGE_CONTENT.sections[1].heading,
       paragraphs: HOME_PAGE_CONTENT.sections[1].paragraphs,
     },
     {
-      title: "How it fits your workflow",
+      title: HOME_PAGE_CONTENT.sections[2].heading,
       paragraphs: HOME_PAGE_CONTENT.sections[2].paragraphs,
     },
   ],
@@ -117,7 +117,9 @@ export function AgentOverview() {
         initial={false}
         transition={introductionTransition}
       >
-        <h2 id="side-glance-overview">What Side Glance does</h2>
+        <h2 id="side-glance-overview">
+          {HOME_PAGE_CONTENT.sections[0].heading}
+        </h2>
         {HOME_PAGE_CONTENT.sections[0].paragraphs.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}

@@ -1,16 +1,12 @@
-import type { Metadata } from "next";
-
 import { TrustPage } from "../components/TrustPage";
 import { PRIVACY_PAGE_CONTENT } from "../lib/agent-content";
+import { buildPageMetadata } from "../lib/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Privacy — Side Glance",
-  description: PRIVACY_PAGE_CONTENT.description,
-  alternates: {
-    canonical: "/privacy",
-    types: { "text/markdown": "/privacy.md" },
-  },
-};
+export const metadata = buildPageMetadata({
+  canonical: "/privacy",
+  page: PRIVACY_PAGE_CONTENT,
+  title: "Side Glance Privacy | Website and Local CLI Data",
+});
 
 export default function PrivacyPage() {
   return <TrustPage page={PRIVACY_PAGE_CONTENT} />;

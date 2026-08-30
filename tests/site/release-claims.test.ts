@@ -115,7 +115,7 @@ test("keeps guided setup, notification coverage, and recovery guidance aligned",
     documentation,
     /next `side-glance init` or `side-glance doctor`/u
   );
-  assert.match(siteHeader, /install with Homebrew and run guided setup/u);
+  assert.match(siteHeader, /copy Homebrew and guided setup commands/u);
   assert.match(
     installButton,
     /brew install AndrewUlloa\/tap\/side-glance\\nside-glance init/u

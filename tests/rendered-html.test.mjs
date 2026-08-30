@@ -29,18 +29,18 @@ test("server-renders the focused Side Glance launch hero", async () => {
   const text = renderedText(html);
   assert.match(
     html,
-    /<title>Side Glance — Long loops\. Short glances\.<\/title>/i
+    /<title>Coding Agent Status for Terminal &amp; tmux \| Side Glance<\/title>/i
   );
   assert.match(
     html,
-    /<meta name="description" content="Side Glance is a local-first attention layer for coding-agent CLIs\. See working, waiting, ready, and failed state in your terminal or tmux\."\/>/i
+    /<meta name="description" content="See when Claude Code, Codex, and other coding agents are working, waiting, ready, or failed\. Side Glance keeps status local in your terminal or tmux\."\/>/i
   );
   assert.match(text, /Long loops\. Short glances\./);
   assert.match(text, /Know which loop needs judgment\./);
-  assert.match(text, /Let the others keep running\./);
+  assert.match(text, /Without reopening every terminal tab or pane\./);
   assert.match(text, /What Side Glance does/);
-  assert.match(text, /When Side Glance helps/);
-  assert.match(text, /How it fits your workflow/);
+  assert.match(text, /Agent sessions\. One clear glance\./);
+  assert.match(text, /How it works/);
   assert.ok(
     text.length >= 500,
     `raw homepage text is only ${text.length} chars`
@@ -80,7 +80,7 @@ test("server-renders the focused Side Glance launch hero", async () => {
   assert.match(text, /Install/);
   assert.match(
     html,
-    /install with Homebrew and run guided setup · stable · v0\.1/
+    /copy Homebrew and guided setup commands · stable · v0\.1/
   );
   assert.match(text, /Claude Code/);
   assert.match(text, /Opus 5 \(1M context\)/);
@@ -191,7 +191,7 @@ test("keeps the focused site accessible, responsive, and product-safe", async ()
   assert.match(siteHeader, /aria-label="Side Glance home"/);
   assert.match(
     siteHeader,
-    /idleAriaLabel="install with Homebrew and run guided setup/u
+    /idleAriaLabel="copy Homebrew and guided setup commands/u
   );
   assert.match(page, /<TerminalShowcase\s*\/>/);
   assert.match(

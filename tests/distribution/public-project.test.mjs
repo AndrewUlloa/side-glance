@@ -71,7 +71,7 @@ test("documents only durable installation and truthful stable availability", asy
 
   const siteHeader = await text("app/components/SiteHeader.tsx");
   assert.match(siteHeader, /stable · v0\.1/u);
-  assert.match(siteHeader, /install with Homebrew and run guided setup/u);
+  assert.match(siteHeader, /copy Homebrew and guided setup commands/u);
   assert.doesNotMatch(
     siteHeader,
     /available after the first verified beta release/u
