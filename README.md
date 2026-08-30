@@ -17,6 +17,10 @@ into a calm terminal or tmux status layer.</p>
 
 [Quick start](#quick-start) · [Lifecycle](#lifecycle-at-a-glance) · [Providers](#providers) · [Safety](#security-privacy-and-recovery) · [Documentation](#documentation) · [Releases](https://github.com/AndrewUlloa/side-glance/releases)
 
+<p align="center">
+  <img alt="Side Glance terminal cycling through Working, Waiting, short and long Ready, and Failed lifecycle states." src="./assets/readme/side-glance-lifecycle.gif" width="640">
+</p>
+
 Install with Homebrew, then run the guided setup:
 
 ```bash

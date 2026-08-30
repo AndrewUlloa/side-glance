@@ -81,6 +81,18 @@ test("documents only durable installation and truthful beta availability", async
   assert.match(releaseGuide, /ad-hoc signed/u);
 });
 
+test("ships a compact lifecycle GIF for the root README", async () => {
+  const readme = await text("README.md");
+  const assetPath = "assets/readme/side-glance-lifecycle.gif";
+  const asset = await readFile(path.join(repository, assetPath));
+
+  assert.match(readme, new RegExp(assetPath.replaceAll("/", "\\/"), "u"));
+  assert.equal(asset.subarray(0, 6).toString("ascii"), "GIF89a");
+  assert.equal(asset.readUInt16LE(6), 640);
+  assert.equal(asset.readUInt16LE(8), 450);
+  assert.ok(asset.byteLength < 100_000, "README GIF should stay below 100 KB");
+});
+
 test("publishes one consistent Apache-2.0 license surface", async () => {
   const rootLicense = await text("LICENSE");
   const packageLicense = await text("packages/cli/LICENSE");
