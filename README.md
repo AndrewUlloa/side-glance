@@ -11,7 +11,9 @@ without reopening every terminal tab or pane.</p>
 No dashboard. No hosted relay. No conversation content in its state protocol.</p>
 
 <a href="https://www.npmjs.com/package/side-glance"><img alt="npm version" src="https://img.shields.io/npm/v/side-glance?style=flat-square"></a>
+<a href="https://www.npmjs.com/package/side-glance"><img alt="npm downloads" src="https://img.shields.io/npm/dw/side-glance?style=flat-square"></a>
 <a href="https://github.com/AndrewUlloa/side-glance/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/AndrewUlloa/side-glance?style=flat-square"></a>
+<a href="https://github.com/AndrewUlloa/side-glance/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/AndrewUlloa/side-glance?style=flat-square"></a>
 <a href="https://github.com/AndrewUlloa/side-glance/blob/main/LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/npm/l/side-glance?style=flat-square"></a>
 
 </div>
