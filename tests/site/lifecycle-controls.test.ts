@@ -114,6 +114,10 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   );
   assert.match(css, /\.minimal-lifecycle\s*\{[^}]*width:\s*fit-content/u);
   assert.match(css, /\.minimal-lifecycle-button\s*\{[^}]*cursor:\s*pointer/u);
+  assert.match(
+    css,
+    /\.minimal-lifecycle-button\s*\{[^}]*padding-inline-start:\s*var\(--spacing-lifecycle-y\)/u
+  );
   assert.match(css, /\.minimal-lifecycle-button\[aria-pressed="true"\]/u);
   assert.match(css, /\.minimal-theme-toggle\s*\{/u);
   assert.match(css, /\.minimal-preview-control-label\s*\{/u);

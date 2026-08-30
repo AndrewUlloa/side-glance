@@ -2628,6 +2628,7 @@ a {
   border: 0;
   align-items: center;
   justify-content: center;
+  padding-inline-start: var(--spacing-lifecycle-y);
   background: #f6f5f3;
   color: #000;
   font-family: var(--font-alan-sans);
@@ -3522,6 +3523,7 @@ a {
 
   .minimal-lifecycle-button {
     padding: 0.5rem 0.75rem;
+    padding-inline-start: 0.5rem;
     font-size: 14px;
   }
 
