@@ -33,7 +33,7 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(showcase, /const phase = activeState\.phase/u);
   assert.match(
     showcase,
-    /const \[appearance, setAppearance\]\s*=\s*useState<PlaygroundAppearance>\("heat"\)/u
+    /const \[appearance, setAppearance\]\s*=\s*useState<PlaygroundAppearance>\("status"\)/u
   );
   assert.match(showcase, /terminalId:\s*"tmux_01"/u);
   assert.match(showcase, /terminalId:\s*"tmux_04"/u);
@@ -43,15 +43,21 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
     /<InteractiveClaudeTerminal\s+appearance=\{appearance\}\s+elapsedSeconds=\{activeState\.elapsedSeconds\}\s+phase=\{phase\}\s+scenario=\{activeState\.scenario\}\s+terminalId=\{activeState\.terminalId\}\s*\/>/u
   );
   assert.match(showcase, /<button/u);
-  assert.match(showcase, /aria-label="Choose a Side Glance color model"/u);
+  assert.match(showcase, />\s*How should finished work look\?\s*</u);
+  assert.match(showcase, />\s*Ready stays green\s*</u);
+  assert.match(showcase, />\s*Ready warms with time\s*</u);
+  assert.match(showcase, />\s*Preview a moment\s*</u);
   assert.doesNotMatch(showcase, />\s*Color model\s*</u);
-  assert.doesNotMatch(css, /\.minimal-theme-toggle-label/u);
   assert.match(showcase, /aria-pressed=\{appearance === "status"\}/u);
   assert.match(showcase, /aria-pressed=\{appearance === "heat"\}/u);
-  assert.match(showcase, /onClick=\{\(\) => setAppearance\("status"\)\}/u);
-  assert.match(showcase, /onClick=\{\(\) => setAppearance\("heat"\)\}/u);
+  assert.match(showcase, /onClick=\{\(\) => selectAppearance\("status"\)\}/u);
+  assert.match(showcase, /onClick=\{\(\) => selectAppearance\("heat"\)\}/u);
   assert.match(showcase, />\s*Status\s*</u);
   assert.match(showcase, />\s*Heat\s*</u);
+  assert.match(
+    showcase,
+    /const selectAppearance = \(nextAppearance: PlaygroundAppearance\) => \{[\s\S]*setPlaybackPaused\(true\);[\s\S]*setStage\(INITIAL_STATE_INDEX\);[\s\S]*setAppearance\(nextAppearance\);[\s\S]*\};/u
+  );
   assert.match(showcase, /className="minimal-lifecycle gap-lifecycle-gap"/u);
   assert.match(showcase, /aria-pressed=\{activeState\.id === state\.id\}/u);
   assert.match(showcase, /onClick=\{\(\) => selectState\(index\)\}/u);
@@ -72,11 +78,11 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.doesNotMatch(showcase, /install-icon\.svg|from "next\/image"/u);
   assert.match(
     showcase,
-    /Ready stays green at every duration[\s\S]*Red means failure/u
+    /Ready stays green at every duration[\s\S]*Failure is red/u
   );
   assert.match(
     showcase,
-    /Successful Ready turns warm with duration[\s\S]*Failure is red immediately/u
+    /Ready warms from green toward red as runtime grows[\s\S]*Failure is\s*red immediately/u
   );
   assert.match(
     showcase,
@@ -105,6 +111,9 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(css, /\.minimal-lifecycle-button\s*\{[^}]*cursor:\s*pointer/u);
   assert.match(css, /\.minimal-lifecycle-button\[aria-pressed="true"\]/u);
   assert.match(css, /\.minimal-theme-toggle\s*\{/u);
+  assert.match(css, /\.minimal-preview-control-label\s*\{/u);
+  assert.match(css, /\.minimal-theme-toggle-detail\s*\{/u);
+  assert.match(css, /\.minimal-lifecycle-picker\s*\{/u);
   assert.match(css, /\.minimal-theme-toggle-button\[aria-pressed="true"\]/u);
   assert.match(css, /\.minimal-lifecycle-progress\s*\{/u);
   assert.match(css, /\.minimal-lifecycle-progress-value\s*\{/u);

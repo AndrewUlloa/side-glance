@@ -104,7 +104,7 @@ const LIFECYCLE_STATES: ReadonlyArray<{
 export function TerminalShowcase() {
   const [stage, setStage] = useState<number>(STORYBOARD_STAGE.waiting);
   const [isPlaybackPaused, setPlaybackPaused] = useState(false);
-  const [appearance, setAppearance] = useState<PlaygroundAppearance>("heat");
+  const [appearance, setAppearance] = useState<PlaygroundAppearance>("status");
   const shouldReduceMotion = useReducedMotion();
   const activeStateIndex =
     stage === STORYBOARD_STAGE.waiting
@@ -170,6 +170,12 @@ export function TerminalShowcase() {
     setStage(index);
   };
 
+  const selectAppearance = (nextAppearance: PlaygroundAppearance) => {
+    setPlaybackPaused(true);
+    setStage(INITIAL_STATE_INDEX);
+    setAppearance(nextAppearance);
+  };
+
   return (
     <figure className="minimal-terminal-showcase gap-showcase">
       <div className="minimal-terminal-surface rounded-terminal-stage px-terminal-stage-x py-terminal-stage-y">
@@ -184,80 +190,93 @@ export function TerminalShowcase() {
 
       <figcaption>
         <div className="minimal-lifecycle-controls">
-          <fieldset
-            aria-label="Choose a Side Glance color model"
-            className="minimal-theme-picker"
-          >
+          <fieldset className="minimal-theme-picker">
+            <legend className="minimal-preview-control-label">
+              How should finished work look?
+            </legend>
             <div className="minimal-theme-toggle">
               <button
                 aria-pressed={appearance === "status"}
                 className="minimal-theme-toggle-button"
-                onClick={() => setAppearance("status")}
+                onClick={() => selectAppearance("status")}
                 type="button"
               >
-                Status
+                <span>Status</span>
+                <span className="minimal-theme-toggle-detail">
+                  Ready stays green
+                </span>
               </button>
               <button
                 aria-pressed={appearance === "heat"}
                 className="minimal-theme-toggle-button"
-                onClick={() => setAppearance("heat")}
+                onClick={() => selectAppearance("heat")}
                 type="button"
               >
-                Heat
+                <span>Heat</span>
+                <span className="minimal-theme-toggle-detail">
+                  Ready warms with time
+                </span>
               </button>
             </div>
+
+            <p aria-live="polite" className="minimal-lifecycle-explanation">
+              {appearance === "status" ? (
+                <>Ready stays green at every duration. Failure is red.</>
+              ) : (
+                <>
+                  Ready warms from green toward red as runtime grows. Failure is
+                  red immediately.
+                </>
+              )}
+            </p>
           </fieldset>
 
-          <ul
-            aria-label="Choose a Side Glance terminal moment"
-            className="minimal-lifecycle gap-lifecycle-gap"
-          >
-            {LIFECYCLE_STATES.map((state, index) => {
-              const visual = visualForPhase(
-                state.phase,
-                state.elapsedSeconds,
-                appearance
-              );
-              const isActive = activeState.id === state.id;
-              const buttonStyle = {
-                "--lifecycle-accent": `#${visual.accent}`,
-              } as CSSProperties;
+          <div className="minimal-lifecycle-picker">
+            <p
+              className="minimal-preview-control-label"
+              id="side-glance-moment-label"
+            >
+              Preview a moment
+            </p>
+            <ul
+              aria-labelledby="side-glance-moment-label"
+              className="minimal-lifecycle gap-lifecycle-gap"
+            >
+              {LIFECYCLE_STATES.map((state, index) => {
+                const visual = visualForPhase(
+                  state.phase,
+                  state.elapsedSeconds,
+                  appearance
+                );
+                const isActive = activeState.id === state.id;
+                const buttonStyle = {
+                  "--lifecycle-accent": `#${visual.accent}`,
+                } as CSSProperties;
 
-              return (
-                <li className="minimal-lifecycle-state" key={state.id}>
-                  <button
-                    aria-controls="side-glance-terminal"
-                    aria-pressed={activeState.id === state.id}
-                    className="minimal-lifecycle-button gap-lifecycle-state rounded-lifecycle px-lifecycle-x py-lifecycle-y text-lifecycle"
-                    data-state={state.id}
-                    onClick={() => selectState(index)}
-                    style={buttonStyle}
-                    type="button"
-                  >
-                    <LifecycleProgressRing
-                      isActive={isActive}
-                      isPlaying={isActive && isPlaybackRunning}
-                      key={isActive ? stage : state.id}
-                    />
-                    <span>{state.label}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                return (
+                  <li className="minimal-lifecycle-state" key={state.id}>
+                    <button
+                      aria-controls="side-glance-terminal"
+                      aria-pressed={activeState.id === state.id}
+                      className="minimal-lifecycle-button gap-lifecycle-state rounded-lifecycle px-lifecycle-x py-lifecycle-y text-lifecycle"
+                      data-state={state.id}
+                      onClick={() => selectState(index)}
+                      style={buttonStyle}
+                      type="button"
+                    >
+                      <LifecycleProgressRing
+                        isActive={isActive}
+                        isPlaying={isActive && isPlaybackRunning}
+                        key={isActive ? stage : state.id}
+                      />
+                      <span>{state.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
-
-        <p aria-live="polite" className="minimal-lifecycle-explanation">
-          {appearance === "status" ? (
-            <>Ready stays green at every duration. Red means failure.</>
-          ) : (
-            <>
-              Successful Ready turns warm with duration; under 10s stays quiet.
-              This preview uses a 5m ceiling; Side Glance adapts it from recent
-              local turns. Failure is red immediately.
-            </>
-          )}
-        </p>
 
         <span
           aria-live={isPlaybackRunning ? "off" : "polite"}

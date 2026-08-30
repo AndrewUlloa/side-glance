@@ -2499,21 +2499,33 @@ a {
 }
 
 .minimal-lifecycle-controls {
-  display: flex;
+  display: grid;
+  width: 100%;
   max-width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 20px;
+  justify-items: center;
 }
 
 .minimal-theme-picker {
   display: grid;
+  max-width: 100%;
   padding: 0;
   border: 0;
-  gap: 4px;
+  gap: 8px;
   font-family: var(--font-alan-sans);
   justify-items: center;
+}
+
+.minimal-preview-control-label {
+  margin: 0;
+  padding: 0;
+  color: #343937;
+  font-family: var(--font-alan-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.13px;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .minimal-theme-toggle {
@@ -2531,14 +2543,19 @@ a {
 
 .minimal-theme-toggle-button {
   appearance: none;
-  min-height: 30px;
-  padding: 0 11px;
+  display: grid;
+  min-width: 150px;
+  min-height: 48px;
+  padding: 7px 13px;
   border: 0;
   border-radius: 9999px;
   background: transparent;
   color: #343937;
   cursor: pointer;
   font: inherit;
+  gap: 2px;
+  justify-items: center;
+  line-height: 1.15;
   transition:
     background-color 160ms ease,
     box-shadow 160ms ease,
@@ -2553,6 +2570,16 @@ a {
   background: #fff;
   color: #000;
   box-shadow: 0 1px 3px rgb(0 0 0 / 14%);
+}
+
+.minimal-theme-toggle-detail {
+  color: #6c7470;
+  font-size: 11px;
+  letter-spacing: -0.11px;
+}
+
+.minimal-theme-toggle-button[aria-pressed="true"] .minimal-theme-toggle-detail {
+  color: #343937;
 }
 
 .minimal-theme-toggle-button:focus-visible {
@@ -2570,6 +2597,13 @@ a {
   justify-content: center;
   flex-wrap: wrap;
   list-style: none;
+}
+
+.minimal-lifecycle-picker {
+  display: grid;
+  max-width: 100%;
+  gap: 8px;
+  justify-items: center;
 }
 
 .minimal-lifecycle-state {
@@ -3547,6 +3581,16 @@ a {
   .site-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .minimal-theme-picker,
+  .minimal-theme-toggle {
+    width: 100%;
+  }
+
+  .minimal-theme-toggle-button {
+    min-width: 0;
+    flex: 1;
   }
 
   .mock-terminal {
