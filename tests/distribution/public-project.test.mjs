@@ -38,14 +38,14 @@ test("contains the public project's security, contribution, support, and governa
   assert.match(await text(".github/CODEOWNERS"), /@AndrewUlloa/u);
 });
 
-test("documents only durable installation and truthful beta availability", async () => {
+test("documents only durable installation and truthful stable availability", async () => {
   const readme = await text("README.md");
   assert.doesNotMatch(readme, /npm link/u);
-  assert.match(readme, /npm install --global side-glance@beta/u);
+  assert.match(readme, /npm install --global side-glance@latest/u);
   assert.match(readme, /brew install AndrewUlloa\/tap\/side-glance/u);
   assert.match(readme, /Intel macOS is experimental/u);
   assert.match(readme, /npm install --global \.\/packages\/cli/u);
-  assert.match(readme, /available as a beta package/iu);
+  assert.match(readme, /v0\.1 is stable/iu);
   assert.match(readme, /https:\/\/sideglance\.dev/u);
   assert.match(readme, /CLI command[\s\S]{0,200}`PATH`/iu);
   assert.match(readme, /desktop\s+app[\s\S]{0,120}may still be usable/iu);
@@ -70,7 +70,7 @@ test("documents only durable installation and truthful beta availability", async
   assert.match(packageReadme, /`side-glance run`[\s\S]{0,160}fallback/iu);
 
   const siteHeader = await text("app/components/SiteHeader.tsx");
-  assert.match(siteHeader, /public beta · v0\.1/u);
+  assert.match(siteHeader, /stable · v0\.1/u);
   assert.match(siteHeader, /install with Homebrew and run guided setup/u);
   assert.doesNotMatch(
     siteHeader,

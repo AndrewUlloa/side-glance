@@ -44,9 +44,9 @@ The release workflow rejects private repositories, forks, unprotected tags, tags
 
 ## npm dist-tag policy
 
-Prereleases update only npm's `beta` tag. The initial beta.1 publication also left
-`latest` pointing at beta.1, so an unqualified install resolves that old build until
-the first stable release deliberately replaces it. Check the live dist-tags instead
+Prereleases update only npm's `beta` tag; stable releases update `latest`. The
+initial beta.1 publication also left `latest` pointing at beta.1, so the v0.1.0
+stable workflow must deliberately replace it. Check the live dist-tags instead
 of encoding their current value in release copy. Do not move `latest` to another prerelease: [npm's dist-tag
 contract](https://docs.npmjs.com/cli/v11/commands/npm-dist-tag/) recommends channels
 such as `beta` for unstable versions and reserves `latest` for the normal unqualified
@@ -55,14 +55,14 @@ install path.
 npm rejects removing this package's `latest` tag, so cleanup is not a beta release
 step. [Trusted-publishing OIDC](https://docs.npmjs.com/trusted-publishers/) supports
 `npm publish`, not arbitrary dist-tag maintenance; the release workflow must not gain
-a long-lived token for that purpose. Until the first stable release creates a new
-`latest`, every public installation example remains explicit about
+a long-lived token for that purpose. Stable public installation examples use
+`side-glance@latest`; prerelease testing remains explicit about
 `side-glance@beta`.
 
 ## Artifact policy
 
-- Supported beta artifacts: macOS arm64, Linux x64 glibc, and Linux arm64 glibc.
-- Intel macOS is an experimental beta artifact because Node does not regularly test that SEA path.
+- Supported v0.1 artifacts: macOS arm64, Linux x64 glibc, and Linux arm64 glibc.
+- Intel macOS is an experimental artifact because Node does not regularly test that SEA path.
 - Windows, Alpine/musl, and other platforms are not supported yet.
 - macOS artifacts are ad-hoc signed for Mach-O launch unless a protected signing job with Developer ID and notarization is added. Do not call them Apple-notarized or Developer-signed.
 - `SHA256SUMS` authenticates downloaded bytes only when obtained through the trusted GitHub release. GitHub attestations provide the workflow provenance record.
@@ -79,7 +79,8 @@ appropriate only when the tagged workflow and its assembled bytes remain valid.
 
 After the release finishes, verify GitHub's immutable-release attestation,
 download the public artifacts again, verify `SHA256SUMS`, execute the Linux x64
-binary, compare npm integrity, verify that `beta` moved while `latest` did not, and
+binary, compare npm integrity, verify that the intended dist-tag moved while the
+other channel did not, and
 open a separate pull request in
 `AndrewUlloa/homebrew-tap` using the generated `side-glance.rb`. Merge that pull
 request only after every `brew test-bot` platform passes.

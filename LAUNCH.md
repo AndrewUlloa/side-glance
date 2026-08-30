@@ -1,12 +1,10 @@
 # Launch and rollback
 
-Side Glance is a beta. Version `0.1.0-beta.11` is public on npm, GitHub Releases,
-and the Homebrew tap. It ships semantic lifecycle colors, aggregate Claude
-readiness, truly adaptive Heat, guarded user theme control, guided init theme
-selection, the interactive color-model preview, secure normal-command terminal
-discovery, controlled legacy Stoplight migration, and guarded fresh-tab cleanup.
-The native Terminal.app compatibility correction is merged to protected `staging`
-and prepared as the still-unpublished `0.1.0-beta.12` release candidate.
+Side Glance `0.1.0-beta.12` is the latest public prerelease on npm and GitHub.
+The dedicated `0.1.0` release preparation promotes that verified lifecycle,
+guided setup, secure terminal discovery, theme control, and fresh-tab behavior to
+the first stable release without changing runtime semantics. Stable npm and npx
+guidance uses `@latest`; provider and platform evidence labels remain unchanged.
 
 ## Production deployment status
 
@@ -19,9 +17,10 @@ and prepared as the still-unpublished `0.1.0-beta.12` release candidate.
   `side-glance-assets-prod` R2 bucket with minimum TLS 1.2
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
-- Tagged beta.11 production deployment: `dpl_4xtEVYmKpyPesTsH5KswrUEd5zCU`
-- Tagged beta.11 immutable deployment URL: <https://side-glance-6whi8mebx-andrew-243s-projects.vercel.app>
-- Tagged beta.11 source commit: `9594905b1cde5d1baddf36fc698f4304b0f1160b`
+- Verified beta.11 deployment: `dpl_4xtEVYmKpyPesTsH5KswrUEd5zCU`
+- Verified beta.11 immutable URL: <https://side-glance-6whi8mebx-andrew-243s-projects.vercel.app>
+- The stable candidate's exact production deployment SHA must be recorded after
+  protected `staging` promotion and before `v0.1.0` is tagged.
 - The canonical Vercel `npm run build` path passed on Node 24 and the public URL
   returned HTTP 200 with Side Glance metadata and rendered copy.
 - Vercel's Git integration creates previews for pull-request commits; the recorded
@@ -41,23 +40,17 @@ The prior known-good production deployment is
 `dpl_6Md5TDwM4tbiAATK6BvePWqSxDDY`. It remains Vercel rollback evidence; immutable
 historical deployment identifiers are not rewritten during a product rename.
 
-## npm beta status and next candidate
+## npm and GitHub release status
 
-- Current public release: `side-glance@0.1.0-beta.11`
-- Prepared candidate: `side-glance@0.1.0-beta.12` (unused; not published)
-- Channel: `beta`
-- Status: beta.12 release preparation is in review; until its protected promotion
-  and tag workflow succeed, `beta` points to beta.11 while `latest` deliberately
-  remains beta.1
-- Previously published: `side-glance@0.1.0-beta.10`, `side-glance@0.1.0-beta.9`,
-  `side-glance@0.1.0-beta.8`,
-  `side-glance@0.1.0-beta.7`,
-  `side-glance@0.1.0-beta.6`, `side-glance@0.1.0-beta.5`,
-  `side-glance@0.1.0-beta.4`, `side-glance@0.1.0-beta.3`, and
-  `side-glance@0.1.0-beta.1`
+- Current public prerelease: `side-glance@0.1.0-beta.12`
+- Prepared stable candidate: `side-glance@0.1.0`
+- Intended stable channel: npm `latest` and GitHub Latest Release
+- Current live dist-tags before stable publication: `beta` points to beta.12 and
+  `latest` points to the historical beta.1 ownership publication
+- Stable publication must move only `latest`; `beta` remains on immutable beta.12
 - Unpublished attempt: the protected `v0.1.0-beta.2` workflow stopped at its npm
   dry-run; no npm package or GitHub Release was published.
-- Current beta.11 integrity: `sha512-B2XrD7AY8v5yqru7xbnlsZEIQTFbYk/XvxXKbMCVjVXTY1dhKBOPCwaNdZL2Ty43Ugdadp6976LoC+Y8GgRLbw==`
+- Current beta.12 integrity: `sha512-yZINagw7cux3mx0NXnRKZraD+0w9t9NsMUCv91RVXACy2WQfdW0izWFev8MxGVrEyFbSsLmz33RH0YwziIdQnw==`
 - Every candidate tarball must contain only `LICENSE`, `README.md`,
   `dist/side-glance.mjs`, and `package.json`.
 
@@ -70,15 +63,12 @@ webpack path passed and the local production server passed desktop and 390×844
 mobile layout, keyboard focus, copy/replay interaction, reduced motion, console,
 network, and overflow checks.
 
-Beta.11 passed every repository gate, exact-SHA-protected CI, the production Vercel
-deployment, the protected tag workflow, npm trusted publishing, immutable GitHub
-Release verification, checksums, and build attestations. Fresh public npx enhanced
-and `NO_COLOR` preview-only flows passed under Node 24.18.0. All four native
-archives passed their standalone jobs; the downloaded Apple Silicon archive was
-executed again locally. Homebrew PR #9 passed Linux, Apple Silicon macOS, and
-experimental Intel macOS `brew test-bot`; the public tap upgrade from beta.10 to
-beta.11 and the installed formula test passed without running setup or changing
-provider configuration.
+Beta.12 published on 2026-08-27 through the protected workflow as an immutable
+GitHub prerelease and Apache-2.0 npm package. Its public release has the npm
+tarball, release manifest, `SHA256SUMS`, generated formula, three supported native
+archives, and the experimental Intel macOS archive. Stable preparation reruns
+every repository, exact-SHA CI, Vercel, package, native, browser, and public
+verification gate rather than treating the prerelease as sufficient evidence.
 
 ## Vercel Preview annotation tooling
 
@@ -107,7 +97,7 @@ brew install AndrewUlloa/tap/side-glance
 side-glance init
 ```
 
-During the beta, `npx side-glance@beta init` is the public bootstrap/trial path.
+`npx side-glance@latest init` is the stable public bootstrap/trial path.
 The npx runner may discover and install with separate consent, but only an
 exact-version durable executable may write provider hooks. `side-glance setup` is
 the exact durable alias for `init`.
@@ -144,26 +134,18 @@ journal is retained.
 
 Follow [docs/releasing.md](./docs/releasing.md). The repository is public, its
 release and branch protections are active, private vulnerability reporting and
-secret scanning are enabled, and future GitHub Releases are immutable. The
-beta.11 gates are complete:
-
-- fresh terminal tab reset feature PR #85 and release preparation PR #86 merged to
-  protected `staging` with full checks;
-- literal `staging` → `main` promotion PR #87 preserved exact staging ancestry;
-- protected `main` CI and the production Vercel deployment passed at the tagged SHA;
-- annotated tag `v0.1.0-beta.11` produced the verified npm and immutable GitHub prerelease;
-- npm `beta` points to beta.11 while `latest` remains beta.1, so beta examples stay explicit about `@beta`;
-- generated-formula Homebrew PR #9 passed every platform and merged only after
-  immutable artifact URLs and hashes existed; public upgrade and formula smokes passed.
+secret scanning are enabled, and GitHub Releases are immutable. Beta.12 is the
+verified rollback baseline. Stable v0.1.0 must complete the pending checklist in
+[`docs/launch/v0.1.0-stable-release.md`](./docs/launch/v0.1.0-stable-release.md)
+before it is declared shipped.
 
 ## Prepared pull request sequence
 
-Fresh terminal tab reset PR #85, beta.11 release preparation PR #86, protected
-promotion PR #87, annotated beta.11 publication, and Homebrew tap PR #9 are
-complete. Native Terminal.app compatibility fix PR #88 is complete on protected
-`staging`; beta.12 release preparation and the literal `staging` → `main`
-promotion remain. Only the exact green `main` merge commit may receive the
-`v0.1.0-beta.12` tag.
+The dedicated stable release-preparation branch changes only version/channel
+metadata, current install and release copy, tests, and launch evidence. Merge it
+to protected `staging`, promote literal `staging` to `main`, and tag only the
+exact green main merge commit as `v0.1.0`. The Homebrew formula remains a separate
+post-release pull request.
 
 ## Controlled migration from stoplight.sh
 

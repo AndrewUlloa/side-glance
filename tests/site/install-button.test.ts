@@ -14,7 +14,7 @@ test("the install control copies Homebrew plus guided setup and morphs into conf
   ]);
 
   assert.match(siteHeader, /<InstallButton/u);
-  assert.match(siteHeader, /public beta · v0\.1/u);
+  assert.match(siteHeader, /stable · v0\.1/u);
   assert.match(siteHeader, /install with Homebrew and run guided setup/u);
   assert.doesNotMatch(installButton, /github\.com\/AndrewUlloa\/side-glance/u);
 

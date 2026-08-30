@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const repository = fileURLToPath(new URL("../..", import.meta.url));
 const generator = path.join(repository, "scripts/release/create-release-manifest.mjs");
-const version = "0.1.0-beta.12";
+const version = "0.1.0";
 const tag = `v${version}`;
 const targets = [
   ["darwin-arm64", "supported"],
@@ -98,9 +98,9 @@ test("refuses a tag that does not exactly match the package version", async (con
     () => command(
       process.execPath,
       [generator, temporary, path.join(temporary, "package.json"), path.join(temporary, "manifest.json")],
-      { SIDE_GLANCE_RELEASE_TAG: "v0.1.0", GITHUB_SHA: "e".repeat(40) },
+      { SIDE_GLANCE_RELEASE_TAG: "v0.1.0-beta.12", GITHUB_SHA: "e".repeat(40) },
     ),
-    /release tag must be v0\.1\.0-beta\.12/iu,
+    /release tag must be v0\.1\.0/iu,
   );
 });
 

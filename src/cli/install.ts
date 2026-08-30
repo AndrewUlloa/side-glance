@@ -29,7 +29,7 @@ export async function runInstallCommand(
     })
   ) {
     throw new Error(
-      "Permanent provider hooks cannot be installed from npx/npm exec. Run `npx side-glance@beta init` for the guided durable bootstrap, or install with `brew install AndrewUlloa/tap/side-glance` and then run `side-glance init`.",
+      "Permanent provider hooks cannot be installed from npx/npm exec. Run `npx side-glance@latest init` for the guided durable bootstrap, or install with `brew install AndrewUlloa/tap/side-glance` and then run `side-glance init`.",
     );
   }
   const provider = parseProvider(args[0]);
