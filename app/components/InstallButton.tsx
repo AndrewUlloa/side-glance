@@ -9,6 +9,8 @@ import { trackInstallCommandCopied } from "../lib/analytics-events";
 
 const INSTALL_COMMAND =
   "brew install AndrewUlloa/tap/side-glance\nside-glance init";
+const INSTALL_FALLBACK_URL =
+  "https://github.com/AndrewUlloa/side-glance#install";
 
 const SWAP_MOTION = {
   animate: { opacity: 1, scale: 1, filter: "blur(0px)" },
@@ -45,6 +47,7 @@ export function InstallButton({ idleAriaLabel }: InstallButtonProps) {
     try {
       await navigator.clipboard.writeText(INSTALL_COMMAND);
     } catch {
+      window.location.assign(INSTALL_FALLBACK_URL);
       return;
     }
 
@@ -57,7 +60,7 @@ export function InstallButton({ idleAriaLabel }: InstallButtonProps) {
     resetRef.current = setTimeout(() => setCopied(false), 1400);
   }, []);
 
-  const label = copied ? "Copied setup" : "Install";
+  const label = copied ? "Copied setup" : "Copy setup";
   const transition = shouldReduceMotion
     ? SWAP_MOTION.reduced
     : SWAP_MOTION.spring;

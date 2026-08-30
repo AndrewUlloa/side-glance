@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path: string) => readFile(path, "utf8");
 
-test("the shared layout header places an accessible GitHub action after Install", async () => {
+test("the shared layout header places an accessible GitHub action after Copy setup", async () => {
   const [layout, siteHeader, trustPage, githubAction, css] = await Promise.all([
     read("app/layout.tsx"),
     read("app/components/SiteHeader.tsx"),
@@ -38,7 +38,7 @@ test("the shared layout header places an accessible GitHub action after Install"
   assert.doesNotMatch(githubAnchor, /<span(?! className="sr-only")/u);
   assert.ok(
     siteHeader.indexOf("<InstallButton") < siteHeader.indexOf("<GitHubAction"),
-    "GitHub action should appear immediately after Install"
+    "GitHub action should appear immediately after Copy setup"
   );
 
   const expectedTokens = [

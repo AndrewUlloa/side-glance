@@ -76,8 +76,11 @@ test("focused homepage uses the exact static Figma assets and copy", async () =>
   );
   assert.match(page, /Long loops\./u);
   assert.match(page, /Short glances\./u);
-  assert.match(page, /Know which loop needs judgment\./u);
-  assert.match(page, /Let the others keep running\./u);
+  assert.match(
+    page,
+    /See each coding-agent session working, waiting, ready, or failed\./u
+  );
+  assert.match(page, /Without reopening every terminal tab or pane\./u);
   assert.match(siteHeader, /src="\/side-glance-mark\.svg"/u);
   assert.match(siteHeader, /<InstallButton/u);
   assert.match(installButton, /src="\/install-icon\.svg"/u);

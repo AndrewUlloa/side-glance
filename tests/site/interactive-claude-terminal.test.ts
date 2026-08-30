@@ -31,7 +31,7 @@ test("the Claude hero answers a local follow-up with an honest install handoff",
   assert.match(terminal, /scrollTo\([\s\S]*scrollHeight/u);
   assert.match(
     terminal,
-    /href="https:\/\/github\.com\/AndrewUlloa\/side-glance#installation-status"/u
+    /href="https:\/\/github\.com\/AndrewUlloa\/side-glance#install"/u
   );
   assert.match(terminal, /Prompt text stays in this tab/u);
   assert.match(terminal, /never sent or saved/u);

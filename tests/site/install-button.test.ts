@@ -15,9 +15,7 @@ test("the install control copies Homebrew plus guided setup and morphs into conf
 
   assert.match(siteHeader, /<InstallButton/u);
   assert.match(siteHeader, /stable · v0\.1/u);
-  assert.match(siteHeader, /install with Homebrew and run guided setup/u);
-  assert.doesNotMatch(installButton, /github\.com\/AndrewUlloa\/side-glance/u);
-
+  assert.match(siteHeader, /copy Homebrew and guided setup commands/u);
   assert.match(installButton, /^"use client";/u);
   assert.match(
     installButton,
@@ -27,13 +25,21 @@ test("the install control copies Homebrew plus guided setup and morphs into conf
     installButton,
     /navigator\.clipboard\.writeText\(INSTALL_COMMAND\)/u
   );
+  assert.match(
+    installButton,
+    /const INSTALL_FALLBACK_URL =\s*"https:\/\/github\.com\/AndrewUlloa\/side-glance#install";/u
+  );
+  assert.match(
+    installButton,
+    /catch \{[\s\S]*window\.location\.assign\(INSTALL_FALLBACK_URL\);[\s\S]*return;/u
+  );
   assert.match(installButton, /AnimatePresence/u);
   assert.match(installButton, /mode="popLayout"/u);
   assert.match(installButton, /useReducedMotion/u);
   assert.match(installButton, /useMeasure/u);
   assert.match(installButton, /animate=\{\{ width: targetWidth \}\}/u);
   assert.doesNotMatch(installButton, /layout=\{/u);
-  assert.match(installButton, /copied \? "Copied setup" : "Install"/u);
+  assert.match(installButton, /copied \? "Copied setup" : "Copy setup"/u);
   assert.match(installButton, /setTimeout\([^,]+, 1400\)/u);
   assert.match(installButton, /clearTimeout/u);
   assert.match(installButton, /copied \? <CheckIcon \/> :/u);

@@ -106,6 +106,19 @@ test("negotiates Markdown with RFC-style preference handling and cache-safe head
   assert.deepEqual(varyTransform.args, ["Accept", "Accept-Encoding"]);
 });
 
+test("canonicalizes Markdown representations to their HTML pages", async () => {
+  const { GET } = await import("../../app/api/markdown/[[...slug]]/route.ts");
+  const response = await GET(new Request("https://sideglance.dev/about.md"), {
+    params: Promise.resolve({ slug: ["about"] }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(
+    response.headers.get("link"),
+    '<https://sideglance.dev/about>; rel="canonical", <https://sideglance.dev/about.md>; rel="alternate"; type="text/markdown", <https://sideglance.dev/llms.txt>; rel="describedby"'
+  );
+});
+
 test("server-rendered homepage contains a useful heading hierarchy and substantial copy", async () => {
   const [page, overview, agentContent] = await Promise.all([
     read("app/page.tsx"),
@@ -116,10 +129,35 @@ test("server-rendered homepage contains a useful heading hierarchy and substanti
 
   assert.match(homepageSource, /<h1>/u);
   assert.match(homepageSource, /<h2/u);
-  assert.match(homepageSource, /What Side Glance does/u);
-  assert.match(homepageSource, /When Side Glance helps/u);
+  assert.match(homepageSource, /HOME_PAGE_CONTENT\.sections\[1\]\.heading/u);
+  assert.match(homepageSource, /HOME_PAGE_CONTENT\.sections\[2\]\.heading/u);
+  assert.match(agentContent, /What Side Glance does/u);
+  assert.match(agentContent, /Four sessions\. One clear glance\./u);
+  assert.match(agentContent, /How it works/u);
   assert.doesNotMatch(homepageSource, /Local-first agent attention/u);
   assert.ok(agentContent.length > 2500, "agent-readable content is too thin");
+});
+
+test("publishes page-specific social metadata for each trust page", async () => {
+  const pageSources = await Promise.all(
+    [
+      ["app/about/page.tsx", "/about"],
+      ["app/contact/page.tsx", "/contact"],
+      ["app/privacy/page.tsx", "/privacy"],
+    ].map(([path, canonical]) =>
+      read(path).then((source) => ({ canonical, source }))
+    )
+  );
+
+  for (const { canonical, source } of pageSources) {
+    assert.match(source, /buildPageMetadata/u);
+    assert.ok(source.includes(`canonical: "${canonical}"`));
+  }
+
+  const helper = await read("app/lib/page-metadata.ts");
+  assert.match(helper, /openGraph/u);
+  assert.match(helper, /twitter/u);
+  assert.match(helper, /SITE_ASSETS\.openGraph/u);
 });
 
 test("publishes canonical identity and accurate JSON-LD", async () => {
@@ -160,6 +198,14 @@ test("publishes canonical identity and accurate JSON-LD", async () => {
     addressRegion: "NY",
   });
   assert.equal(organization.contactPoint.email, "andrew@designfrom.com");
+  const [, , software] = SIDE_GLANCE_STRUCTURED_DATA["@graph"];
+  assert.deepEqual(software.offers, {
+    "@type": "Offer",
+    availability: "https://schema.org/InStock",
+    price: "0",
+    priceCurrency: "USD",
+    url: "https://sideglance.dev",
+  });
 });
 
 test("credits Design From in public project metadata", async () => {
@@ -217,7 +263,7 @@ test("publishes a valid sitemap and explicit agent content policy", async () => 
     "https://sideglance.dev/contact",
     "https://sideglance.dev/privacy",
   ]);
-  assert.ok(sitemap().every((entry) => entry.lastModified instanceof Date));
+  assert.ok(sitemap().every((entry) => entry.lastModified === undefined));
   assert.match(robotsSource, /^User-agent: \*$/mu);
   assert.match(robotsSource, /^Allow: \/$/mu);
   assert.match(
@@ -250,6 +296,11 @@ test("adds substantive About, Contact, and Privacy trust pages", async () => {
   assert.match(agentContent, /Privacy/u);
   assert.match(agentContent, /Cloudflare Web Analytics/u);
   assert.match(agentContent, /private vulnerability report/u);
+  assert.match(agentContent, /Why I built Side Glance/u);
+  assert.match(agentContent, /The design influence/u);
+  assert.match(agentContent, /Shisa Kanko/u);
+  assert.match(agentContent, /shisha-kanko-pointing-calling-redux/u);
+  assert.doesNotMatch(agentContent, /once discussions are enabled/u);
   assert.ok(agentContent.length > 2500, "trust-page content is too thin");
 });
 
@@ -297,7 +348,7 @@ test("publishes a digest-verified Side Glance skill discovery index", async () =
       name: "side-glance",
       type: "skill-md",
       description:
-        "Install, configure, and verify Side Glance for local coding-agent CLI attention workflows.",
+        "Install, configure, and verify Side Glance terminal and tmux status for local coding-agent CLIs.",
       url: "https://sideglance.dev/.well-known/agent-skills/side-glance/SKILL.md",
       digest,
     },
@@ -309,7 +360,7 @@ test("publishes a digest-verified Side Glance skill discovery index", async () =
   assert.match(skill, /^---\nname: side-glance\n/mu);
   assert.match(skill, /^## When to use Side Glance$/mu);
   assert.match(skill, /npx side-glance@latest init/u);
-  assert.match(skill, /Side Glance does not read or persist prompts/u);
+  assert.match(skill, /state protocol and saved state exclude prompts/u);
 });
 
 test("publishes truthful ARD and RFC 9727 discovery documents", async () => {

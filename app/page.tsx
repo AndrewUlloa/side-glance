@@ -22,9 +22,9 @@ export default function Home() {
               </span>
             </h1>
             <p className="minimal-page-enter minimal-page-enter-description">
-              Know which loop needs judgment.
+              See each coding-agent session working, waiting, ready, or failed.
               <br />
-              Let the others keep running.
+              Without reopening every terminal tab or pane.
             </p>
           </div>
 

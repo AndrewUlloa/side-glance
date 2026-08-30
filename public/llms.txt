@@ -1,6 +1,6 @@
 # Side Glance
 
-> Side Glance is a local-first attention layer for coding-agent CLIs. It turns working, waiting, ready, failed, and inactive lifecycle events into calm terminal or tmux status without persisting prompts or transcripts by default.
+> Side Glance is an open-source, local-first CLI that shows coding-agent lifecycle status in terminal and tmux. It turns supported provider events into working, waiting, ready, failed, and inactive status without putting prompts, responses, or transcripts in its state protocol or saved state.
 
 Side Glance v0.1 is an open-source stable release for developers supervising long-running coding-agent sessions. Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider remain experimental. Supported v0.1 installation targets are Apple Silicon macOS and glibc Linux through Homebrew, with npm as a durable fallback. Intel macOS is experimental.
 

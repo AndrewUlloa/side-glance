@@ -48,8 +48,7 @@ export const SIDE_GLANCE_STRUCTURED_DATA = {
     {
       "@id": websiteId,
       "@type": "WebSite",
-      description:
-        "Side Glance is a local-first attention layer for coding-agent CLIs.",
+      description: "Terminal and tmux lifecycle status for coding-agent CLIs.",
       inLanguage: "en",
       name: "Side Glance",
       publisher: { "@id": organizationId },
@@ -68,11 +67,18 @@ export const SIDE_GLANCE_STRUCTURED_DATA = {
       copyrightHolder: { "@id": organizationId },
       creator: { "@id": organizationId },
       description:
-        "A local-first attention layer that turns coding-agent lifecycle events into calm terminal and tmux status without persisting prompts or transcripts by default.",
+        "Side Glance turns local coding-agent lifecycle events into terminal color and tmux markers. Its state protocol excludes prompts, responses, and transcripts.",
       downloadUrl: "https://www.npmjs.com/package/side-glance",
       isPartOf: { "@id": websiteId },
       license: "https://www.apache.org/licenses/LICENSE-2.0",
       name: "Side Glance",
+      offers: {
+        "@type": "Offer",
+        availability: "https://schema.org/InStock",
+        price: "0",
+        priceCurrency: "USD",
+        url: SIDE_GLANCE_SITE_URL,
+      },
       operatingSystem: "macOS, Linux",
       softwareVersion: "0.1.0",
       url: SIDE_GLANCE_SITE_URL,

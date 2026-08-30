@@ -2,7 +2,8 @@ import {
   MARKDOWN_NOT_FOUND,
   pageContentForPath,
   renderPageMarkdown,
-} from "../../../lib/agent-content";
+} from "../../../lib/agent-content.ts";
+import { SIDE_GLANCE_SITE_URL } from "../../../lib/site-identity.ts";
 
 const responseHeaders = {
   "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400",
@@ -29,7 +30,7 @@ export async function GET(
   return new Response(`${renderPageMarkdown(page)}\n`, {
     headers: {
       ...responseHeaders,
-      Link: `<${page.markdownPath}>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"`,
+      Link: `<${SIDE_GLANCE_SITE_URL}${page.path === "/" ? "" : page.path}>; rel="canonical", <${SIDE_GLANCE_SITE_URL}${page.markdownPath}>; rel="alternate"; type="text/markdown", <${SIDE_GLANCE_SITE_URL}/llms.txt>; rel="describedby"`,
     },
   });
 }

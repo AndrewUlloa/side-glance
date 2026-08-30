@@ -10,16 +10,16 @@ export const AGENT_DISCOVERY_CACHE_CONTROL =
 
 export const SIDE_GLANCE_SKILL_MARKDOWN = `---
 name: side-glance
-description: Install, configure, and verify Side Glance for local coding-agent CLI attention workflows.
+description: Install, configure, and verify Side Glance terminal and tmux status for local coding-agent CLIs.
 ---
 
 # Side Glance
 
-Side Glance is a local-first attention layer for coding-agent command-line interfaces. It turns bounded lifecycle events into calm terminal or tmux status so a developer can see which long-running session needs judgment.
+Side Glance is an open-source, local-first CLI that turns supported coding-agent lifecycle events into terminal color and tmux markers. It keeps the best-known working, waiting, ready, failed, or inactive state visible without repeatedly reopening terminal tabs or panes.
 
 ## When to use Side Glance
 
-Use Side Glance when a developer runs one or more long-lived Claude Code or Codex sessions and wants working, waiting, ready, failed, and inactive state to remain visible without repeatedly polling terminal tabs. Claude Code and Codex are locally contract-audited; Gemini, OpenCode v1, and Aider remain experimental.
+Use Side Glance when coding-agent sessions run long enough for a developer to switch tasks, then reopen each terminal to learn what changed. Claude Code and Codex are locally contract-audited; Gemini, OpenCode v1, and Aider remain experimental.
 
 Do not use Side Glance as a remote orchestrator, transcript summarizer, or guarantee of cleanup after SIGKILL, power loss, or terminal-emulator failure. Those cases require recovery and ownership reconciliation.
 
@@ -58,7 +58,7 @@ Confirm the installed version, platform, provider adapter, target terminal owner
 
 ## Data and safety boundaries
 
-Side Glance does not read or persist prompts, responses, or transcripts by default. It processes bounded lifecycle metadata, stores typed local state, treats all hook payloads as untrusted, and writes terminal bytes only after verifying an owned character TTY.
+Side Glance's state protocol and saved state exclude prompts, responses, and transcripts. It processes bounded lifecycle metadata, stores typed local state, treats all hook payloads as untrusted, and writes terminal bytes only after verifying an owned character TTY.
 
 ## Canonical resources
 
@@ -79,7 +79,7 @@ export const SIDE_GLANCE_SKILL_INDEX = {
       name: "side-glance",
       type: "skill-md",
       description:
-        "Install, configure, and verify Side Glance for local coding-agent CLI attention workflows.",
+        "Install, configure, and verify Side Glance terminal and tmux status for local coding-agent CLIs.",
       url: `${SIDE_GLANCE_SITE_URL}/.well-known/agent-skills/side-glance/SKILL.md`,
       digest: skillDigest,
     },
