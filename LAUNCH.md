@@ -15,6 +15,8 @@ and prepared as the still-unpublished `0.1.0-beta.12` release candidate.
 - Custom-domain status: `sideglance.dev` uses Cloudflare authoritative DNS and
   DNSSEC in front of Vercel; `www.sideglance.dev` redirects to the apex, and both
   hostnames are attached to production
+- Asset-domain status: `assets.sideglance.dev` is attached directly to the
+  `side-glance-assets-prod` R2 bucket with minimum TLS 1.2
 - Vercel project: `andrew-243s-projects/side-glance`
 - Project ID: `prj_WAlUcwR41N6Uw93yC8kDT2mUiVQ5`
 - Tagged beta.11 production deployment: `dpl_4xtEVYmKpyPesTsH5KswrUEd5zCU`
@@ -29,11 +31,11 @@ and prepared as the still-unpublished `0.1.0-beta.12` release candidate.
 
 The Next.js application remains on Vercel. Large site images are stored in the
 `side-glance-assets-prod` Cloudflare R2 bucket and use immutable, content-addressed
-keys. The verified current origin is
-`https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev`; all six manifest objects
-returned HTTP 200 with the declared content type, length, and immutable cache header
-on 2026-08-24. `assets.sideglance.ai` is not connected and must remain conditional.
-See [the public-asset runbook](./docs/assets.md) for the cutover contract.
+keys. The verified current origin is `https://assets.sideglance.dev`; the custom
+domain was connected directly to R2 with minimum TLS 1.2 on 2026-08-30. All six
+manifest objects must return HTTP 200 with their declared content type, length, and
+immutable cache header. See [the public-asset runbook](./docs/assets.md) for the
+verification and rollback contract.
 
 The prior known-good production deployment is
 `dpl_6Md5TDwM4tbiAATK6BvePWqSxDDY`. It remains Vercel rollback evidence; immutable

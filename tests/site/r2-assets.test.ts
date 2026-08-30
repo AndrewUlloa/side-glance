@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("serves substantial site media from immutable R2 URLs without the Vercel image proxy", async () => {
+test("serves substantial site media from the custom R2 domain without the Vercel image proxy", async () => {
   const [
     layout,
     loadingSequence,
@@ -56,10 +56,8 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
   assert.match(ogStyles, /var\(--side-glance-hero-surface\)/u);
   assert.doesNotMatch(ogStyles, /url\("\/hero-surface\.png"\)/u);
   assert.equal(manifest.bucket, "side-glance-assets-prod");
-  assert.equal(
-    manifest.defaultOrigin,
-    "https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev"
-  );
+  assert.equal(manifest.defaultOrigin, "https://assets.sideglance.dev");
+  assert.doesNotMatch(siteAssets, /r2\.dev/u);
   assert.equal(manifest.cacheControl, "public, max-age=31536000, immutable");
   assert.equal(Object.keys(manifest.assets).length, 6);
   let totalBytes = 0;
@@ -83,18 +81,21 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
   assert.match(uploadScript, /createHash\("sha256"\)/u);
   assert.match(uploadScript, /--cache-control/u);
   assert.match(uploadScript, /shell:\s*false/u);
-  assert.match(layout, /NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN/u);
-  assert.match(layout, /static\.cloudflareinsights\.com\/beacon\.min\.js/u);
+  assert.doesNotMatch(layout, /NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN/u);
+  assert.doesNotMatch(
+    layout,
+    /static\.cloudflareinsights\.com\/beacon\.min\.js/u
+  );
 
-  for (const localAsset of [
-    "public/hero-surface.png",
-    "public/hero-terminal.png",
-    "public/loading-life-01.png",
-    "public/loading-life-02.png",
-    "public/loading-life-03.png",
-    "public/loading-life-04.png",
-    "public/og-image.png",
-  ]) {
-    await assert.rejects(access(localAsset));
-  }
+  await Promise.all(
+    [
+      "public/hero-surface.png",
+      "public/hero-terminal.png",
+      "public/loading-life-01.png",
+      "public/loading-life-02.png",
+      "public/loading-life-03.png",
+      "public/loading-life-04.png",
+      "public/og-image.png",
+    ].map((localAsset) => assert.rejects(access(localAsset)))
+  );
 });

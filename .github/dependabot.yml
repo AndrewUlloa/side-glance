@@ -7,12 +7,44 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
-      development-dependencies:
-        dependency-type: development
+      next-toolchain:
+        patterns:
+          - next
+          - "@next/eslint-plugin-next"
         applies-to: version-updates
         update-types:
           - minor
           - patch
+      site-styling:
+        patterns:
+          - tailwindcss
+          - "@tailwindcss/postcss"
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      biome-linting:
+        patterns:
+          - "@biomejs/biome"
+          - ultracite
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      typescript-toolchain:
+        patterns:
+          - typescript
+          - typescript-eslint
+          - "@types/*"
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # typescript-eslint does not support TypeScript 7 yet.
+      - dependency-name: typescript
+        versions:
+          - "7.x"
 
   - package-ecosystem: github-actions
     directory: /

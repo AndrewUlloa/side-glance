@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { type CSSProperties, useEffect, useState } from "react";
 
+import { trackDemoEngaged } from "../lib/analytics-events";
 import {
   InteractiveClaudeTerminal,
   type TerminalScenario,
@@ -111,7 +112,7 @@ export function TerminalShowcase() {
       ? INITIAL_STATE_INDEX
       : stage % LIFECYCLE_STATES.length;
   const activeState = LIFECYCLE_STATES[activeStateIndex];
-  const phase = activeState.phase;
+  const { phase } = activeState;
   const isPlaybackRunning =
     stage !== STORYBOARD_STAGE.waiting &&
     !isPlaybackPaused &&
@@ -132,7 +133,7 @@ export function TerminalShowcase() {
         TIMING.startPlayback
       );
     };
-    const pageMotion = document.documentElement.dataset.pageMotion;
+    const { pageMotion } = document.documentElement.dataset;
 
     if (pageMotion === "ready" || pageMotion === "settled") {
       startPlayback();
@@ -166,11 +167,13 @@ export function TerminalShowcase() {
   }, [isPlaybackPaused, shouldReduceMotion, stage]);
 
   const selectState = (index: number) => {
+    trackDemoEngaged("lifecycle");
     setPlaybackPaused(true);
     setStage(index);
   };
 
   const selectAppearance = (nextAppearance: PlaygroundAppearance) => {
+    trackDemoEngaged("color_model");
     setPlaybackPaused(true);
     setStage(INITIAL_STATE_INDEX);
     setAppearance(nextAppearance);

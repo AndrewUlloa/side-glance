@@ -64,7 +64,7 @@ test("server-renders the focused Side Glance launch hero", async () => {
     jsonLd["@graph"].map((entry) => entry["@type"]),
     ["Organization", "WebSite", "SoftwareApplication"]
   );
-  const organization = jsonLd["@graph"][0];
+  const [organization] = jsonLd["@graph"];
   assert.equal(organization.name, "Design From, Inc.");
   assert.equal(organization.email, "andrew@designfrom.com");
   assert.deepEqual(organization.address, {
@@ -90,7 +90,7 @@ test("server-renders the focused Side Glance launch hero", async () => {
   );
   assert.match(text, /Ownership reconciliation is complete\./);
   assert.doesNotMatch(text, /Test failed/);
-  assert.match(text, /Demo only · nothing is sent or saved/);
+  assert.match(text, /Prompt text stays in this tab · never sent or saved/);
   assert.match(html, /Add a follow-up/);
   assert.doesNotMatch(html, /hero-terminal\.png/);
   assert.match(html, /side-glance-mark\.svg/);
@@ -127,37 +127,39 @@ test("server-renders the focused Side Glance launch hero", async () => {
 });
 
 test("server-renders substantive trust pages", async () => {
-  for (const [route, heading] of [
-    ["about", "About Side Glance"],
-    ["contact", "Contact and support"],
-    ["privacy", "Privacy"],
-  ]) {
-    const html = await readFile(
-      new URL(`../.next/server/app/${route}.html`, import.meta.url),
-      "utf8"
-    );
-    const text = renderedText(html);
+  await Promise.all(
+    [
+      ["about", "About Side Glance"],
+      ["contact", "Contact and support"],
+      ["privacy", "Privacy"],
+    ].map(async ([route, heading]) => {
+      const html = await readFile(
+        new URL(`../.next/server/app/${route}.html`, import.meta.url),
+        "utf8"
+      );
+      const text = renderedText(html);
 
-    assert.match(html, new RegExp(`<h1[^>]*>${heading}</h1>`, "iu"));
-    assert.ok(
-      text.length >= 500,
-      `${route} raw HTML text is only ${text.length} chars`
-    );
-    assert.ok((html.match(/<h2\b/gu)?.length ?? 0) >= 3);
-    assert.match(
-      html,
-      new RegExp(
-        `<link rel="canonical" href="https:\\/\\/sideglance\\.dev\\/${route}"\\/>`,
-        "iu"
-      )
-    );
-    if (route === "about") {
-      assert.match(text, /originated at Design From, Inc\./u);
-    }
-    if (route === "contact") {
-      assert.match(text, /andrew@designfrom\.com/u);
-    }
-  }
+      assert.match(html, new RegExp(`<h1[^>]*>${heading}</h1>`, "iu"));
+      assert.ok(
+        text.length >= 500,
+        `${route} raw HTML text is only ${text.length} chars`
+      );
+      assert.ok((html.match(/<h2\b/gu)?.length ?? 0) >= 3);
+      assert.match(
+        html,
+        new RegExp(
+          `<link rel="canonical" href="https:\\/\\/sideglance\\.dev\\/${route}"\\/>`,
+          "iu"
+        )
+      );
+      if (route === "about") {
+        assert.match(text, /originated at Design From, Inc\./u);
+      }
+      if (route === "contact") {
+        assert.match(text, /andrew@designfrom\.com/u);
+      }
+    })
+  );
 });
 
 test("keeps the focused site accessible, responsive, and product-safe", async () => {
