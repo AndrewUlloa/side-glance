@@ -57,13 +57,13 @@ test("keeps public beta, provider, terminal, and domain claims within verified e
 });
 
 test("keeps guided setup, notification coverage, and recovery guidance aligned", async () => {
-  const [readme, packageReadme, changelog, launch, page, installButton] =
+  const [readme, packageReadme, changelog, launch, siteHeader, installButton] =
     await Promise.all([
       readFile("README.md", "utf8"),
       readFile("packages/cli/README.md", "utf8"),
       readFile("CHANGELOG.md", "utf8"),
       readFile("LAUNCH.md", "utf8"),
-      readFile("app/page.tsx", "utf8"),
+      readFile("app/components/SiteHeader.tsx", "utf8"),
       readFile("app/components/InstallButton.tsx", "utf8"),
     ]);
   const documentation = [readme, packageReadme, changelog, launch].join("\n");
@@ -115,7 +115,7 @@ test("keeps guided setup, notification coverage, and recovery guidance aligned",
     documentation,
     /next `side-glance init` or `side-glance doctor`/u
   );
-  assert.match(page, /install with Homebrew and run guided setup/u);
+  assert.match(siteHeader, /install with Homebrew and run guided setup/u);
   assert.match(
     installButton,
     /brew install AndrewUlloa\/tap\/side-glance\\nside-glance init/u

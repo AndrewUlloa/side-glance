@@ -69,10 +69,13 @@ test("documents only durable installation and truthful beta availability", async
   );
   assert.match(packageReadme, /`side-glance run`[\s\S]{0,160}fallback/iu);
 
-  const page = await text("app/page.tsx");
-  assert.match(page, /public beta · v0\.1/u);
-  assert.match(page, /install with Homebrew and run guided setup/u);
-  assert.doesNotMatch(page, /available after the first verified beta release/u);
+  const siteHeader = await text("app/components/SiteHeader.tsx");
+  assert.match(siteHeader, /public beta · v0\.1/u);
+  assert.match(siteHeader, /install with Homebrew and run guided setup/u);
+  assert.doesNotMatch(
+    siteHeader,
+    /available after the first verified beta release/u
+  );
 
   const releaseGuide = await text("docs/releasing.md");
   assert.match(releaseGuide, /Initial npm ownership is established/u);

@@ -25,6 +25,10 @@ test("the OG route renders the real long-ready terminal in a 1200 by 630 composi
   assert.match(css, /transition:\s*none\s*!important/u);
   assert.match(
     css,
+    /body:has\(> \.og-image-canvas\) > \.minimal-header\s*\{[^}]*display:\s*none/u
+  );
+  assert.match(
+    css,
     /\.og-image-terminal\s+\.mock-terminal\s*\{[^}]*width:\s*100%/u
   );
   assert.match(

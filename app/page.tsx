@@ -1,8 +1,4 @@
-import Image from "next/image";
-
 import { AgentOverview } from "./components/AgentOverview";
-import { GitHubAction } from "./components/GitHubAction";
-import { InstallButton } from "./components/InstallButton";
 import { LoadingSequence } from "./components/LoadingSequence";
 import { MotionOrchestrator } from "./components/MotionOrchestrator";
 import { SiteFooter } from "./components/SiteFooter";
@@ -14,31 +10,6 @@ export default function Home() {
       <MotionOrchestrator />
       <LoadingSequence />
       <div className="minimal-home gap-layout-stack px-site-gutter">
-        <header className="minimal-header h-site-header">
-          <a
-            aria-label="Side Glance home"
-            className="minimal-brand gap-brand-gap text-brand tracking-brand"
-            href="/"
-          >
-            <Image
-              alt=""
-              aria-hidden="true"
-              className="h-brand-mark-height w-brand-mark-width"
-              height={24}
-              priority
-              src="/side-glance-mark.svg"
-              width={35}
-            />
-            <span>Side Glance</span>
-          </a>
-
-          <div className="minimal-header-actions minimal-page-enter minimal-page-enter-actions gap-header-actions-gap">
-            <InstallButton idleAriaLabel="install with Homebrew and run guided setup · public beta · v0.1" />
-
-            <GitHubAction />
-          </div>
-        </header>
-
         <main className="minimal-hero gap-layout-stack">
           <div className="minimal-copy gap-hero-copy">
             <h1>

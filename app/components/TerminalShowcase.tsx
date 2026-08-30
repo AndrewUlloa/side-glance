@@ -174,6 +174,8 @@ export function TerminalShowcase() {
 
   const selectAppearance = (nextAppearance: PlaygroundAppearance) => {
     trackDemoEngaged("color_model");
+    setPlaybackPaused(true);
+    setStage(INITIAL_STATE_INDEX);
     setAppearance(nextAppearance);
   };
 
@@ -192,10 +194,13 @@ export function TerminalShowcase() {
       <figcaption>
         <div className="minimal-lifecycle-controls">
           <fieldset
-            aria-label="Choose a Side Glance color model"
+            aria-describedby="side-glance-appearance-explanation"
             className="minimal-theme-picker"
           >
-            <legend className="minimal-theme-toggle-label">Color model</legend>
+            <legend className="sr-only">How should finished work look?</legend>
+            <span aria-hidden="true" className="minimal-preview-control-label">
+              Finished work
+            </span>
             <div className="minimal-theme-toggle">
               <button
                 aria-pressed={appearance === "status"}
@@ -216,55 +221,59 @@ export function TerminalShowcase() {
             </div>
           </fieldset>
 
-          <ul
-            aria-label="Choose a Side Glance terminal moment"
-            className="minimal-lifecycle gap-lifecycle-gap"
-          >
-            {LIFECYCLE_STATES.map((state, index) => {
-              const visual = visualForPhase(
-                state.phase,
-                state.elapsedSeconds,
-                appearance
-              );
-              const isActive = activeState.id === state.id;
-              const buttonStyle = {
-                "--lifecycle-accent": `#${visual.accent}`,
-              } as CSSProperties;
+          <div className="minimal-lifecycle-picker">
+            <p
+              className="minimal-preview-control-label"
+              id="side-glance-moment-label"
+            >
+              Preview a moment
+            </p>
+            <ul
+              aria-labelledby="side-glance-moment-label"
+              className="minimal-lifecycle"
+            >
+              {LIFECYCLE_STATES.map((state, index) => {
+                const visual = visualForPhase(
+                  state.phase,
+                  state.elapsedSeconds,
+                  appearance
+                );
+                const isActive = activeState.id === state.id;
+                const buttonStyle = {
+                  "--lifecycle-accent": `#${visual.accent}`,
+                } as CSSProperties;
 
-              return (
-                <li className="minimal-lifecycle-state" key={state.id}>
-                  <button
-                    aria-controls="side-glance-terminal"
-                    aria-pressed={activeState.id === state.id}
-                    className="minimal-lifecycle-button gap-lifecycle-state rounded-lifecycle px-lifecycle-x py-lifecycle-y text-lifecycle"
-                    data-state={state.id}
-                    onClick={() => selectState(index)}
-                    style={buttonStyle}
-                    type="button"
-                  >
-                    <LifecycleProgressRing
-                      isActive={isActive}
-                      isPlaying={isActive && isPlaybackRunning}
-                      key={isActive ? stage : state.id}
-                    />
-                    <span>{state.label}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                return (
+                  <li className="minimal-lifecycle-state" key={state.id}>
+                    <button
+                      aria-controls="side-glance-terminal"
+                      aria-pressed={activeState.id === state.id}
+                      className="minimal-lifecycle-button gap-lifecycle-state rounded-lifecycle px-lifecycle-x py-lifecycle-y text-lifecycle"
+                      data-state={state.id}
+                      onClick={() => selectState(index)}
+                      style={buttonStyle}
+                      type="button"
+                    >
+                      <LifecycleProgressRing
+                        isActive={isActive}
+                        isPlaying={isActive && isPlaybackRunning}
+                        key={isActive ? stage : state.id}
+                      />
+                      <span>{state.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
 
-        <p aria-live="polite" className="minimal-lifecycle-explanation">
-          {appearance === "status" ? (
-            <>Ready stays green at every duration. Red means failure.</>
-          ) : (
-            <>
-              Successful Ready turns warm with duration; under 10s stays quiet.
-              This preview uses a 5m ceiling; Side Glance adapts it from recent
-              local turns. Failure is red immediately.
-            </>
-          )}
+        <p
+          className="minimal-lifecycle-explanation"
+          id="side-glance-appearance-explanation"
+        >
+          Status keeps Ready green. Heat warms successful Ready as runtime
+          grows; failure is red immediately in both.
         </p>
 
         <span
