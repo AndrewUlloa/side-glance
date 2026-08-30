@@ -16,6 +16,14 @@ No dashboard. No hosted relay. No conversation content in its state protocol.</p
 
 </div>
 
+<p align="center">
+  <img alt="Four Side Glance terminals showing Working, Ready · short, Waiting, and Ready · long with the Heat theme." src="./assets/readme/side-glance-heat-grid.gif" width="800">
+</p>
+
+<p align="center">
+  <sub><strong>Heat theme shown.</strong> Warmer Ready means a longer successful turn. In default Status, Ready stays green and red means failure.</sub>
+</p>
+
 [Install](#install) · [Lifecycle](#lifecycle) · [Providers](#provider-support) · [Safety](#safety-privacy-and-recovery) · [Documentation](#documentation)
 
 ## Four sessions. One clear glance.
@@ -232,13 +240,6 @@ Run `side-glance --help` or a subcommand's help for complete options. `event` an
 - **Status** is the default semantic palette shown above.
 - **Heat** maps successful Ready duration from green through amber to red.
 - **Custom** accepts one validated wash/accent pair per lifecycle state.
-
-<p align="center">
-  <img alt="Four Side Glance terminals showing Working, Ready · short, Waiting, and Ready · long with the Heat theme." src="./assets/readme/side-glance-heat-grid.gif" width="800">
-</p>
-
-The grid demonstrates Heat, where warmer colors mean longer successful turns.
-Status remains the default: in Status, Ready is always green and red means failure.
 
 ```bash
 side-glance theme show --json
