@@ -196,6 +196,9 @@ until their live binary matrices pass.
 | Aider | Documented static notification command paired with the wrapper | Completion bridge only; existing notification commands are preserved. | Experimental |
 | Any CLI | Supervised wrapper | The generic wrapper reports only process exit when `--notify-on-exit` is selected. | Supported fallback |
 
+Codex and Gemini report attention through their installed Side Glance integrations;
+their pre-final completion hooks remain notification-silent.
+
 Claude tracks bounded `SubagentStart` and `SubagentStop` identities plus current
 background-task and session-cron snapshots. Known subagent work keeps the parent
 Working and delays Ready. Missing or malformed registries mean unknown, not empty;
