@@ -79,6 +79,6 @@ test("the launch page follows the vertical Figma showcase while keeping the term
   assert.match(headerRule, /position:\s*sticky/u);
   assert.match(headerRule, /top:\s*0/u);
   assert.match(headerRule, /z-index:\s*50/u);
-  assert.match(headerRule, /backdrop-filter:\s*blur\(16px\)/u);
+  assert.match(headerRule, /background:\s*#fff/u);
   assert.match(css, /\.minimal-home\s*\{[^}]*overflow-x:\s*clip/u);
 });
