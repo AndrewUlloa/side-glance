@@ -32,7 +32,7 @@ The Next.js application remains on Vercel. Large site images are stored in the
 keys. The verified current origin is
 `https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev`; all six manifest objects
 returned HTTP 200 with the declared content type, length, and immutable cache header
-on 2026-08-24. `assets.sideglance.ai` is not connected and must remain conditional.
+on 2026-08-24. `assets.sideglance.dev` is not connected and must remain conditional.
 See [the public-asset runbook](./docs/assets.md) for the cutover contract.
 
 The prior known-good production deployment is

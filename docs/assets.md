@@ -4,7 +4,7 @@ Side Glance keeps the Next.js application on Vercel and serves substantial publi
 media from the `side-glance-assets-prod` Cloudflare R2 bucket. The currently
 verified candidate origin is
 `https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev`. The custom hostname
-`assets.sideglance.ai` is not connected. Fonts, JavaScript, CSS, the favicon, and
+`assets.sideglance.dev` is not connected. Fonts, JavaScript, CSS, the favicon, and
 sub-kilobyte interface SVGs remain with the Vercel application.
 
 ## Compression contract
@@ -51,18 +51,12 @@ only read public immutable URLs. The loading sequence uses unoptimized Next.js
 images deliberately so R2 responses do not pass back through Vercel's
 `/_next/image` endpoint.
 
-Cloudflare Web Analytics is enabled only when this public token is present in the
-Vercel build environment:
-
-```text
-NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN=<site-token>
-```
-
 ## Domain cutover
 
-After the `sideglance.ai` zone is active in the same Cloudflare account as the bucket:
+The `sideglance.dev` zone is active in the same Cloudflare account as the bucket.
+When the asset hostname is ready for cutover:
 
-1. Connect `assets.sideglance.ai` to `side-glance-assets-prod` with minimum TLS 1.2.
+1. Connect `assets.sideglance.dev` to `side-glance-assets-prod` with minimum TLS 1.2.
 2. Verify every manifest URL and its `Cache-Control` and `Content-Type` headers.
 3. Warm an asset twice and confirm a Cloudflare cache hit on the custom domain.
 4. Change the manifest default and Vercel environment only after the custom-domain

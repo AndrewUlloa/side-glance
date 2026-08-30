@@ -43,7 +43,7 @@ Both changes preserve compatible state and unrelated provider configuration.
 - Never move, delete, or reuse a protected version tag; fix forward instead.
 - Never move npm `latest` to a beta.
 - Do not update Homebrew before immutable release assets exist.
-- Do not claim `sideglance.ai` is live until public DNS and TLS resolve.
+- Do not claim the custom production domain is live until public DNS and TLS resolve.
 - If a protected check, deployment SHA, or public artifact disagrees, stop and
   repair through the next protected forward path.
 

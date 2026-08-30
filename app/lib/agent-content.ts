@@ -176,7 +176,8 @@ export const PRIVACY_PAGE_CONTENT: SitePageContent = {
       heading: "Website data",
       paragraphs: [
         "The Side Glance website is a Next.js application hosted by Vercel, proxied through Cloudflare, with substantial public media delivered from Cloudflare R2. Those infrastructure providers may process ordinary request information such as IP addresses, user agents, requested URLs, timestamps, and security signals according to their own service policies and retention practices.",
-        "When the deployment is configured with a Cloudflare Web Analytics token, Cloudflare Web Analytics measures aggregate site traffic. The site stores a light-or-dark theme preference in local browser storage. The interactive terminal demonstration runs in the page and is labeled as a demo; its sample input is not sent to Side Glance or saved by the demo.",
+        "Cloudflare Web Analytics automatically measures aggregate real-user traffic for sideglance.dev. Vercel Web Analytics measures page views and three anonymous custom interactions: a successful install-command copy, a header GitHub open, and the first meaningful demo engagement in a browser-tab session. Those events contain only static labels such as homebrew, header, lifecycle, color_model, or terminal_input; they never contain prompt text or other user-provided content.",
+        "The site stores a light-or-dark theme preference in localStorage and a side-glance:demo-engaged marker in sessionStorage so the demo event is sent at most once per browser-tab session. The interactive terminal demonstration runs in the page; prompt text stays in that tab and is not sent to Side Glance or saved by the demo.",
         "The site's Content Signals allow search indexing and AI-assisted retrieval while reserving the content from model training. These preferences are published in robots.txt as ai-train=no, search=yes, and ai-input=yes.",
       ],
     },
@@ -198,7 +199,7 @@ export const PRIVACY_PAGE_CONTENT: SitePageContent = {
       heading: "Choices and questions",
       paragraphs: [
         "You can clear the website theme preference through browser storage controls. You can stop using the site without creating an account, and you can uninstall or reset the CLI using its documented commands. Avoid submitting sensitive session content through public support channels.",
-        "Privacy or security questions should use the contact routes listed on the Contact page. Suspected vulnerabilities belong in the private vulnerability report rather than a public issue. This notice was last updated on August 27, 2026 and should be revised whenever the website's data flow or the CLI's content boundaries change.",
+        "Privacy or security questions should use the contact routes listed on the Contact page. Suspected vulnerabilities belong in the private vulnerability report rather than a public issue. This notice was last updated on August 29, 2026 and should be revised whenever the website's data flow or the CLI's content boundaries change.",
       ],
     },
   ],

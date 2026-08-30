@@ -55,9 +55,10 @@ The Vercel project must stay connected to `AndrewUlloa/side-glance`, with
 Production Branch set to `main` and Node.js 24.x. Preview-only environment values
 may be scoped to `staging` when the staging environment needs to differ. A custom
 staging domain is optional; Vercel's stable branch URL is sufficient by default.
-Production and Preview both receive the Cloudflare Web Analytics site token. Both
-use the verified R2 development URL until `assets.sideglance.ai` is connected and
-the explicit asset cutover checklist passes.
+Cloudflare Web Analytics is automatic for the `sideglance.dev` zone; the app does
+not embed a Cloudflare analytics token. Vercel Web Analytics is part of the app.
+Production and Preview use the verified R2 development URL until
+`assets.sideglance.dev` is connected and the explicit asset cutover checklist passes.
 
 Rollback is a Vercel promotion of the last known-good production deployment. A
 follow-up fix still moves through `staging` so the Git history and deployed state
