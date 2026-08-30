@@ -364,9 +364,10 @@ Side Glance is not digital pointing and calling. It applies that narrower design
 principle through an ambient terminal signal.
 
 Side Glance originated at Design From, Inc. and is maintained by Andrew as
-Apache-2.0 open source. Read
-[Christopher Roosen's essay](https://www.christopherroosen.com/blog/2020/4/20/how-the-ritual-of-pointing-and-calling-shisa-kanko-embeds-us-in-the-world)
-for the original design influence.
+Apache-2.0 open source. Read Christopher Roosen's
+[original essay on Shisa Kanko](https://www.christopherroosen.com/blog/2020/4/20/how-the-ritual-of-pointing-and-calling-shisa-kanko-embeds-us-in-the-world)
+and his [2024 return to the subject](https://www.christopherroosen.com/blog/2024/6/30/shisha-kanko-pointing-calling-redux),
+which extends the idea into everyday attention, distraction, and multitasking.
 
 ## Try it from source
 
