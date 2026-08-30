@@ -47,7 +47,7 @@ test("focused hero shows Claude inside the real Side Glance lifecycle wash", () 
     interactiveTerminalSource,
     /visualForPhase\(phase, elapsedSeconds, appearance\)/
   );
-  assert.match(interactiveTerminalSource, /install the public beta\./);
+  assert.match(interactiveTerminalSource, /install the stable release\./);
   assert.doesNotMatch(interactiveTerminalSource, /workingWash/);
   assert.match(interactiveTerminalSource, /className="mock-terminal-wash"/);
   assert.match(interactiveTerminalSource, /Claude Code/);

@@ -378,7 +378,7 @@ function getInteractionAnnouncement(
     return interactionAnnouncement;
   }
   if (submittedPrompt) {
-    return "To try Side Glance, install the public beta.";
+    return "To try Side Glance, install the stable release.";
   }
   return "The example session needs judgment.";
 }
@@ -571,7 +571,7 @@ export function InteractiveClaudeTerminal({
                       rel="noreferrer"
                       target="_blank"
                     >
-                      install the public beta.
+                      install the stable release.
                     </a>
                   </span>
                 </p>

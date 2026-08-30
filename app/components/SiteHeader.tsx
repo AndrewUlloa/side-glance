@@ -78,7 +78,7 @@ export function SiteHeader() {
       </a>
 
       <div className="minimal-header-actions minimal-page-enter minimal-page-enter-actions gap-header-actions-gap">
-        <InstallButton idleAriaLabel="install with Homebrew and run guided setup · public beta · v0.1" />
+        <InstallButton idleAriaLabel="install with Homebrew and run guided setup · stable · v0.1" />
 
         <GitHubAction />
       </div>

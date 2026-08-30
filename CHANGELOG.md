@@ -4,8 +4,16 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-08-29
+
 ### Changed
 
+- Side Glance is now available as a stable v0.1 release through Homebrew and
+  npm's `latest` channel, with an immutable GitHub Latest Release, native
+  archives, checksums, provenance, and Apache-2.0 package metadata.
+- Stable npm and `npx` guidance now uses `side-glance@latest`. Provider maturity
+  is unchanged: Claude Code and Codex are locally contract-audited, while
+  Gemini, OpenCode v1, and Aider remain experimental.
 - Production site media now uses the cached `assets.sideglance.dev` R2 custom
   domain instead of Cloudflare's rate-limited public development hostname.
 
@@ -222,7 +230,8 @@ published. Beta.3 contains the same product changes plus the release-path fix.
 - Doctor, status, preview, reset, install, uninstall, event, and run commands.
 - Interactive product site using the real phase and urgency model.
 
-[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0-beta.12...HEAD
+[Unreleased]: https://github.com/AndrewUlloa/side-glance/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0
 [0.1.0-beta.12]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.12
 [0.1.0-beta.11]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.11
 [0.1.0-beta.10]: https://github.com/AndrewUlloa/side-glance/releases/tag/v0.1.0-beta.10

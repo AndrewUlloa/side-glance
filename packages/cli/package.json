@@ -1,6 +1,6 @@
 {
   "name": "side-glance",
-  "version": "0.1.0-beta.12",
+  "version": "0.1.0",
   "description": "A local-first attention layer for coding-agent CLIs.",
   "author": {
     "name": "Design From, Inc.",
@@ -39,7 +39,7 @@
   "publishConfig": {
     "access": "public",
     "provenance": true,
-    "tag": "beta"
+    "tag": "latest"
   },
   "scripts": {
     "prepack": "node ../../scripts/build-cli.mjs"

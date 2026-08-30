@@ -308,7 +308,7 @@ test("publishes a digest-verified Side Glance skill discovery index", async () =
   );
   assert.match(skill, /^---\nname: side-glance\n/mu);
   assert.match(skill, /^## When to use Side Glance$/mu);
-  assert.match(skill, /npx side-glance@beta init/u);
+  assert.match(skill, /npx side-glance@latest init/u);
   assert.match(skill, /Side Glance does not read or persist prompts/u);
 });
 

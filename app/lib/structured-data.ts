@@ -74,7 +74,7 @@ export const SIDE_GLANCE_STRUCTURED_DATA = {
       license: "https://www.apache.org/licenses/LICENSE-2.0",
       name: "Side Glance",
       operatingSystem: "macOS, Linux",
-      softwareVersion: "0.1.0-beta.8",
+      softwareVersion: "0.1.0",
       url: SIDE_GLANCE_SITE_URL,
     },
   ],

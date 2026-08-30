@@ -80,7 +80,7 @@ test("server-renders the focused Side Glance launch hero", async () => {
   assert.match(text, /Install/);
   assert.match(
     html,
-    /install with Homebrew and run guided setup · public beta · v0\.1/
+    /install with Homebrew and run guided setup · stable · v0\.1/
   );
   assert.match(text, /Claude Code/);
   assert.match(text, /Opus 5 \(1M context\)/);

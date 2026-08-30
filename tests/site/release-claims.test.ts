@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("keeps public beta, provider, terminal, and domain claims within verified evidence", async () => {
+test("keeps stable release, provider, terminal, and domain claims within verified evidence", async () => {
   const [
     readme,
     packageReadme,
@@ -24,7 +24,7 @@ test("keeps public beta, provider, terminal, and domain claims within verified e
 
   assert.match(
     readme,
-    /Prereleases are published on npm's\s+explicit `beta` channel/u
+    /Stable releases are published on npm's explicit\s+`latest` channel/u
   );
   assert.doesNotMatch(
     readme,
@@ -73,7 +73,7 @@ test("keeps guided setup, notification coverage, and recovery guidance aligned",
       guide,
       /brew install AndrewUlloa\/tap\/side-glance[\s\S]*?side-glance init/u
     );
-    assert.match(guide, /npx side-glance@beta init/u);
+    assert.match(guide, /npx side-glance@latest init/u);
   }
 
   for (const guide of [readme, packageReadme]) {
