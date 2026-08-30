@@ -27,7 +27,6 @@ export function TrustPage({ page }: { page: SitePageContent }) {
 
       <main className="trust-main">
         <div className="trust-introduction">
-          <p className="trust-eyebrow">Side Glance</p>
           <h1>{page.title}</h1>
           <p className="trust-description">{page.description}</p>
         </div>

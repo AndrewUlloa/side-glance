@@ -12,6 +12,7 @@ test("trust pages keep informational navigation in the shared footer", async () 
 
   assert.doesNotMatch(trustPage, /aria-label="Primary"/u);
   assert.doesNotMatch(trustPage, /trust-navigation/u);
+  assert.doesNotMatch(trustPage, /className="trust-eyebrow"/u);
   assert.match(trustPage, /aria-label="Side Glance home"/u);
 
   assert.match(siteFooter, /aria-label="Footer"/u);
