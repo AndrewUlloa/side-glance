@@ -143,10 +143,6 @@ side-glance init
 The public discovery journey is:
 
 ```bash
-# During the beta channel
-npx side-glance@beta init
-
-# After the stable package owns the latest tag
 npx side-glance@latest init
 ```
 
@@ -685,7 +681,7 @@ these requirements.
 - Killing a waiting provider and starting another on the same surface demonstrates bounded
   reconciliation without wiping a newer generation.
 - Manual Terminal.app, iTerm, Ghostty, and tmux checks record supported visible channels.
-- A fresh isolated `side-glance@beta` installation exposes exactly the commands and
+- A fresh isolated `side-glance@latest` installation exposes exactly the commands and
   behavior documented by the deployed site.
 
 **Always:** use red-green regression tests, keep hooks/configuration reversible, preserve

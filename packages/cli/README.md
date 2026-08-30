@@ -5,8 +5,8 @@ working, waiting, ready, failed, and inactive lifecycle events into a calm termi
 or tmux status layer while protecting newer work from delayed hooks.
 
 The npm CLI requires Node.js 22 or newer. macOS and glibc-based Linux are
-supported during the beta; Windows and musl/Alpine are not supported yet.
-Prereleases use npm's explicit `beta` channel; confirm the installed build with
+supported in v0.1; Windows and musl/Alpine are not supported yet. Stable
+releases use npm's explicit `latest` channel; confirm the installed build with
 `side-glance --version`.
 
 ```bash
@@ -15,10 +15,10 @@ brew install AndrewUlloa/tap/side-glance
 side-glance init
 ```
 
-Global npm is the durable fallback during the beta:
+Global npm is the durable fallback:
 
 ```bash
-npm install --global side-glance@beta
+npm install --global side-glance@latest
 side-glance init
 ```
 
@@ -29,12 +29,12 @@ Package upgrades alone do not rewrite existing provider hooks. Rerun
 For public discovery or a guided trial, use:
 
 ```bash
-npx side-glance@beta init
+npx side-glance@latest init
 ```
 
-Use `npx side-glance@latest init` only after the stable package owns npm's
-`latest` tag. The beta npx flow performs discovery and can ask to bootstrap an
-exact-version durable install. Side Glance deliberately refuses permanent provider installation from `npx` because npm's ephemeral cache is not a durable lifecycle-hook location.
+The npx flow performs discovery and can ask to bootstrap an exact-version durable
+install. Side Glance deliberately refuses permanent provider installation from `npx`
+because npm's ephemeral cache is not a durable lifecycle-hook location.
 
 `side-glance init` shows a concise read-only review of the selected providers,
 notification choices, warnings, and owned configuration paths before it asks for

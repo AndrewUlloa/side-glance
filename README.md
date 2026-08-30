@@ -7,9 +7,9 @@
 <p>Turn local Claude Code, Codex, Gemini, OpenCode, and Aider lifecycle events<br>
 into a calm terminal or tmux status layer.</p>
 
-<a href="https://www.npmjs.com/package/side-glance"><img alt="npm beta version" src="https://img.shields.io/npm/v/side-glance/beta?style=flat-square"></a>
+<a href="https://www.npmjs.com/package/side-glance"><img alt="npm version" src="https://img.shields.io/npm/v/side-glance?style=flat-square"></a>
 <a href="https://www.npmjs.com/package/side-glance"><img alt="npm downloads" src="https://img.shields.io/npm/dw/side-glance?style=flat-square"></a>
-<a href="https://github.com/AndrewUlloa/side-glance/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/AndrewUlloa/side-glance?style=flat-square&include_prereleases"></a>
+<a href="https://github.com/AndrewUlloa/side-glance/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/AndrewUlloa/side-glance?style=flat-square"></a>
 <a href="https://github.com/AndrewUlloa/side-glance/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/AndrewUlloa/side-glance?style=flat-square"></a>
 <a href="https://github.com/AndrewUlloa/side-glance/blob/main/LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/npm/l/side-glance?style=flat-square"></a>
 
@@ -47,7 +47,7 @@ an Apache-2.0 open-source project.
 
 - The npm CLI requires Node.js 22 or newer. The Homebrew formula installs a
   standalone build.
-- macOS and glibc-based Linux are supported during the beta. Windows and
+- macOS and glibc-based Linux are supported in v0.1. Windows and
   musl/Alpine are not supported yet; Intel macOS is experimental.
 - A provider is available to setup only when its CLI command is executable on
   the `PATH` of the shell running setup. Its account or desktop app may still be usable
@@ -58,10 +58,10 @@ an Apache-2.0 open-source project.
 
 ## Quick start
 
-### 1. Install the beta
+### 1. Install Side Glance
 
-Side Glance is available as a beta package. Prereleases are published on npm's
-explicit `beta` channel. Source commits are not releases: a version becomes
+Side Glance v0.1 is stable. Stable releases are published on npm's explicit
+`latest` channel. Source commits are not releases: a version becomes
 installable only after its matching protected-tag workflow completes.
 
 Homebrew is the recommended durable installation:
@@ -74,18 +74,17 @@ side-glance init
 For public discovery or a guided trial, use the temporary package runner:
 
 ```bash
-npx side-glance@beta init
+npx side-glance@latest init
 ```
 
 The runner performs read-only discovery, then either hands off to an existing
-durable executable or asks before installing the exact beta. It never writes an
-npm-cache path into provider hooks. Use `npx side-glance@latest init` only after
-the stable package owns npm's `latest` tag.
+durable executable or asks before installing the exact stable release. It never
+writes an npm-cache path into provider hooks.
 
 Global npm is the durable fallback:
 
 ```bash
-npm install --global side-glance@beta
+npm install --global side-glance@latest
 side-glance init
 side-glance --version
 ```
@@ -489,9 +488,9 @@ npm test
 - [Releases](https://github.com/AndrewUlloa/side-glance/releases)
 - [Apache 2.0 license](https://github.com/AndrewUlloa/side-glance/blob/main/LICENSE)
 
-Public beta. Protected branch and tag rules gate every release. The verified public
-site is [sideglance.dev](https://sideglance.dev). Gemini, OpenCode v1, and Aider
-remain experimental until their live provider matrices are signed off.
+Stable · v0.1. Protected branch and tag rules gate every release. The verified
+public site is [sideglance.dev](https://sideglance.dev). Gemini, OpenCode v1, and
+Aider remain experimental until their live provider matrices are signed off.
 
 ## License
 

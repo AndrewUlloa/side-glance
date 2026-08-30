@@ -45,7 +45,7 @@ const tools: WebMcpTool[] = [
   {
     name: "get-side-glance-install-command",
     description:
-      "Return the supported public-beta command for installing and configuring Side Glance without executing it.",
+      "Return the supported stable command for installing and configuring Side Glance without executing it.",
     inputSchema: {
       type: "object",
       properties: {
@@ -60,7 +60,7 @@ const tools: WebMcpTool[] = [
     execute: (input) => {
       const command =
         input.method === "npm"
-          ? "npm install --global side-glance@beta && side-glance init"
+          ? "npm install --global side-glance@latest && side-glance init"
           : "brew install AndrewUlloa/tap/side-glance && side-glance init";
       return Promise.resolve(textResult(command));
     },

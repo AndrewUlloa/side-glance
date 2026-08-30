@@ -43,7 +43,7 @@ export const HOME_PAGE_CONTENT: SitePageContent = {
       heading: "How it fits your workflow",
       paragraphs: [
         "Guided setup detects supported provider CLIs without executing them, previews the changes Side Glance owns, and preserves unrelated configuration. A supervised wrapper supplies a stable surface identity for direct terminals or tmux, while provider adapters supply lifecycle events. Status is the default theme; Heat and validated custom colors are optional.",
-        "Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider remain experimental until their live provider matrices pass. The public beta supports macOS and glibc Linux through Homebrew, with npm available as a durable fallback.",
+        "Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider remain experimental until their live provider matrices pass. Stable v0.1 supports macOS and glibc Linux through Homebrew, with npm available as a durable fallback.",
       ],
     },
   ],
@@ -92,7 +92,7 @@ export const ABOUT_PAGE_CONTENT: SitePageContent = {
     {
       heading: "Current scope and limits",
       paragraphs: [
-        "Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider are experimental until their live binary matrices pass. The supported public-beta path is Homebrew on Apple Silicon macOS or glibc Linux, with global npm as a durable fallback. Intel macOS remains experimental, while Windows and musl-based Linux are not supported yet.",
+        "Claude Code and Codex are locally contract-audited. Gemini, OpenCode v1, and Aider are experimental until their live binary matrices pass. The supported v0.1 path is Homebrew on Apple Silicon macOS or glibc Linux, with global npm as a durable fallback. Intel macOS remains experimental, while Windows and musl-based Linux are not supported yet.",
         "Normal session-end and signal paths release through the serialized controller. No software can synchronously guarantee cleanup after every component receives SIGKILL, after power loss, or after a terminal emulator disappears. Side Glance describes those cases as recovery and reconciliation, and exposes explicit diagnosis and reset commands instead of making an impossible lifecycle guarantee.",
       ],
     },
@@ -142,7 +142,7 @@ export const CONTACT_PAGE_CONTENT: SitePageContent = {
       heading: "Security reports",
       paragraphs: [
         "Do not open a public issue for a suspected vulnerability. Use GitHub's private vulnerability report for the Side Glance repository. Include the affected version and platform, reproduction steps, potential impact, and any suggested mitigation. Avoid attaching real credentials, transcripts, or other sensitive user data.",
-        "Until Side Glance reaches version 1.0, security fixes target the newest published beta. The main branch is development code rather than a supported release channel. The private vulnerability-reporting route is the appropriate contact point for coordinated disclosure.",
+        "Security fixes target the newest published stable release. The main branch is development code rather than a supported release channel. The private vulnerability-reporting route is the appropriate contact point for coordinated disclosure.",
       ],
     },
   ],

@@ -49,8 +49,8 @@ export function bootstrapInitHelpText(): string {
   return `Side Glance npx bootstrap
 
 Usage:
-  npx side-glance@beta init --dry-run [--install <homebrew|npm|none>]
-  npx side-glance@beta init --install <homebrew|npm> --providers <list> --notifications <list|none> --yes
+  npx side-glance@latest init --dry-run [--install <homebrew|npm|none>]
+  npx side-glance@latest init --install <homebrew|npm> --providers <list> --notifications <list|none> --yes
 
 Options:
   --install <homebrew|npm|none> Choose the durable installation method

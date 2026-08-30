@@ -27,7 +27,7 @@ test("the Claude hero answers a local follow-up with an honest install handoff",
     /visualForPhase\(phase, elapsedSeconds, appearance\)/u
   );
   assert.match(terminal, /To try Side Glance,/u);
-  assert.match(terminal, /install the public beta\./u);
+  assert.match(terminal, /install the stable release\./u);
   assert.match(terminal, /scrollTo\([\s\S]*scrollHeight/u);
   assert.match(
     terminal,

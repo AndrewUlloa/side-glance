@@ -80,7 +80,7 @@ test("CI and release workflows pin actions and enforce the public protected-tag 
   assert.match(release, /github\.ref_protected/u);
 });
 
-test("release validation accepts only Side Glance's public protected matching version tag", async (context) => {
+test("release validation accepts only Side Glance's public protected stable version tag", async (context) => {
   const temporary = await mkdtemp(path.join(tmpdir(), "side-glance-release-policy-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const output = path.join(temporary, "output");
@@ -88,21 +88,21 @@ test("release validation accepts only Side Glance's public protected matching ve
     GITHUB_REPOSITORY: "AndrewUlloa/side-glance",
     GITHUB_EVENT_REPOSITORY_VISIBILITY: "public",
     GITHUB_REF_TYPE: "tag",
-    GITHUB_REF_NAME: "v0.1.0-beta.12",
+    GITHUB_REF_NAME: "v0.1.0",
     GITHUB_REF_PROTECTED: "true",
     GITHUB_OUTPUT: output,
   };
 
   await command(process.execPath, [validator, repository], base);
   const fields = await readFile(output, "utf8");
-  assert.match(fields, /^version=0\.1\.0-beta\.12$/mu);
-  assert.match(fields, /^npm_tag=beta$/mu);
-  assert.match(fields, /^prerelease=true$/mu);
+  assert.match(fields, /^version=0\.1\.0$/mu);
+  assert.match(fields, /^npm_tag=latest$/mu);
+  assert.match(fields, /^prerelease=false$/mu);
 
   for (const [field, value, pattern] of [
     ["GITHUB_EVENT_REPOSITORY_VISIBILITY", "private", /repository must be public/iu],
     ["GITHUB_REF_PROTECTED", "false", /tag must be protected/iu],
-    ["GITHUB_REF_NAME", "v0.1.0", /must exactly match package version/iu],
+    ["GITHUB_REF_NAME", "v0.1.0-beta.12", /must exactly match package version/iu],
     ["GITHUB_REPOSITORY", "attacker/fork", /canonical repository/iu],
   ]) {
     await assert.rejects(
@@ -112,8 +112,8 @@ test("release validation accepts only Side Glance's public protected matching ve
   }
 });
 
-test("release validation routes stable versions to latest and a normal GitHub release", async (context) => {
-  const temporary = await mkdtemp(path.join(tmpdir(), "side-glance-stable-release-policy-"));
+test("release validation routes prerelease versions to beta and a GitHub prerelease", async (context) => {
+  const temporary = await mkdtemp(path.join(tmpdir(), "side-glance-beta-release-policy-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   await mkdir(path.join(temporary, "packages/cli"), { recursive: true });
   await writeFile(path.join(temporary, "package.json"), JSON.stringify({ private: true }), "utf8");
@@ -121,8 +121,8 @@ test("release validation routes stable versions to latest and a normal GitHub re
     path.join(temporary, "packages/cli/package.json"),
     JSON.stringify({
       name: "side-glance",
-      version: "1.0.0",
-      publishConfig: { tag: "latest" },
+      version: "0.1.1-beta.1",
+      publishConfig: { tag: "beta" },
     }),
     "utf8",
   );
@@ -132,22 +132,22 @@ test("release validation routes stable versions to latest and a normal GitHub re
     GITHUB_REPOSITORY: "AndrewUlloa/side-glance",
     GITHUB_EVENT_REPOSITORY_VISIBILITY: "public",
     GITHUB_REF_TYPE: "tag",
-    GITHUB_REF_NAME: "v1.0.0",
+    GITHUB_REF_NAME: "v0.1.1-beta.1",
     GITHUB_REF_PROTECTED: "true",
     GITHUB_OUTPUT: output,
   });
 
   const fields = await readFile(output, "utf8");
-  assert.match(fields, /^version=1\.0\.0$/mu);
-  assert.match(fields, /^npm_tag=latest$/mu);
-  assert.match(fields, /^prerelease=false$/mu);
+  assert.match(fields, /^version=0\.1\.1-beta\.1$/mu);
+  assert.match(fields, /^npm_tag=beta$/mu);
+  assert.match(fields, /^prerelease=true$/mu);
 });
 
 test("release channels allow retries and upgrades but reject backward dist-tag moves", async () => {
   await command(process.execPath, [channelValidator, "0.1.0-beta.12", "beta", "0.1.0-beta.11"]);
   await command(process.execPath, [channelValidator, "0.1.0-beta.12", "beta", "0.1.0-beta.12"]);
-  await command(process.execPath, [channelValidator, "1.0.0", "latest", "0.1.0-beta.3"]);
-  await command(process.execPath, [channelValidator, "1.0.0", "latest"]);
+  await command(process.execPath, [channelValidator, "0.1.0", "latest", "0.1.0-beta.3"]);
+  await command(process.execPath, [channelValidator, "0.1.0", "latest"]);
 
   await assert.rejects(
     () => command(process.execPath, [channelValidator, "0.1.0-beta.2", "beta", "0.1.0-beta.3"]),

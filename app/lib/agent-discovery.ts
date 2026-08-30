@@ -25,7 +25,7 @@ Do not use Side Glance as a remote orchestrator, transcript summarizer, or guara
 
 ## Prerequisites
 
-- Apple Silicon macOS or glibc Linux for the supported public-beta path.
+- Apple Silicon macOS or glibc Linux for the supported v0.1 path; Intel macOS is experimental.
 - Homebrew is recommended; npm is the durable fallback.
 - A supported coding-agent CLI and a terminal or tmux session the user controls.
 
@@ -41,7 +41,7 @@ side-glance init
 If Homebrew is unavailable:
 
 ~~~sh
-npx side-glance@beta init
+npx side-glance@latest init
 ~~~
 
 Do not silently replace provider hooks or unrelated notification commands. Guided setup previews Side Glance-owned changes and preserves unrelated configuration.
