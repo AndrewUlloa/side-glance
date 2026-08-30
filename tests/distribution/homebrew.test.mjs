@@ -28,6 +28,7 @@ test("generates a validated Homebrew formula from immutable release metadata", a
     assert.ok(formula.includes(artifact.sha256));
   }
   assert.match(formula, /Intel macOS.*experimental/u);
+  assert.doesNotMatch(formula, /beta artifact/iu);
   assert.match(formula, /bin\.install "side-glance"/u);
   assert.match(formula, /assert_equal version\.to_s/u);
   assert.match(formula, /preview --phase waiting --elapsed 60 --json/u);

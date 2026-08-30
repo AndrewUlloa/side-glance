@@ -119,7 +119,7 @@ class SideGlance < Formula
     end
 
     on_intel do
-      # Node SEA does not regularly test Intel macOS; this beta artifact is experimental.
+      # Node SEA does not regularly test Intel macOS; this artifact is experimental.
       url "${darwinIntel.url}"
       sha256 "${darwinIntel.sha256}"
     end

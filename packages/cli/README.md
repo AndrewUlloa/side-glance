@@ -4,10 +4,10 @@ Side Glance is a local-first attention layer for coding-agent CLIs. It turns
 working, waiting, ready, failed, and inactive lifecycle events into a calm terminal
 or tmux status layer while protecting newer work from delayed hooks.
 
-The npm CLI requires Node.js 22 or newer. macOS and glibc-based Linux are
-supported in v0.1; Windows and musl/Alpine are not supported yet. Stable
-releases use npm's explicit `latest` channel; confirm the installed build with
-`side-glance --version`.
+The npm CLI requires Node.js 22 or newer. Apple Silicon macOS and glibc-based
+Linux are supported in v0.1; Intel macOS is experimental.
+Windows and musl/Alpine are not supported yet. Stable releases use npm's explicit
+`latest` channel; confirm the installed build with `side-glance --version`.
 
 ```bash
 # Apple Silicon macOS or glibc Linux; Intel macOS is experimental
