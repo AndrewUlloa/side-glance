@@ -2495,25 +2495,26 @@ a {
   width: fit-content;
   max-width: 100%;
   justify-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .minimal-lifecycle-controls {
-  display: grid;
-  width: 100%;
+  display: flex;
   max-width: 100%;
+  align-items: center;
+  justify-content: center;
   gap: 20px;
-  justify-items: center;
+  flex-wrap: wrap;
 }
 
 .minimal-theme-picker {
-  display: grid;
+  display: flex;
   max-width: 100%;
   padding: 0;
   border: 0;
   gap: 8px;
+  align-items: center;
   font-family: var(--font-alan-sans);
-  justify-items: center;
 }
 
 .minimal-preview-control-label {
@@ -2521,9 +2522,9 @@ a {
   padding: 0;
   color: #343937;
   font-family: var(--font-alan-sans);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: -0.13px;
+  letter-spacing: -0.11px;
   line-height: 1.2;
   text-align: center;
 }
@@ -2543,19 +2544,14 @@ a {
 
 .minimal-theme-toggle-button {
   appearance: none;
-  display: grid;
-  min-width: 150px;
-  min-height: 48px;
-  padding: 7px 13px;
+  min-height: 30px;
+  padding: 0 11px;
   border: 0;
   border-radius: 9999px;
   background: transparent;
   color: #343937;
   cursor: pointer;
   font: inherit;
-  gap: 2px;
-  justify-items: center;
-  line-height: 1.15;
   transition:
     background-color 160ms ease,
     box-shadow 160ms ease,
@@ -2572,16 +2568,6 @@ a {
   box-shadow: 0 1px 3px rgb(0 0 0 / 14%);
 }
 
-.minimal-theme-toggle-detail {
-  color: #6c7470;
-  font-size: 11px;
-  letter-spacing: -0.11px;
-}
-
-.minimal-theme-toggle-button[aria-pressed="true"] .minimal-theme-toggle-detail {
-  color: #343937;
-}
-
 .minimal-theme-toggle-button:focus-visible {
   outline: 2px solid #000;
   outline-offset: 2px;
@@ -2595,15 +2581,16 @@ a {
   padding: 0;
   align-items: center;
   justify-content: center;
+  gap: clamp(8px, 1.25vw, 16px);
   flex-wrap: wrap;
   list-style: none;
 }
 
 .minimal-lifecycle-picker {
-  display: grid;
+  display: flex;
   max-width: 100%;
   gap: 8px;
-  justify-items: center;
+  align-items: center;
 }
 
 .minimal-lifecycle-state {
@@ -2611,7 +2598,7 @@ a {
 }
 
 .minimal-lifecycle-explanation {
-  max-width: 560px;
+  max-width: 720px;
   margin: 0;
   color: #5f6663;
   font-family: var(--font-alan-sans);
@@ -2619,6 +2606,12 @@ a {
   letter-spacing: -0.13px;
   line-height: 1.4;
   text-align: center;
+}
+
+@media (min-width: 761px) {
+  .minimal-lifecycle-controls {
+    flex-wrap: nowrap;
+  }
 }
 
 .minimal-lifecycle-button {
@@ -3513,6 +3506,30 @@ a {
   }
 }
 
+@media (min-width: 761px) and (max-width: 1100px) {
+  .minimal-lifecycle-controls {
+    gap: 12px;
+  }
+
+  .minimal-preview-control-label {
+    display: none;
+  }
+
+  .minimal-lifecycle {
+    gap: 8px;
+  }
+
+  .minimal-lifecycle-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 14px;
+  }
+
+  .minimal-lifecycle-progress {
+    width: 16px;
+    height: 16px;
+  }
+}
+
 @media (max-width: 760px) {
   :root {
     --spacing-layout-stack: 3rem;
@@ -3586,6 +3603,12 @@ a {
   .minimal-theme-picker,
   .minimal-theme-toggle {
     width: 100%;
+  }
+
+  .minimal-theme-picker,
+  .minimal-lifecycle-picker {
+    display: grid;
+    justify-items: center;
   }
 
   .minimal-theme-toggle-button {

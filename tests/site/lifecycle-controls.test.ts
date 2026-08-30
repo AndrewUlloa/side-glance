@@ -44,9 +44,16 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   );
   assert.match(showcase, /<button/u);
   assert.match(showcase, />\s*How should finished work look\?\s*</u);
-  assert.match(showcase, />\s*Ready stays green\s*</u);
-  assert.match(showcase, />\s*Ready warms with time\s*</u);
+  assert.match(showcase, />\s*Finished work\s*</u);
   assert.match(showcase, />\s*Preview a moment\s*</u);
+  assert.match(
+    showcase,
+    /<legend className="sr-only">\s*How should finished work look\?\s*<\/legend>/u
+  );
+  assert.match(
+    showcase,
+    /aria-describedby="side-glance-appearance-explanation"/u
+  );
   assert.doesNotMatch(showcase, />\s*Color model\s*</u);
   assert.match(showcase, /aria-pressed=\{appearance === "status"\}/u);
   assert.match(showcase, /aria-pressed=\{appearance === "heat"\}/u);
@@ -58,7 +65,7 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
     showcase,
     /const selectAppearance = \(nextAppearance: PlaygroundAppearance\) => \{[\s\S]*setPlaybackPaused\(true\);[\s\S]*setStage\(INITIAL_STATE_INDEX\);[\s\S]*setAppearance\(nextAppearance\);[\s\S]*\};/u
   );
-  assert.match(showcase, /className="minimal-lifecycle gap-lifecycle-gap"/u);
+  assert.match(showcase, /className="minimal-lifecycle"/u);
   assert.match(showcase, /aria-pressed=\{activeState\.id === state\.id\}/u);
   assert.match(showcase, /onClick=\{\(\) => selectState\(index\)\}/u);
   assert.match(
@@ -78,11 +85,7 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.doesNotMatch(showcase, /install-icon\.svg|from "next\/image"/u);
   assert.match(
     showcase,
-    /Ready stays green at every duration[\s\S]*Failure is red/u
-  );
-  assert.match(
-    showcase,
-    /Ready warms from green toward red as runtime grows[\s\S]*Failure is\s*red immediately/u
+    /Status keeps Ready green\. Heat warms successful Ready as runtime\s*grows;\s*failure is red immediately in both\./u
   );
   assert.match(
     showcase,
@@ -112,8 +115,21 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(css, /\.minimal-lifecycle-button\[aria-pressed="true"\]/u);
   assert.match(css, /\.minimal-theme-toggle\s*\{/u);
   assert.match(css, /\.minimal-preview-control-label\s*\{/u);
-  assert.match(css, /\.minimal-theme-toggle-detail\s*\{/u);
   assert.match(css, /\.minimal-lifecycle-picker\s*\{/u);
+  assert.doesNotMatch(css, /\.minimal-theme-toggle-detail/u);
+  assert.match(
+    css,
+    /\.minimal-lifecycle-controls\s*\{[^}]*display:\s*flex[^}]*align-items:\s*center/u
+  );
+  assert.match(
+    css,
+    /\.minimal-theme-toggle-button\s*\{[^}]*min-height:\s*30px/u
+  );
+  assert.match(css, /--spacing-lifecycle-control-height:\s*2\.5rem/u);
+  assert.match(
+    css,
+    /@media \(min-width:\s*761px\)[\s\S]*?\.minimal-lifecycle-controls\s*\{[^}]*flex-wrap:\s*nowrap/u
+  );
   assert.match(css, /\.minimal-theme-toggle-button\[aria-pressed="true"\]/u);
   assert.match(css, /\.minimal-lifecycle-progress\s*\{/u);
   assert.match(css, /\.minimal-lifecycle-progress-value\s*\{/u);

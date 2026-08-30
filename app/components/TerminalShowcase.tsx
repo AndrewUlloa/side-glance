@@ -190,10 +190,14 @@ export function TerminalShowcase() {
 
       <figcaption>
         <div className="minimal-lifecycle-controls">
-          <fieldset className="minimal-theme-picker">
-            <legend className="minimal-preview-control-label">
-              How should finished work look?
-            </legend>
+          <fieldset
+            aria-describedby="side-glance-appearance-explanation"
+            className="minimal-theme-picker"
+          >
+            <legend className="sr-only">How should finished work look?</legend>
+            <span aria-hidden="true" className="minimal-preview-control-label">
+              Finished work
+            </span>
             <div className="minimal-theme-toggle">
               <button
                 aria-pressed={appearance === "status"}
@@ -201,10 +205,7 @@ export function TerminalShowcase() {
                 onClick={() => selectAppearance("status")}
                 type="button"
               >
-                <span>Status</span>
-                <span className="minimal-theme-toggle-detail">
-                  Ready stays green
-                </span>
+                Status
               </button>
               <button
                 aria-pressed={appearance === "heat"}
@@ -212,23 +213,9 @@ export function TerminalShowcase() {
                 onClick={() => selectAppearance("heat")}
                 type="button"
               >
-                <span>Heat</span>
-                <span className="minimal-theme-toggle-detail">
-                  Ready warms with time
-                </span>
+                Heat
               </button>
             </div>
-
-            <p aria-live="polite" className="minimal-lifecycle-explanation">
-              {appearance === "status" ? (
-                <>Ready stays green at every duration. Failure is red.</>
-              ) : (
-                <>
-                  Ready warms from green toward red as runtime grows. Failure is
-                  red immediately.
-                </>
-              )}
-            </p>
           </fieldset>
 
           <div className="minimal-lifecycle-picker">
@@ -240,7 +227,7 @@ export function TerminalShowcase() {
             </p>
             <ul
               aria-labelledby="side-glance-moment-label"
-              className="minimal-lifecycle gap-lifecycle-gap"
+              className="minimal-lifecycle"
             >
               {LIFECYCLE_STATES.map((state, index) => {
                 const visual = visualForPhase(
@@ -277,6 +264,14 @@ export function TerminalShowcase() {
             </ul>
           </div>
         </div>
+
+        <p
+          className="minimal-lifecycle-explanation"
+          id="side-glance-appearance-explanation"
+        >
+          Status keeps Ready green. Heat warms successful Ready as runtime
+          grows; failure is red immediately in both.
+        </p>
 
         <span
           aria-live={isPlaybackRunning ? "off" : "polite"}

@@ -35,7 +35,7 @@ test("the launch page follows the vertical Figma showcase while keeping the term
     assert.match(showcase, new RegExp(`label: "${label}"`, "u"));
   }
 
-  assert.match(showcase, /className="minimal-lifecycle gap-lifecycle-gap"/u);
+  assert.match(showcase, /className="minimal-lifecycle"/u);
   assert.match(showcase, /data-state=\{state\.id\}/u);
   assert.match(
     showcase,
@@ -69,6 +69,10 @@ test("the launch page follows the vertical Figma showcase while keeping the term
     /@media \(min-width:\s*761px\)[\s\S]*?\.minimal-terminal-surface\s*\{[^}]*height:\s*calc\(\s*100dvh\s*-\s*var\(--spacing-site-header\)\s*-\s*var\(--spacing-lifecycle-control-height\)\s*-\s*var\(--spacing-showcase\)\s*-\s*var\(--spacing-showcase\)\s*-\s*var\(--spacing-page-block\)\s*\)/u
   );
   assert.match(css, /\.minimal-lifecycle\s*\{[^}]*flex-wrap:\s*wrap/u);
+  assert.match(
+    css,
+    /\.minimal-lifecycle\s*\{[^}]*gap:\s*clamp\(8px, 1\.25vw, 16px\)/u
+  );
   assert.match(css, /background-image:\s*var\(--side-glance-hero-surface\)/u);
 
   const headerRule = css.match(/\.minimal-header\s*\{([^}]*)\}/u)?.[1] ?? "";
