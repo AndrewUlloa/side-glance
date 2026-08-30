@@ -17,8 +17,10 @@ Initial npm ownership is established by the published
 owner `AndrewUlloa`, repository `side-glance`, workflow `release.yml`, and
 environment `npm-release`; publishing is allowed while staged publishing is not,
 and no legacy npm automation token is used by this repository. Required
-environment reviewers can be added when a
-second qualified release operator is available.
+environment reviewers can be added when a second qualified release operator is
+available. Until then, the sole maintainer verifies the exact protected main
+commit and annotated tag before publication; a self-review placeholder would not
+add an independent approval boundary.
 
 `AndrewUlloa/homebrew-tap` is public and provides the supported third-party tap
 command `brew install AndrewUlloa/tap/side-glance`. Its protected `main` branch is
@@ -58,6 +60,12 @@ step. [Trusted-publishing OIDC](https://docs.npmjs.com/trusted-publishers/) supp
 a long-lived token for that purpose. Stable public installation examples use
 `side-glance@latest`; prerelease testing remains explicit about
 `side-glance@beta`.
+
+Do not use `@latest` to validate an unpublished stable candidate. Before npm
+publication, test the exact assembled tarball or staged release artifact. When a
+release changes the public channel itself, keep channel-specific public copy out
+of production until the registry move completes; publish that copy through the
+normal protected follow-up path.
 
 ## Artifact policy
 
