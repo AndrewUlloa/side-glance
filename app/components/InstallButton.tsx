@@ -60,7 +60,7 @@ export function InstallButton({ idleAriaLabel }: InstallButtonProps) {
     resetRef.current = setTimeout(() => setCopied(false), 1400);
   }, []);
 
-  const label = copied ? "Copied setup" : "Copy setup";
+  const label = copied ? "Copied setup" : "Install";
   const transition = shouldReduceMotion
     ? SWAP_MOTION.reduced
     : SWAP_MOTION.spring;

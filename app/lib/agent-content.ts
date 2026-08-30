@@ -33,7 +33,7 @@ export const HOME_PAGE_CONTENT: SitePageContent = {
       ],
     },
     {
-      heading: "Four sessions. One clear glance.",
+      heading: "Agent sessions. One clear glance.",
       paragraphs: [
         "You start a few agents, then return to another task. One finishes. Another needs permission. A third fails. Side Glance keeps the best-known state where the work is already running.",
         "Side Glance is not a remote agent orchestrator or transcript summarizer. After power loss, SIGKILL, or terminal-emulator failure, it reconciles state on the next affected event; it does not promise synchronous cleanup.",
@@ -71,15 +71,15 @@ export const HOME_PAGE_CONTENT: SitePageContent = {
 export const ABOUT_PAGE_CONTENT: SitePageContent = {
   title: "About Side Glance",
   description:
-    "Why Andrew Ulloa built Side Glance, how Shisa Kanko influenced its design, and what the coding-agent CLI supports today.",
+    "How Side Glance grew from a personal terminal-status hook, how Shisa Kanko influenced its design, and what the coding-agent CLI supports today.",
   path: "/about",
   markdownPath: "/about.md",
   sections: [
     {
-      heading: "Why I built Side Glance",
+      heading: "Why Side Glance exists",
       paragraphs: [
-        "I built Side Glance after repeatedly reopening several agent terminals to see which one was still working, waiting for input, ready for review, or failed.",
-        "The first version was stoplight.sh, a personal Claude Code hook that turned those states into terminal color. Side Glance originated at Design From, Inc.; I maintain it as Apache-2.0 open source.",
+        "Side Glance was built for developers who run long-lived coding-agent sessions and have become the watcher of their own automation. A loop may still be working, may need input, may be ready for review, or may have failed. Side Glance makes those lifecycle states ambient in the terminal so attention can stay on the next decision or the work already in the foreground.",
+        "The first version was stoplight.sh, a personal Claude Code hook that turned those states into terminal color. Side Glance originated at Design From, Inc. and is maintained by Andrew Ulloa as Apache-2.0 open source.",
       ],
     },
     {

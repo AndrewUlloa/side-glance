@@ -36,13 +36,10 @@ test("server-renders the focused Side Glance launch hero", async () => {
     /<meta name="description" content="See when Claude Code, Codex, and other coding agents are working, waiting, ready, or failed\. Side Glance keeps status local in your terminal or tmux\."\/>/i
   );
   assert.match(text, /Long loops\. Short glances\./);
-  assert.match(
-    text,
-    /See each coding-agent session working, waiting, ready, or failed\./
-  );
+  assert.match(text, /Know which loop needs judgment\./);
   assert.match(text, /Without reopening every terminal tab or pane\./);
   assert.match(text, /What Side Glance does/);
-  assert.match(text, /Four sessions\. One clear glance\./);
+  assert.match(text, /Agent sessions\. One clear glance\./);
   assert.match(text, /How it works/);
   assert.ok(
     text.length >= 500,
@@ -80,7 +77,7 @@ test("server-renders the focused Side Glance launch hero", async () => {
     html,
     /<link href="\/\.well-known\/ai-catalog\.json" rel="ai-catalog" type="application\/json"\/>/iu
   );
-  assert.match(text, /Copy setup/);
+  assert.match(text, /Install/);
   assert.match(
     html,
     /copy Homebrew and guided setup commands · stable · v0\.1/
@@ -143,7 +140,7 @@ test("server-renders substantive trust pages", async () => {
       const text = renderedText(html);
 
       assert.match(html, new RegExp(`<h1[^>]*>${heading}</h1>`, "iu"));
-      assert.match(text, /Copy setup/u);
+      assert.match(text, /Install/u);
       assert.match(html, /aria-label="View Side Glance on GitHub"/u);
       assert.ok(
         text.length >= 500,

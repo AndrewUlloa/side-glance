@@ -39,7 +39,7 @@ test("the install control copies Homebrew plus guided setup and morphs into conf
   assert.match(installButton, /useMeasure/u);
   assert.match(installButton, /animate=\{\{ width: targetWidth \}\}/u);
   assert.doesNotMatch(installButton, /layout=\{/u);
-  assert.match(installButton, /copied \? "Copied setup" : "Copy setup"/u);
+  assert.match(installButton, /copied \? "Copied setup" : "Install"/u);
   assert.match(installButton, /setTimeout\([^,]+, 1400\)/u);
   assert.match(installButton, /clearTimeout/u);
   assert.match(installButton, /copied \? <CheckIcon \/> :/u);

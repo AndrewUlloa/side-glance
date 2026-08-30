@@ -132,7 +132,7 @@ test("server-rendered homepage contains a useful heading hierarchy and substanti
   assert.match(homepageSource, /HOME_PAGE_CONTENT\.sections\[1\]\.heading/u);
   assert.match(homepageSource, /HOME_PAGE_CONTENT\.sections\[2\]\.heading/u);
   assert.match(agentContent, /What Side Glance does/u);
-  assert.match(agentContent, /Four sessions\. One clear glance\./u);
+  assert.match(agentContent, /Agent sessions\. One clear glance\./u);
   assert.match(agentContent, /How it works/u);
   assert.doesNotMatch(homepageSource, /Local-first agent attention/u);
   assert.ok(agentContent.length > 2500, "agent-readable content is too thin");
@@ -296,7 +296,15 @@ test("adds substantive About, Contact, and Privacy trust pages", async () => {
   assert.match(agentContent, /Privacy/u);
   assert.match(agentContent, /Cloudflare Web Analytics/u);
   assert.match(agentContent, /private vulnerability report/u);
-  assert.match(agentContent, /Why I built Side Glance/u);
+  assert.match(agentContent, /Why Side Glance exists/u);
+  assert.match(
+    agentContent,
+    /have become the watcher of their own automation/u
+  );
+  assert.doesNotMatch(
+    agentContent,
+    /Why I built Side Glance|I built Side Glance/u
+  );
   assert.match(agentContent, /The design influence/u);
   assert.match(agentContent, /Shisa Kanko/u);
   assert.match(agentContent, /shisha-kanko-pointing-calling-redux/u);
