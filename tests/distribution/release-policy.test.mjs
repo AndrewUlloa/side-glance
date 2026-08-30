@@ -55,7 +55,7 @@ test("CI and release workflows pin actions and enforce the public protected-tag 
   assert.equal(
     [
       ...release.matchAll(
-        /uses:\s+actions\/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4\.2\.1/gu,
+        /uses:\s+actions\/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4\.2\.2/gu,
       ),
     ].length,
     2,

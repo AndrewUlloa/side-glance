@@ -25,7 +25,7 @@ test("scopes Ultracite to the landing page and keeps it out of the published CLI
 
   assert.equal(rootPackage.devDependencies["@biomejs/biome"], "2.3.11");
   assert.equal(rootPackage.devDependencies.ultracite, "7.0.12");
-  assert.equal(rootPackage.devDependencies["lint-staged"], "16.1.2");
+  assert.equal(rootPackage.devDependencies["lint-staged"], "17.3.0");
   assert.equal(rootPackage.scripts["lint:site"], "biome check .");
   assert.equal(rootPackage.scripts["lint:site:fix"], "biome check --write .");
   assert.match(rootPackage.scripts.lint, /npm run lint:site/u);
