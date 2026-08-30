@@ -30,7 +30,7 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(showcase, /clearTimeout/u);
   assert.match(showcase, /motion\.circle/u);
   assert.match(showcase, /pathLength/u);
-  assert.match(showcase, /const phase = activeState\.phase/u);
+  assert.match(showcase, /const \{ phase \} = activeState/u);
   assert.match(
     showcase,
     /const \[appearance, setAppearance\]\s*=\s*useState<PlaygroundAppearance>\("status"\)/u
@@ -46,8 +46,10 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(showcase, /aria-label="Choose a Side Glance color model"/u);
   assert.match(showcase, /aria-pressed=\{appearance === "status"\}/u);
   assert.match(showcase, /aria-pressed=\{appearance === "heat"\}/u);
-  assert.match(showcase, /onClick=\{\(\) => setAppearance\("status"\)\}/u);
-  assert.match(showcase, /onClick=\{\(\) => setAppearance\("heat"\)\}/u);
+  assert.match(showcase, /onClick=\{\(\) => selectAppearance\("status"\)\}/u);
+  assert.match(showcase, /onClick=\{\(\) => selectAppearance\("heat"\)\}/u);
+  assert.match(showcase, /trackDemoEngaged\("color_model"\)/u);
+  assert.match(showcase, /trackDemoEngaged\("lifecycle"\)/u);
   assert.match(showcase, />\s*Status\s*</u);
   assert.match(showcase, />\s*Heat\s*</u);
   assert.match(showcase, /className="minimal-lifecycle gap-lifecycle-gap"/u);

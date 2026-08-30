@@ -34,7 +34,10 @@
       "postcss.config.mjs"
     ],
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
+      "performance": {
+        "noJsxPropsBind": "off"
+      },
       "style": {
         "useFilenamingConvention": "off"
       }
@@ -53,7 +56,10 @@
     ],
     "actions": {
       "source": {
-        "organizeImports": "on"
+        "organizeImports": "on",
+        "useSortedInterfaceMembers": "off",
+        "useSortedKeys": "off",
+        "useSortedProperties": "off"
       }
     }
   },
@@ -70,6 +76,29 @@
     "ignoreUnknown": true
   },
   "overrides": [
+    {
+      "includes": ["app/globals.css"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDescendingSpecificity": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "app/components/InstallButton.tsx",
+        "app/components/LoadingSequence.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnnecessaryConditions": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["tests/site/**/*.ts", "tests/rendered-html.test.mjs"],
       "linter": {

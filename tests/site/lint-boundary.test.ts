@@ -23,9 +23,9 @@ test("scopes Ultracite to the landing page and keeps it out of the published CLI
       readFile(".husky/pre-commit", "utf8"),
     ]);
 
-  assert.equal(rootPackage.devDependencies["@biomejs/biome"], "2.3.11");
-  assert.equal(rootPackage.devDependencies.ultracite, "7.0.12");
-  assert.equal(rootPackage.devDependencies["lint-staged"], "16.1.2");
+  assert.equal(rootPackage.devDependencies["@biomejs/biome"], "2.5.10");
+  assert.equal(rootPackage.devDependencies.ultracite, "7.10.6");
+  assert.equal(rootPackage.devDependencies["lint-staged"], "17.3.0");
   assert.equal(rootPackage.scripts["lint:site"], "biome check .");
   assert.equal(rootPackage.scripts["lint:site:fix"], "biome check --write .");
   assert.match(rootPackage.scripts.lint, /npm run lint:site/u);
@@ -40,6 +40,28 @@ test("scopes Ultracite to the landing page and keeps it out of the published CLI
   assert.deepEqual(biome.linter.includes, siteIncludes);
   assert.deepEqual(biome.formatter.includes, siteIncludes);
   assert.deepEqual(biome.assist.includes, siteIncludes);
+  assert.equal(biome.linter.rules.preset, "recommended");
+  assert.equal(biome.linter.rules.recommended, undefined);
+  assert.equal(biome.linter.rules.performance.noJsxPropsBind, "off");
+  assert.equal(biome.assist.actions.source.useSortedInterfaceMembers, "off");
+  assert.equal(biome.assist.actions.source.useSortedKeys, "off");
+  assert.equal(biome.assist.actions.source.useSortedProperties, "off");
+  const cssOverride = biome.overrides.find((override: { includes: string[] }) =>
+    override.includes.includes("app/globals.css")
+  );
+  assert.equal(cssOverride?.linter.rules.style.noDescendingSpecificity, "off");
+  const conditionOverride = biome.overrides.find(
+    (override: { includes: string[] }) =>
+      override.includes.includes("app/components/InstallButton.tsx")
+  );
+  assert.deepEqual(conditionOverride?.includes, [
+    "app/components/InstallButton.tsx",
+    "app/components/LoadingSequence.tsx",
+  ]);
+  assert.equal(
+    conditionOverride?.linter.rules.suspicious.noUnnecessaryConditions,
+    "off"
+  );
   const testOverride = biome.overrides.find(
     (override: { includes: string[] }) =>
       override.includes.includes("tests/site/**/*.ts")

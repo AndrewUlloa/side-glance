@@ -97,7 +97,7 @@ const tools: WebMcpTool[] = [
 
 export function WebMcpTools() {
   useEffect(() => {
-    const modelContext = document.modelContext;
+    const { modelContext } = document;
     if (modelContext) {
       const controller = new AbortController();
       for (const tool of tools) {

@@ -129,7 +129,7 @@ codex
 gemini
 ```
 
-For supported local launches, Side Glance recovers the originating terminal from
+For supported local launches, Side Glance can recover the originating terminal from
 tmux identity or bounded process ancestry, then paints only after the canonical
 path passes its owned character TTY checks. Direct discovery is supported, not
 guaranteed. Desktop and detached sessions have no trustworthy local terminal and
@@ -148,7 +148,7 @@ integration needs that refresh.
 
 ## Lifecycle at a glance
 
-The default **Status** theme uses color and a distinct tmux marker for every phase:
+The default **Status** theme uses color and a distinct tmux marker for every active phase:
 
 Status uses Working cyan, Waiting amber, Ready green, Failed red, and Inactive
 neutral.
@@ -190,8 +190,8 @@ until their live binary matrices pass.
 | Provider | Lifecycle integration | Notification coverage | Status |
 |---|---|---|---|
 | Claude Code | Native hooks; known subagent and background work delays Ready | Claude reports attention and failure; its pre-final Ready event stays silent. | Contract-audited |
-| Codex | Native hooks with safe terminal discovery | Codex and Gemini report attention; their pre-final Ready events stay silent. | Contract-audited |
-| Gemini | Native hooks with safe terminal discovery | Codex and Gemini report attention; their pre-final Ready events stay silent. | Experimental |
+| Codex | Native hooks with safe terminal discovery | Codex reports attention; its pre-final Ready event stays silent. | Contract-audited |
+| Gemini | Native hooks with safe terminal discovery | Gemini reports attention; its pre-final Ready event stays silent. | Experimental |
 | OpenCode v1 | Stable v1 plugin API; incompatible `opencode2` beta fails closed | OpenCode v1 reports Ready, attention, and failure. | Experimental |
 | Aider | Documented static notification command paired with the wrapper | Completion bridge only; existing notification commands are preserved. | Experimental |
 | Any CLI | Supervised wrapper | The generic wrapper reports only process exit when `--notify-on-exit` is selected. | Supported fallback |
@@ -460,9 +460,11 @@ Provider hooks must never point at `npx` or an npm cache path.
 
 The CLI and interactive site share the same lifecycle phases and palette. The
 Next.js application deploys to Vercel; substantial public media is delivered from
-Cloudflare R2, and privacy-first traffic measurement uses Cloudflare Web Analytics.
-
-Run the repository gates with Node.js 24.18.0:
+Cloudflare R2 through `assets.sideglance.dev`. Cloudflare supplies automatic aggregate
+real-user monitoring for `sideglance.dev`; Vercel records page views and three bounded,
+non-content intent events.
+There is no Cloudflare Worker, vinext, or Wrangler compatibility build. The
+required gates, run with Node.js 24.18.0, are:
 
 ```bash
 npm run test:unit

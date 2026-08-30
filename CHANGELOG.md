@@ -4,6 +4,11 @@ Notable user-facing changes are recorded here. Side Glance follows [Semantic Ver
 
 ## [Unreleased]
 
+### Changed
+
+- Production site media now uses the cached `assets.sideglance.dev` R2 custom
+  domain instead of Cloudflare's rate-limited public development hostname.
+
 ## [0.1.0-beta.12] — 2026-08-27
 
 ### Fixed

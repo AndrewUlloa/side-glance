@@ -53,10 +53,7 @@ test("keeps public beta, provider, terminal, and domain claims within verified e
     launch,
     /Custom-domain status:[\s\S]{0,80}`sideglance\.dev` uses Cloudflare authoritative DNS[\s\S]{0,140}`www\.sideglance\.dev` redirects to the apex/iu
   );
-  assert.equal(
-    manifest.defaultOrigin,
-    "https://pub-5e783841ee13416ab2ffa0db4d732b63.r2.dev"
-  );
+  assert.equal(manifest.defaultOrigin, "https://assets.sideglance.dev");
 });
 
 test("keeps guided setup, notification coverage, and recovery guidance aligned", async () => {

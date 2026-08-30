@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useMeasure } from "../hooks/useMeasure";
+import { trackInstallCommandCopied } from "../lib/analytics-events";
 
 const INSTALL_COMMAND =
   "brew install AndrewUlloa/tap/side-glance\nside-glance init";
@@ -46,6 +47,8 @@ export function InstallButton({ idleAriaLabel }: InstallButtonProps) {
     } catch {
       return;
     }
+
+    trackInstallCommandCopied();
 
     if (resetRef.current) {
       clearTimeout(resetRef.current);
