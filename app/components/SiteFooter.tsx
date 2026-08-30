@@ -10,8 +10,8 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <p>
-        Side Glance · Local-first attention for coding-agent CLIs · Originated
-        by Design From, Inc.
+        Side Glance · Terminal and tmux status for coding-agent CLIs ·
+        Originated at Design From, Inc.
       </p>
       <nav aria-label="Footer">
         {footerLinks.map((link) => (

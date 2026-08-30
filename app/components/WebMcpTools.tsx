@@ -81,9 +81,9 @@ const tools: WebMcpTool[] = [
             name: "Side Glance",
             originatedBy: "Design From, Inc.",
             description:
-              "A local-first attention layer for coding-agent CLIs that reports lifecycle state in terminals and tmux.",
+              "Terminal and tmux status for coding-agent CLIs, showing working, waiting, ready, failed, and inactive lifecycle state.",
             privacy:
-              "Side Glance does not read or persist prompts, responses, or transcripts by default.",
+              "Prompts, responses, and transcripts are not part of Side Glance's state protocol or saved state.",
             supportedPlatforms: ["Apple Silicon macOS", "glibc Linux"],
             homepage: "https://sideglance.dev",
             instructions: "https://sideglance.dev/llms.txt",

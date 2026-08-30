@@ -214,7 +214,7 @@ export function TerminalStoryboard() {
       <div className="storyboard-head">
         <div>
           <span className="playground-kicker">
-            Four sessions · one clear glance
+            Agent sessions · one clear glance
           </span>
           <h2 id="terminal-story-title">Know which terminal needs you.</h2>
         </div>

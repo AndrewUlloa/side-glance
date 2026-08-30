@@ -54,9 +54,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SIDE_GLANCE_SITE_URL),
-  title: "Side Glance — Long loops. Short glances.",
+  title: "Coding Agent Status for Terminal & tmux | Side Glance",
   description:
-    "Side Glance is a local-first attention layer for coding-agent CLIs. See working, waiting, ready, and failed state in your terminal or tmux.",
+    "See when Claude Code, Codex, and other coding agents are working, waiting, ready, or failed. Side Glance keeps status local in your terminal or tmux.",
   applicationName: "Side Glance",
   alternates: {
     canonical: "/",
@@ -83,9 +83,9 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    title: "Side Glance — Long loops. Short glances.",
+    title: "Coding Agent Status for Terminal & tmux | Side Glance",
     description:
-      "A local-first attention layer for coding-agent CLIs. See lifecycle state in your terminal or tmux.",
+      "See which coding-agent session needs attention without reopening every terminal tab or pane.",
     siteName: "Side Glance",
     url: SIDE_GLANCE_SITE_URL,
     images: [
@@ -100,9 +100,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Side Glance — Long loops. Short glances.",
+    title: "Coding Agent Status for Terminal & tmux | Side Glance",
     description:
-      "A local-first attention layer for coding-agent CLIs. See lifecycle state in your terminal or tmux.",
+      "See which coding-agent session needs attention without reopening every terminal tab or pane.",
     images: [
       {
         url: SITE_ASSETS.openGraph,

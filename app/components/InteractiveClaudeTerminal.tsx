@@ -567,7 +567,7 @@ export function InteractiveClaudeTerminal({
                     <code>codex</code>, or the experimental <code>gemini</code>{" "}
                     normally. See how to{" "}
                     <a
-                      href="https://github.com/AndrewUlloa/side-glance#installation-status"
+                      href="https://github.com/AndrewUlloa/side-glance#install"
                       rel="noreferrer"
                       target="_blank"
                     >
