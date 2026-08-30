@@ -112,7 +112,7 @@ export function TerminalShowcase() {
       ? INITIAL_STATE_INDEX
       : stage % LIFECYCLE_STATES.length;
   const activeState = LIFECYCLE_STATES[activeStateIndex];
-  const phase = activeState.phase;
+  const { phase } = activeState;
   const isPlaybackRunning =
     stage !== STORYBOARD_STAGE.waiting &&
     !isPlaybackPaused &&
@@ -133,7 +133,7 @@ export function TerminalShowcase() {
         TIMING.startPlayback
       );
     };
-    const pageMotion = document.documentElement.dataset.pageMotion;
+    const { pageMotion } = document.documentElement.dataset;
 
     if (pageMotion === "ready" || pageMotion === "settled") {
       startPlayback();

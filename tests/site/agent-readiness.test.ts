@@ -148,7 +148,7 @@ test("publishes canonical identity and accurate JSON-LD", async () => {
   const { SIDE_GLANCE_STRUCTURED_DATA } = await import(
     "../../app/lib/structured-data.ts"
   );
-  const organization = SIDE_GLANCE_STRUCTURED_DATA["@graph"][0];
+  const [organization] = SIDE_GLANCE_STRUCTURED_DATA["@graph"];
   assert.equal(organization.name, "Design From, Inc.");
   assert.equal(organization.legalName, "Design From, Inc.");
   assert.equal(organization.email, "andrew@designfrom.com");

@@ -30,7 +30,7 @@ test("the lifecycle legend controls the live terminal and hugs its buttons", asy
   assert.match(showcase, /clearTimeout/u);
   assert.match(showcase, /motion\.circle/u);
   assert.match(showcase, /pathLength/u);
-  assert.match(showcase, /const phase = activeState\.phase/u);
+  assert.match(showcase, /const \{ phase \} = activeState/u);
   assert.match(
     showcase,
     /const \[appearance, setAppearance\]\s*=\s*useState<PlaygroundAppearance>\("status"\)/u

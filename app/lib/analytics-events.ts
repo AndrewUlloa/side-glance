@@ -11,8 +11,8 @@ export const ANALYTICS_EVENTS = {
 const DEMO_ENGAGEMENT_SESSION_KEY = "side-glance:demo-engaged";
 
 interface AnalyticsStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
 }
 
 export type DemoEngagementInteraction =
