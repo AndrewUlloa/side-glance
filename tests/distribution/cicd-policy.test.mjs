@@ -44,6 +44,12 @@ test("enforces the feature to staging to main delivery path", async () => {
   assert.equal(packageManifest.devDependencies.husky, "9.1.7");
 
   assert.equal([...dependabot.matchAll(/target-branch:\s+staging/gu)].length, 2);
+  assert.match(dependabot, /next-toolchain:[\s\S]*patterns:[\s\S]*- next[\s\S]*- "@next\/eslint-plugin-next"/u);
+  assert.match(dependabot, /site-styling:[\s\S]*patterns:[\s\S]*- tailwindcss[\s\S]*- "@tailwindcss\/postcss"/u);
+  assert.match(dependabot, /biome-linting:[\s\S]*patterns:[\s\S]*- "@biomejs\/biome"[\s\S]*- ultracite/u);
+  assert.match(dependabot, /typescript-toolchain:[\s\S]*patterns:[\s\S]*- typescript[\s\S]*- typescript-eslint[\s\S]*- "@types\/\*"/u);
+  assert.match(dependabot, /dependency-name:\s+typescript[\s\S]*versions:\s*\n\s+- "7\.x"/u);
+  assert.doesNotMatch(dependabot, /^\s{6}development-dependencies:/mu);
   assert.match(cicd, /feature\/\*.*staging.*main/su);
   assert.match(cicd, /merge commit.*staging.*main/isu);
   assert.match(cicd, /Vercel Git integration/u);
