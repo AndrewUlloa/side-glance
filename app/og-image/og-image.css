@@ -1,3 +1,8 @@
+/* The image compositor inherits RootLayout but must remain an exact 1200×630 canvas. */
+body:has(> .og-image-canvas) > .minimal-header {
+  display: none;
+}
+
 .og-image-canvas {
   display: flex;
   width: 1200px;

@@ -6,6 +6,10 @@ const pageSource = await readFile(
   new URL("../../app/page.tsx", import.meta.url),
   "utf8"
 );
+const siteHeaderSource = await readFile(
+  new URL("../../app/components/SiteHeader.tsx", import.meta.url),
+  "utf8"
+);
 const interactiveTerminalSource = await readFile(
   new URL(
     "../../app/components/InteractiveClaudeTerminal.tsx",
@@ -63,7 +67,7 @@ test("focused hero shows Claude inside the real Side Glance lifecycle wash", () 
 test("hero stays focused on one headline, one install action, and one product proof", () => {
   assert.match(pageSource, /Long loops\./);
   assert.match(pageSource, /Short glances\./);
-  assert.match(pageSource, /<InstallButton/u);
+  assert.match(siteHeaderSource, /<InstallButton/u);
   assert.match(
     installButtonSource,
     /className="minimal-install rounded-header-action text-header-action!"/
@@ -120,7 +124,11 @@ test("focused hero uses responsive Tailwind gutters and the vertical Figma stack
   const heroRule =
     stylesheet.match(/\.minimal-home\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
-  assert.match(heroRule, /min-height:\s*100dvh/);
+  assert.match(
+    heroRule,
+    /min-height:\s*calc\(100dvh - var\(--spacing-site-header\)\)/
+  );
+  assert.match(heroRule, /padding-top:\s*var\(--spacing-layout-stack\)/);
   assert.doesNotMatch(heroRule, /max-width:/);
   assert.match(heroRule, /background:\s*#fff/);
   assert.match(pageSource, /gap-layout-stack px-site-gutter/);

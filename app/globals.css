@@ -2310,8 +2310,9 @@ a {
 .minimal-home {
   display: flex;
   width: 100%;
-  min-height: 100dvh;
+  min-height: calc(100dvh - var(--spacing-site-header));
   margin-inline: auto;
+  padding-top: var(--spacing-layout-stack);
   flex-direction: column;
   overflow-x: clip;
   background: #fff;
@@ -3210,17 +3211,11 @@ a {
   display: flex;
   width: 100%;
   max-width: 1512px;
-  min-height: 100dvh;
+  min-height: calc(100dvh - var(--spacing-site-header));
   margin-inline: auto;
   flex-direction: column;
   background: #fff;
   color: #000;
-}
-
-.trust-header {
-  display: flex;
-  width: 100%;
-  align-items: center;
 }
 
 .trust-main {
@@ -3546,7 +3541,7 @@ a {
   }
 
   .minimal-home {
-    min-height: 100svh;
+    min-height: calc(100svh - var(--spacing-site-header));
     overflow: visible;
   }
 

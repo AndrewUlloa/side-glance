@@ -6,16 +6,16 @@ const read = (path: string) =>
   readFile(new URL(`../../${path}`, import.meta.url), "utf8").catch(() => "");
 
 test("the install control copies Homebrew plus guided setup and morphs into confirmation", async () => {
-  const [page, installButton, measureHook, css] = await Promise.all([
-    read("app/page.tsx"),
+  const [siteHeader, installButton, measureHook, css] = await Promise.all([
+    read("app/components/SiteHeader.tsx"),
     read("app/components/InstallButton.tsx"),
     read("app/hooks/useMeasure.ts"),
     read("app/globals.css"),
   ]);
 
-  assert.match(page, /<InstallButton/u);
-  assert.match(page, /public beta · v0\.1/u);
-  assert.match(page, /install with Homebrew and run guided setup/u);
+  assert.match(siteHeader, /<InstallButton/u);
+  assert.match(siteHeader, /public beta · v0\.1/u);
+  assert.match(siteHeader, /install with Homebrew and run guided setup/u);
   assert.doesNotMatch(installButton, /github\.com\/AndrewUlloa\/side-glance/u);
 
   assert.match(installButton, /^"use client";/u);

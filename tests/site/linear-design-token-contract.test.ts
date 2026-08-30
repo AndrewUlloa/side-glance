@@ -60,13 +60,15 @@ test("homepage token parity uses Alan Sans and the measured visual system", asyn
 });
 
 test("focused homepage uses the exact static Figma assets and copy", async () => {
-  const [page, showcase, terminal, installButton, css] = await Promise.all([
-    read("app/page.tsx"),
-    read("app/components/TerminalShowcase.tsx"),
-    read("app/components/InteractiveClaudeTerminal.tsx"),
-    read("app/components/InstallButton.tsx"),
-    read("app/globals.css"),
-  ]);
+  const [page, siteHeader, showcase, terminal, installButton, css] =
+    await Promise.all([
+      read("app/page.tsx"),
+      read("app/components/SiteHeader.tsx"),
+      read("app/components/TerminalShowcase.tsx"),
+      read("app/components/InteractiveClaudeTerminal.tsx"),
+      read("app/components/InstallButton.tsx"),
+      read("app/globals.css"),
+    ]);
 
   assert.match(
     page,
@@ -76,8 +78,8 @@ test("focused homepage uses the exact static Figma assets and copy", async () =>
   assert.match(page, /Short glances\./u);
   assert.match(page, /Know which loop needs judgment\./u);
   assert.match(page, /Let the others keep running\./u);
-  assert.match(page, /src="\/side-glance-mark\.svg"/u);
-  assert.match(page, /<InstallButton/u);
+  assert.match(siteHeader, /src="\/side-glance-mark\.svg"/u);
+  assert.match(siteHeader, /<InstallButton/u);
   assert.match(installButton, /src="\/install-icon\.svg"/u);
   assert.match(page, /<TerminalShowcase\s*\/>/u);
   assert.match(

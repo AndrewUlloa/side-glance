@@ -140,6 +140,8 @@ test("server-renders substantive trust pages", async () => {
       const text = renderedText(html);
 
       assert.match(html, new RegExp(`<h1[^>]*>${heading}</h1>`, "iu"));
+      assert.match(text, /Install/u);
+      assert.match(html, /aria-label="View Side Glance on GitHub"/u);
       assert.ok(
         text.length >= 500,
         `${route} raw HTML text is only ${text.length} chars`
@@ -163,26 +165,32 @@ test("server-renders substantive trust pages", async () => {
 });
 
 test("keeps the focused site accessible, responsive, and product-safe", async () => {
-  const [page, showcase, terminal, css, layout] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(
-      new URL("../app/components/TerminalShowcase.tsx", import.meta.url),
-      "utf8"
-    ),
-    readFile(
-      new URL(
-        "../app/components/InteractiveClaudeTerminal.tsx",
-        import.meta.url
+  const [page, siteHeader, showcase, terminal, css, layout] = await Promise.all(
+    [
+      readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+      readFile(
+        new URL("../app/components/SiteHeader.tsx", import.meta.url),
+        "utf8"
       ),
-      "utf8"
-    ),
-    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-  ]);
+      readFile(
+        new URL("../app/components/TerminalShowcase.tsx", import.meta.url),
+        "utf8"
+      ),
+      readFile(
+        new URL(
+          "../app/components/InteractiveClaudeTerminal.tsx",
+          import.meta.url
+        ),
+        "utf8"
+      ),
+      readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+      readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    ]
+  );
 
-  assert.match(page, /aria-label="Side Glance home"/);
+  assert.match(siteHeader, /aria-label="Side Glance home"/);
   assert.match(
-    page,
+    siteHeader,
     /idleAriaLabel="install with Homebrew and run guided setup/u
   );
   assert.match(page, /<TerminalShowcase\s*\/>/);
@@ -204,7 +212,10 @@ test("keeps the focused site accessible, responsive, and product-safe", async ()
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(css, /overflow-x:\s*clip/);
-  assert.match(css, /\.minimal-home\s*\{[\s\S]*min-height:\s*100dvh/u);
+  assert.match(
+    css,
+    /\.minimal-home\s*\{[\s\S]*min-height:\s*calc\(100dvh - var\(--spacing-site-header\)\)/u
+  );
   assert.match(layout, /metadataBase/);
   assert.match(layout, /openGraph/);
   assert.doesNotMatch(page, /_sites-preview|SkeletonPreview/);

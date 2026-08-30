@@ -6,6 +6,7 @@ import Script from "next/script";
 import type { CSSProperties } from "react";
 import "lenis/dist/lenis.css";
 import { AgentationToolbar } from "./components/AgentationToolbar";
+import { SiteHeader } from "./components/SiteHeader";
 import { SmoothScroll } from "./components/SmoothScroll";
 import { WebMcpTools } from "./components/WebMcpTools";
 import { shouldShowAgentation } from "./lib/agentation-environment";
@@ -153,6 +154,7 @@ export default function RootLayout({
         />
         <SmoothScroll />
         <WebMcpTools />
+        <SiteHeader />
         {children}
         <AgentationToolbar enabled={showAgentation} />
         <Analytics />
