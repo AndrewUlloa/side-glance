@@ -4,31 +4,40 @@ import test from "node:test";
 
 const read = (path: string) => readFile(path, "utf8");
 
-test("the header places an accessible icon-only GitHub action after Install", async () => {
-  const [page, css] = await Promise.all([
-    read("app/page.tsx"),
+test("the shared layout header places an accessible GitHub action after Install", async () => {
+  const [layout, siteHeader, trustPage, githubAction, css] = await Promise.all([
+    read("app/layout.tsx"),
+    read("app/components/SiteHeader.tsx"),
+    read("app/components/TrustPage.tsx"),
+    read("app/components/GitHubAction.tsx"),
     read("app/globals.css"),
   ]);
 
+  assert.match(layout, /<SiteHeader\s*\/>/u);
   assert.match(
-    page,
+    siteHeader,
     /className="minimal-header-actions minimal-page-enter minimal-page-enter-actions gap-header-actions-gap"/u
   );
-  assert.match(page, /aria-label="View Side Glance on GitHub"/u);
-  assert.match(page, /href="https:\/\/github\.com\/AndrewUlloa\/side-glance"/u);
-  assert.match(page, /target="_blank"/u);
-  assert.match(page, /rel="noreferrer"/u);
+  assert.match(siteHeader, /<InstallButton/u);
+  assert.match(siteHeader, /<GitHubAction\s*\/>/u);
+  assert.doesNotMatch(trustPage, /<header\b/u);
+  assert.match(githubAction, /aria-label="View Side Glance on GitHub"/u);
+  assert.match(
+    githubAction,
+    /href="https:\/\/github\.com\/AndrewUlloa\/side-glance"/u
+  );
+  assert.match(githubAction, /target="_blank"/u);
+  assert.match(githubAction, /rel="noreferrer"/u);
 
-  const githubAction = page.match(
+  const githubAnchor = githubAction.match(
     /<a(?=[^>]*aria-label="View Side Glance on GitHub")[^>]*>[\s\S]*?<\/a>/u
   )?.[0];
-  assert.ok(githubAction, "missing GitHub action");
-  assert.match(githubAction, /<svg/u);
-  assert.match(githubAction, /<span className="sr-only">GitHub<\/span>/u);
-  assert.doesNotMatch(githubAction, /<span(?! className="sr-only")/u);
+  assert.ok(githubAnchor, "missing GitHub action");
+  assert.match(githubAnchor, /<svg/u);
+  assert.match(githubAnchor, /<span className="sr-only">GitHub<\/span>/u);
+  assert.doesNotMatch(githubAnchor, /<span(?! className="sr-only")/u);
   assert.ok(
-    page.indexOf("<InstallButton") <
-      page.indexOf('aria-label="View Side Glance on GitHub"'),
+    siteHeader.indexOf("<InstallButton") < siteHeader.indexOf("<GitHubAction"),
     "GitHub action should appear immediately after Install"
   );
 
@@ -42,7 +51,7 @@ test("the header places an accessible icon-only GitHub action after Install", as
       `missing Tailwind header action token: ${token}`
     );
   }
-  assert.match(page, /gap-header-actions-gap/u);
-  assert.match(page, /size-header-icon-button/u);
+  assert.match(siteHeader, /gap-header-actions-gap/u);
+  assert.match(githubAction, /size-header-icon-button/u);
   assert.match(css, /\.minimal-github:focus-visible/u);
 });

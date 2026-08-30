@@ -662,7 +662,7 @@ these requirements.
   verification. It never collapses these into one `ready` claim.
 - The website, README, package README, CLI help, changelog, npm dist-tags, GitHub release,
   and deployed assets describe the version users can actually install.
-- Production may use `assets.sideglance.ai` only after public DNS, TLS, and every immutable
+- Production may use `assets.sideglance.dev` only after public DNS, TLS, and every immutable
   asset are verified. Until then, Production must use the verified R2 development origin
   and custom-domain claims must remain conditional.
 - `main` requires the `require-staging-head` check in its live ruleset before promotion.

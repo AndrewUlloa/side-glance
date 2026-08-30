@@ -166,7 +166,7 @@ work delays Ready. The website never claims it can inspect local history.
 - Treating pending task-list items as active computation.
 - Per-child colors, labels, notifications, or surface leases.
 - Moving npm `latest` to a beta.
-- Claiming `sideglance.ai` is live before its public DNS resolves.
+- Claiming the custom production domain is live before its public DNS resolves.
 
 ## Boundaries
 

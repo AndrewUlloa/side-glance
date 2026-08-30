@@ -5,8 +5,9 @@ import test from "node:test";
 const read = (path: string) => readFile(path, "utf8");
 
 test("header scale is expressed as Tailwind theme tokens and consumed as utilities", async () => {
-  const [page, installButton, css] = await Promise.all([
+  const [page, siteHeader, installButton, css] = await Promise.all([
     read("app/page.tsx"),
+    read("app/components/SiteHeader.tsx"),
     read("app/components/InstallButton.tsx"),
     read("app/globals.css"),
   ]);
@@ -37,12 +38,18 @@ test("header scale is expressed as Tailwind theme tokens and consumed as utiliti
     page,
     /className="minimal-home gap-layout-stack px-site-gutter"/u
   );
-  assert.match(page, /className="minimal-header h-site-header"/u);
   assert.match(
-    page,
+    siteHeader,
+    /className="minimal-header h-site-header px-site-gutter"/u
+  );
+  assert.match(
+    siteHeader,
     /className="minimal-brand gap-brand-gap text-brand tracking-brand"/u
   );
-  assert.match(page, /className="h-brand-mark-height w-brand-mark-width"/u);
+  assert.match(
+    siteHeader,
+    /className="h-brand-mark-height w-brand-mark-width"/u
+  );
 
   assert.match(
     installButton,

@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("reveals the launch page only after the loader completes", async () => {
-  const [page, css, loader, orchestrator] = await Promise.all([
+  const [page, siteHeader, css, loader, orchestrator] = await Promise.all([
     readFile("app/page.tsx", "utf8"),
+    readFile("app/components/SiteHeader.tsx", "utf8"),
     readFile("app/globals.css", "utf8"),
     readFile("app/components/LoadingSequence.tsx", "utf8"),
     readFile("app/components/MotionOrchestrator.tsx", "utf8"),
@@ -12,7 +13,7 @@ test("reveals the launch page only after the loader completes", async () => {
 
   assert.match(page, /<MotionOrchestrator\s*\/>/u);
   assert.match(
-    page,
+    siteHeader,
     /minimal-header-actions minimal-page-enter minimal-page-enter-actions gap-header-actions-gap/u
   );
   assert.match(page, /minimal-page-enter-line-1/u);

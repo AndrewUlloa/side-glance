@@ -1,10 +1,12 @@
 // biome-ignore-all lint/security/noDangerouslySetInnerHtml: Fixed theme and JSON-LD payloads contain no user data; the theme must run before first paint and JSON-LD must remain parseable in raw HTML.
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Alan_Sans, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import type { CSSProperties } from "react";
 import "lenis/dist/lenis.css";
 import { AgentationToolbar } from "./components/AgentationToolbar";
+import { SiteHeader } from "./components/SiteHeader";
 import { SmoothScroll } from "./components/SmoothScroll";
 import { WebMcpTools } from "./components/WebMcpTools";
 import { shouldShowAgentation } from "./lib/agentation-environment";
@@ -17,8 +19,6 @@ const showAgentation = shouldShowAgentation({
   nodeEnv: process.env.NODE_ENV,
   vercelEnv: process.env.VERCEL_ENV,
 });
-const cloudflareAnalyticsToken =
-  process.env.NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN;
 const rootStyle = {
   "--side-glance-hero-surface": `url("${SITE_ASSETS.heroSurface}")`,
 } as CSSProperties;
@@ -154,17 +154,10 @@ export default function RootLayout({
         />
         <SmoothScroll />
         <WebMcpTools />
+        <SiteHeader />
         {children}
         <AgentationToolbar enabled={showAgentation} />
-        {cloudflareAnalyticsToken ? (
-          <Script
-            data-cf-beacon={JSON.stringify({
-              token: cloudflareAnalyticsToken,
-            })}
-            src="https://static.cloudflareinsights.com/beacon.min.js"
-            strategy="afterInteractive"
-          />
-        ) : null}
+        <Analytics />
       </body>
     </html>
   );

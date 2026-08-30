@@ -69,16 +69,32 @@ test("documents only durable installation and truthful beta availability", async
   );
   assert.match(packageReadme, /`side-glance run`[\s\S]{0,160}fallback/iu);
 
-  const page = await text("app/page.tsx");
-  assert.match(page, /public beta · v0\.1/u);
-  assert.match(page, /install with Homebrew and run guided setup/u);
-  assert.doesNotMatch(page, /available after the first verified beta release/u);
+  const siteHeader = await text("app/components/SiteHeader.tsx");
+  assert.match(siteHeader, /public beta · v0\.1/u);
+  assert.match(siteHeader, /install with Homebrew and run guided setup/u);
+  assert.doesNotMatch(
+    siteHeader,
+    /available after the first verified beta release/u
+  );
 
   const releaseGuide = await text("docs/releasing.md");
   assert.match(releaseGuide, /Initial npm ownership is established/u);
   assert.match(releaseGuide, /`AndrewUlloa\/homebrew-tap` is public/u);
   assert.match(releaseGuide, /trusted publishing/u);
   assert.match(releaseGuide, /ad-hoc signed/u);
+});
+
+test("ships a compact favicon-ordered Heat GIF for the root README", async () => {
+  const readme = await text("README.md");
+  const assetPath = "assets/readme/side-glance-heat-grid.gif";
+  const asset = await readFile(path.join(repository, assetPath));
+
+  assert.match(readme, new RegExp(assetPath.replaceAll("/", "\\/"), "u"));
+  assert.match(readme, /Working, Ready · short, Waiting, and Ready · long/u);
+  assert.equal(asset.subarray(0, 6).toString("ascii"), "GIF89a");
+  assert.equal(asset.readUInt16LE(6), 800);
+  assert.equal(asset.readUInt16LE(8), 563);
+  assert.ok(asset.byteLength < 400_000, "README GIF should stay below 400 KB");
 });
 
 test("publishes one consistent Apache-2.0 license surface", async () => {
