@@ -102,7 +102,7 @@ actions recorded for that release were:
 The custom domain is optional for this candidate. The verified, content-addressed R2
 development origin is the selected temporary asset origin; Cloudflare documents the
 managed `r2.dev` endpoint as rate-limited and unsuitable for sustained production
-traffic, so `assets.sideglance.ai` remains the recommended later cutover after DNS and
+traffic, so `assets.sideglance.dev` remains the recommended later cutover after DNS and
 TLS verification.
 
 ## Five-axis review
@@ -139,8 +139,8 @@ an idle-specific thermal phase would be a separate product/protocol change.
   lifecycle selection, 16px mobile input, stable reduced-motion state, usable core UI
   during an offline R2 image failure, and a `1200×630` social preview all pass.
 - All six declared R2 objects return HTTP 200 with exact type, size, and immutable
-  cache control. `side-glance.vercel.app` returns HTTP 200. `sideglance.ai` and
-  `assets.sideglance.ai` do not resolve and are not claimed as live.
+  cache control. At that checkpoint the Vercel fallback returned HTTP 200, while
+  the planned custom production and asset domains did not yet resolve or carry live claims.
 - A real PTY discovered its owned character device, painted Working plus the opt-in
   title, emitted OSC 111 and an empty title on exit, and persisted an inactive surface.
   A real isolated tmux server round-tripped local and inherited window options.

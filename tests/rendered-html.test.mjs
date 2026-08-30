@@ -90,7 +90,7 @@ test("server-renders the focused Side Glance launch hero", async () => {
   );
   assert.match(text, /Ownership reconciliation is complete\./);
   assert.doesNotMatch(text, /Test failed/);
-  assert.match(text, /Demo only · nothing is sent or saved/);
+  assert.match(text, /Prompt text stays in this tab · never sent or saved/);
   assert.match(html, /Add a follow-up/);
   assert.doesNotMatch(html, /hero-terminal\.png/);
   assert.match(html, /side-glance-mark\.svg/);

@@ -343,7 +343,8 @@ OSC 111 restores the terminal's configured default background; terminals do not 
 
 The CLI and interactive site share the same phase and palette model. The Next.js
 application deploys to Vercel, while substantial public media is delivered from
-Cloudflare R2 and privacy-first traffic measurement uses Cloudflare Web Analytics.
+Cloudflare R2. Cloudflare supplies automatic aggregate real-user monitoring for
+`sideglance.dev`; Vercel records page views and three bounded, non-content intent events.
 There is no Cloudflare Worker, vinext, or Wrangler compatibility build. The
 required gates are:
 

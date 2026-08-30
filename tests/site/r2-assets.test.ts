@@ -83,8 +83,11 @@ test("serves substantial site media from immutable R2 URLs without the Vercel im
   assert.match(uploadScript, /createHash\("sha256"\)/u);
   assert.match(uploadScript, /--cache-control/u);
   assert.match(uploadScript, /shell:\s*false/u);
-  assert.match(layout, /NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN/u);
-  assert.match(layout, /static\.cloudflareinsights\.com\/beacon\.min\.js/u);
+  assert.doesNotMatch(layout, /NEXT_PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN/u);
+  assert.doesNotMatch(
+    layout,
+    /static\.cloudflareinsights\.com\/beacon\.min\.js/u
+  );
 
   for (const localAsset of [
     "public/hero-surface.png",

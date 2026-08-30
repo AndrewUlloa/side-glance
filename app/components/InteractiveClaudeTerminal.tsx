@@ -8,6 +8,7 @@ import type {
 } from "react";
 import { useEffect, useRef, useState } from "react";
 
+import { trackDemoEngaged } from "../lib/analytics-events";
 import {
   type PlaygroundAppearance,
   type PlaygroundPhase,
@@ -446,6 +447,7 @@ export function InteractiveClaudeTerminal({
     if (!prompt) {
       return;
     }
+    trackDemoEngaged("terminal_input");
     if (prompt.startsWith("/")) {
       setInteractionAnnouncement(
         "That command is not available in this local demo. Type slash to see commands."
@@ -456,6 +458,13 @@ export function InteractiveClaudeTerminal({
     setSubmittedPrompt(prompt);
     setDraft("");
     closeMenu("Install Side Glance to try it in your terminal.");
+  };
+
+  const handleDraftChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.value) {
+      trackDemoEngaged("terminal_input");
+    }
+    handleInputChange(event);
   };
 
   const visual = visualForPhase(phase, elapsedSeconds, appearance);
@@ -597,7 +606,7 @@ export function InteractiveClaudeTerminal({
                 autoCorrect="off"
                 maxLength={INPUT_MAX_LENGTH}
                 name="follow-up"
-                onChange={handleInputChange}
+                onChange={handleDraftChange}
                 onKeyDown={handleInputKeyDown}
                 placeholder="Add a follow-up · / for commands"
                 role="combobox"
@@ -617,7 +626,9 @@ export function InteractiveClaudeTerminal({
             </p>
             <p>
               <strong>▶ auto mode on</strong>
-              <span>/ commands · Demo only · nothing is sent or saved</span>
+              <span>
+                / commands · Prompt text stays in this tab · never sent or saved
+              </span>
             </p>
           </footer>
         </section>

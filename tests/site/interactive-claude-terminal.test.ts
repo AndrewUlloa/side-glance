@@ -33,7 +33,8 @@ test("the Claude hero answers a local follow-up with an honest install handoff",
     terminal,
     /href="https:\/\/github\.com\/AndrewUlloa\/side-glance#installation-status"/u
   );
-  assert.match(terminal, /Demo only · nothing is sent or saved/u);
+  assert.match(terminal, /Prompt text stays in this tab/u);
+  assert.match(terminal, /never sent or saved/u);
   assert.doesNotMatch(terminal, /ANIMATION STORYBOARD|const TIMING\s*=/u);
   assert.doesNotMatch(terminal, /I’ll rerun the focused test/u);
   assert.doesNotMatch(terminal, /redirect ownership is still ambiguous/u);
